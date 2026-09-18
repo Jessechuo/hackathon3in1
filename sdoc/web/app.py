@@ -4,11 +4,12 @@ Renders whatever exists: with no categories.json it still shows all 520
 emails, with the category and verification columns reserved but empty.
 """
 import json
+from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from sdoc.ai.classify import CATEGORIES
@@ -38,6 +39,25 @@ def load_results() -> dict:
         if path.exists():
             return json.loads(path.read_text(encoding="utf-8"))
     return {}
+
+
+DECISIONS = {"verified", "mismatch"}
+
+
+def load_review() -> dict:
+    """Human decisions recorded from the UI. The human-in-the-loop record:
+    what a person confirmed or corrected, and when."""
+    path = Path(OUT_DIR) / "review.json"
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def save_review(state: dict) -> None:
+    Path(OUT_DIR).mkdir(parents=True, exist_ok=True)
+    (Path(OUT_DIR) / "review.json").write_text(
+        json.dumps(state, indent=2), encoding="utf-8"
+    )
 
 
 def _human_size(n: int) -> str:
@@ -109,13 +129,39 @@ def email_detail(request: Request, email_id: str):
         context={
             "email": email,
             "cat": results.get(email_id),
+            "review": load_review().get(email_id),
             "attachments": _attachment_meta(email["attachments"]),
             "prev_id": ordered[i - 1]["email_id"] if i > 0 else None,
             "next_id": ordered[i + 1]["email_id"] if i + 1 < len(ordered) else None,
+            "position": i + 1,
             "total": len(ordered),
             **_shell(results, None),
         },
     )
+
+
+@app.post("/review/{email_id}")
+async def record_review(email_id: str, request: Request):
+    """Record a human decision. Toggling the same decision clears it."""
+    if not any(e["email_id"] == email_id for e in load_emails()):
+        raise HTTPException(status_code=404, detail=f"no such email: {email_id}")
+
+    payload = await request.json()
+    decision = payload.get("decision")
+    if decision not in DECISIONS:
+        raise HTTPException(status_code=400, detail=f"bad decision: {decision!r}")
+
+    state = load_review()
+    if state.get(email_id, {}).get("decision") == decision:
+        state.pop(email_id, None)          # clicking the same button undoes it
+        current = None
+    else:
+        current = {"decision": decision,
+                   "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+        state[email_id] = current
+    save_review(state)
+
+    return JSONResponse({"email_id": email_id, "review": current})
 
 
 @app.get("/attachment/{path:path}", response_class=HTMLResponse)

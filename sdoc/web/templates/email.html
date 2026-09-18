@@ -20,7 +20,61 @@
   }
   .toolbar .tags { display:flex; align-items:center; gap:var(--md); margin-left:var(--lg); }
   .toolbar .why { color:var(--fg-subtle); font-size:12px; font-style:italic; }
-  .toolbar .nav { margin-left:auto; display:flex; gap:var(--xs); }
+  .toolbar .acts { margin-left:auto; display:flex; align-items:center; gap:var(--md); }
+
+  /* Primary / secondary action buttons, 32px per the design spec. */
+  .act {
+    height:32px; padding:0 var(--lg); border-radius:var(--r-ctl);
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:13px; font-weight:500; white-space:nowrap;
+    border:1px solid var(--border-strong); background:transparent; color:var(--fg);
+    transition:background var(--t), border-color var(--t), color var(--t);
+  }
+  .act:hover { background:var(--l2); }
+  .act kbd {
+    font-family:var(--mono); font-size:10px; color:var(--fg-subtle);
+    border:1px solid var(--border-strong); border-radius:3px; padding:0 4px;
+  }
+  .act.primary {
+    background:var(--primary); color:var(--on-primary); border-color:var(--primary);
+  }
+  .act.primary:hover { filter:brightness(1.08); }
+  .act.primary kbd { color:var(--on-primary); border-color:currentColor; opacity:.7; }
+  .act.danger { color:var(--mismatch); border-color:var(--mismatch); }
+  .act.danger:hover { background:var(--sp-bg); }
+  .act[aria-pressed="true"] {
+    background:var(--ok); color:#fff; border-color:var(--ok);
+  }
+  .act.danger[aria-pressed="true"] {
+    background:var(--mismatch); color:#fff; border-color:var(--mismatch);
+  }
+  .act[aria-pressed="true"] kbd { color:#fff; border-color:currentColor; opacity:.7; }
+
+  /* Prev/next as one segmented control, matching the design. */
+  .pager { display:inline-flex; }
+  .pager a, .pager span {
+    width:32px; height:32px; display:inline-flex; align-items:center; justify-content:center;
+    border:1px solid var(--border-strong); color:var(--fg-muted); background:transparent;
+    transition:background var(--t), color var(--t);
+  }
+  .pager > :first-child { border-radius:var(--r-ctl) 0 0 var(--r-ctl); }
+  .pager > :last-child { border-radius:0 var(--r-ctl) var(--r-ctl) 0; margin-left:-1px; }
+  .pager a:hover { background:var(--l2); color:var(--fg); }
+  .pager span { opacity:.35; cursor:not-allowed; }
+
+  .copy {
+    width:28px; height:28px; border-radius:var(--r-ctl);
+    border:1px solid transparent; background:transparent; color:var(--fg-subtle);
+    display:inline-flex; align-items:center; justify-content:center;
+    transition:background var(--t), color var(--t);
+  }
+  .copy:hover { background:var(--l2); color:var(--fg); }
+  .head { position:relative; }
+  .head .copy { position:absolute; top:var(--lg); right:var(--lg); }
+
+  .saved {
+    font-family:var(--mono); font-size:11px; color:var(--fg-subtle);
+  }
 
   .panel {
     background:var(--l1); border:1px solid var(--border);
@@ -110,15 +164,43 @@
         <span class="why">Not yet classified</span>
       {% endif %}
     </div>
-    <div class="nav">
-      {% if prev_id %}<a class="iconbtn" href="/email/{{ prev_id }}" title="Previous (K)" style="width:auto;padding:0 8px;font-family:var(--mono);font-size:11px">K</a>{% endif %}
-      {% if next_id %}<a class="iconbtn" href="/email/{{ next_id }}" title="Next (J)" style="width:auto;padding:0 8px;font-family:var(--mono);font-size:11px">J</a>{% endif %}
+    <div class="acts">
+      <button class="act primary" id="verify"
+              aria-pressed="{{ 'true' if review and review.decision == 'verified' else 'false' }}">
+        <svg class="ico ico-sm"><use href="#i-check"/></svg>
+        <span id="verify-label">{{ 'Verified' if review and review.decision == 'verified' else 'Mark Verified' }}</span>
+        <kbd>V</kbd>
+      </button>
+      <button class="act danger" id="flag"
+              aria-pressed="{{ 'true' if review and review.decision == 'mismatch' else 'false' }}">
+        <svg class="ico ico-sm"><use href="#i-flag"/></svg>
+        <span id="flag-label">{{ 'Flagged' if review and review.decision == 'mismatch' else 'Flag Mismatch' }}</span>
+        <kbd>F</kbd>
+      </button>
+      <span class="saved" id="saved">{% if review %}saved {{ review.at[11:16] }} UTC{% endif %}</span>
+      <span class="vr"></span>
+      <span class="pager">
+        {% if prev_id %}
+          <a href="/email/{{ prev_id }}" title="Previous (K)" aria-label="Previous email"><svg class="ico"><use href="#i-up"/></svg></a>
+        {% else %}
+          <span aria-disabled="true"><svg class="ico"><use href="#i-up"/></svg></span>
+        {% endif %}
+        {% if next_id %}
+          <a href="/email/{{ next_id }}" title="Next (J)" aria-label="Next email"><svg class="ico"><use href="#i-down"/></svg></a>
+        {% else %}
+          <span aria-disabled="true"><svg class="ico"><use href="#i-down"/></svg></span>
+        {% endif %}
+      </span>
     </div>
   </div>
 
   <div class="panel head">
+    <button class="copy" id="copy" title="Copy subject and id" aria-label="Copy subject and id">
+      <svg class="ico ico-sm"><use href="#i-copy"/></svg>
+    </button>
     <h1>{{ email.subject }}</h1>
-    <div class="meta"><b>{{ email.email_id }}</b> &middot; from {{ email['from'] }}</div>
+    <div class="meta"><b>{{ email.email_id }}</b> &middot; from {{ email['from'] }}
+      &middot; {{ position }} of {{ total }}</div>
   </div>
 
   <pre class="body">{{ email.body }}</pre>
@@ -159,13 +241,62 @@
 
 {% block script %}
 <script>
-document.addEventListener("keydown", function (ev) {
-  if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
-  var t = ev.target.tagName;
-  if (t === "INPUT" || t === "TEXTAREA") return;
-  if (ev.key === "Escape") location.href = "/";
-  {% if next_id %}else if (ev.key === "j" || ev.key === "J") location.href = "/email/{{ next_id }}";{% endif %}
-  {% if prev_id %}else if (ev.key === "k" || ev.key === "K") location.href = "/email/{{ prev_id }}";{% endif %}
-});
+(function () {
+  var EID = "{{ email.email_id }}";
+  var verify = document.getElementById("verify");
+  var flag = document.getElementById("flag");
+  var saved = document.getElementById("saved");
+
+  var LABELS = {
+    verified: { on: "Verified", off: "Mark Verified" },
+    mismatch: { on: "Flagged", off: "Flag Mismatch" }
+  };
+
+  function paint(review) {
+    var d = review ? review.decision : null;
+    verify.setAttribute("aria-pressed", d === "verified" ? "true" : "false");
+    flag.setAttribute("aria-pressed", d === "mismatch" ? "true" : "false");
+    document.getElementById("verify-label").textContent =
+      d === "verified" ? LABELS.verified.on : LABELS.verified.off;
+    document.getElementById("flag-label").textContent =
+      d === "mismatch" ? LABELS.mismatch.on : LABELS.mismatch.off;
+    saved.textContent = review ? "saved " + review.at.slice(11, 16) + " UTC" : "";
+  }
+
+  function decide(decision) {
+    fetch("/review/" + EID, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decision: decision })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { paint(d.review); })
+      .catch(function () { saved.textContent = "save failed"; });
+  }
+
+  verify.addEventListener("click", function () { decide("verified"); });
+  flag.addEventListener("click", function () { decide("mismatch"); });
+
+  document.getElementById("copy").addEventListener("click", function (ev) {
+    var text = EID + " — " + document.querySelector(".head h1").textContent.trim();
+    navigator.clipboard.writeText(text).then(function () {
+      var b = ev.currentTarget;
+      b.style.color = "var(--ok)";
+      setTimeout(function () { b.style.color = ""; }, 900);
+    });
+  });
+
+  document.addEventListener("keydown", function (ev) {
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    var t = ev.target.tagName;
+    if (t === "INPUT" || t === "TEXTAREA") return;
+    var k = ev.key.toLowerCase();
+    if (ev.key === "Escape") location.href = "/";
+    else if (k === "v") { ev.preventDefault(); decide("verified"); }
+    else if (k === "f") { ev.preventDefault(); decide("mismatch"); }
+    {% if next_id %}else if (k === "j") location.href = "/email/{{ next_id }}";{% endif %}
+    {% if prev_id %}else if (k === "k") location.href = "/email/{{ prev_id }}";{% endif %}
+  });
+})();
 </script>
 {% endblock %}
