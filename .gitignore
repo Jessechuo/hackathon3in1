@@ -19,3 +19,7 @@ zip/
 # Local scratch
 .playwright-mcp/
 shot-*.png
+
+# Organizer-supplied data — kept out of the public repo
+sdoc-hackathon-bundle/
+Shipping Document Verification Use Case.pdf
