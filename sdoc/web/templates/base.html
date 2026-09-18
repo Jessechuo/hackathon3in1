@@ -4,6 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}SDOC Inbox{% endblock %}</title>
+<script>
+/* Must run before first paint, or the page renders in the OS theme and then
+   flips to the saved one — a visible flash on every navigation. Blocking and
+   tiny is correct here; do not move this to the bottom of the body. */
+(function () {
+  try {
+    var t = localStorage.getItem("sdoc-theme");
+    if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -49,10 +60,15 @@
   --row:40px; --rail:48px; --head:48px;
   --r-ctl:4px; --r-badge:2px;
   --t:80ms linear;            /* sub-100ms, per the spec */
+
+  /* Keeps browser-painted chrome (scrollbars, form controls) in step with
+     the page, so those don't flash their own default either. */
+  color-scheme:light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    color-scheme:dark;
     --l0:#09090b; --l1:#18181b; --l2:#27272a; --l3:#3f3f46;
     --border:#27272a; --border-strong:#3f3f46;
     --fg:#fafafa; --fg-muted:#a1a1aa; --fg-subtle:#8b8b93;
@@ -66,6 +82,7 @@
   }
 }
 :root[data-theme="dark"] {
+  color-scheme:dark;
   --l0:#09090b; --l1:#18181b; --l2:#27272a; --l3:#3f3f46;
   --border:#27272a; --border-strong:#3f3f46;
   --fg:#fafafa; --fg-muted:#a1a1aa; --fg-subtle:#8b8b93;
@@ -297,17 +314,23 @@ aside.rail {
 <script>
 (function () {
   var root = document.documentElement;
-  try {
-    var saved = localStorage.getItem("sdoc-theme");
-    if (saved) root.setAttribute("data-theme", saved);
-  } catch (e) {}
   var btn = document.getElementById("theme-toggle");
-  if (btn) btn.addEventListener("click", function () {
-    var dark = getComputedStyle(root).getPropertyValue("--l0").trim() === "#09090b";
-    var next = dark ? "light" : "dark";
+  if (!btn) return;
+
+  function current() {
+    var set = root.getAttribute("data-theme");
+    if (set === "light" || set === "dark") return set;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+
+  btn.addEventListener("click", function () {
+    var next = current() === "dark" ? "light" : "dark";
     root.setAttribute("data-theme", next);
+    btn.setAttribute("aria-pressed", next === "dark" ? "true" : "false");
     try { localStorage.setItem("sdoc-theme", next); } catch (e) {}
   });
+
+  btn.setAttribute("aria-pressed", current() === "dark" ? "true" : "false");
 })();
 </script>
 {% block script %}{% endblock %}
