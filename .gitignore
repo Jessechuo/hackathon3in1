@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Pipeline artifacts
+.cache/
+out/
+
+# Organizer material — NEVER commit.
+# sdoc-hackathon-docker/ contains ground_truth.json (the answer key).
+sdoc-hackathon-docker/
+zip/
+
+# Vendored third-party skill data (regenerate: uipro init --ai claude)
+.claude/
