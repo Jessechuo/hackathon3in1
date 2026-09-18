@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}{{ email.email_id }} — SDOC Inbox{% endblock %}
+{% block count %}{{ email.email_id }}{% endblock %}
+{% block content %}
+<style>
+  .wrap { max-width:860px; margin:0 auto; padding:var(--s5); }
+
+  .back {
+    display:inline-flex; align-items:center; gap:6px;
+    color:var(--muted-fg); text-decoration:none; font-size:13px;
+    min-height:24px; transition:color var(--t);
+  }
+  .back:hover { color:var(--primary); }
+  .back svg { width:14px; height:14px; stroke:currentColor; fill:none;
+              stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+
+  h2 {
+    margin:var(--s4) 0 var(--s2);
+    font-size:19px; font-weight:600; line-height:1.35; letter-spacing:-.01em;
+    overflow-wrap:anywhere;
+  }
+  .meta {
+    color:var(--muted-fg); font-size:13px; font-family:var(--mono);
+    overflow-wrap:anywhere;
+  }
+  .filed { margin-top:var(--s3); display:flex; align-items:center; gap:var(--s2); }
+  .filed .why { color:var(--muted-fg); font-size:12px; font-style:italic; }
+
+  .body {
+    margin:var(--s5) 0;
+    background:var(--muted); border:1px solid var(--border);
+    border-radius:var(--radius); padding:var(--s4);
+    font-family:var(--mono); font-size:13px; line-height:1.65;
+    white-space:pre-wrap; overflow-wrap:anywhere;
+  }
+
+  /* Reserved for the Day-2 SI vs BL comparison table. */
+  .slot {
+    margin:var(--s5) 0; padding:var(--s5) var(--s4);
+    border:1px dashed var(--border); border-radius:var(--radius);
+    color:var(--muted-fg); font-size:13px; text-align:center;
+  }
+
+  .atts { border-top:1px solid var(--border); padding-top:var(--s4); }
+  .atts h3 {
+    margin:0 0 var(--s3); font-size:11px; font-weight:600;
+    letter-spacing:.06em; text-transform:uppercase; color:var(--muted-fg);
+  }
+  .atts ul { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:var(--s3); }
+  .atts a {
+    display:inline-flex; align-items:center; gap:6px; min-height:24px;
+    color:var(--primary); text-decoration:none; font-size:13px;
+    font-family:var(--mono);
+    transition:opacity var(--t);
+  }
+  .atts a:hover { text-decoration:underline; }
+  .atts svg { width:13px; height:13px; stroke:currentColor; fill:none;
+              stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .none { color:var(--muted-fg); font-size:13px; }
+
+  @media (max-width:560px) { .wrap { padding:var(--s4) var(--s3); } }
+</style>
+
+<div class="wrap">
+  <a class="back" href="/">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    Inbox
+  </a>
+
+  <h2>{{ email.subject }}</h2>
+  <div class="meta">{{ email.email_id }} · {{ email['from'] }}</div>
+
+  <div class="filed">
+    {% if cat %}
+      <span class="badge">{{ cat.category }}</span>
+      {% if cat.reason %}<span class="why">{{ cat.reason }}</span>{% endif %}
+    {% else %}
+      <span class="cat"><span class="cat-slot" aria-label="Not yet classified"></span></span>
+      <span class="why">Not yet classified</span>
+    {% endif %}
+  </div>
+
+  <pre class="body">{{ email.body }}</pre>
+
+  <div class="slot">SI vs BL comparison appears here once the pipeline runs.</div>
+
+  <section class="atts">
+    <h3>Attachments</h3>
+    {% if email.attachments %}
+      <ul>
+        {% for a in email.attachments %}
+        <li>
+          <a href="/attachment/{{ a }}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            {{ a.split('/')[-1] }}
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="none">None</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

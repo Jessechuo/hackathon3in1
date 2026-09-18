@@ -15,3 +15,7 @@ zip/
 
 # Vendored third-party skill data (regenerate: uipro init --ai claude)
 .claude/
+
+# Local scratch
+.playwright-mcp/
+shot-*.png

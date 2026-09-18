@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block count %}{{ emails|length }}{% if emails|length != total %} of {{ total }}{% endif %} emails{% endblock %}
+{% block content %}
+<style>
+  .list { display:flex; flex-direction:column; }
+  .row {
+    display:flex; align-items:center; gap:var(--s3);
+    min-height:var(--row); padding:var(--s2) var(--s5);
+    border-bottom:1px solid var(--border);
+    text-decoration:none; color:inherit;
+    transition:background var(--t);
+  }
+  .row:hover { background:var(--muted); }
+  .row:focus-visible { outline:2px solid var(--ring); outline-offset:-2px; }
+
+  .eid {
+    font-family:var(--mono); font-size:12px; color:var(--muted-fg);
+    width:74px; flex:0 0 74px; font-variant-numeric:tabular-nums;
+  }
+  .subject {
+    flex:1 1 auto; min-width:0;
+    font-size:14px; font-weight:500;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .row:hover .subject { color:var(--primary); }
+  .sender {
+    width:210px; flex:0 0 210px;
+    font-size:12px; color:var(--muted-fg);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .att {
+    width:40px; flex:0 0 40px;
+    display:flex; align-items:center; justify-content:flex-end; gap:3px;
+    font-size:12px; color:var(--muted-fg); font-variant-numeric:tabular-nums;
+  }
+  .att svg { width:13px; height:13px; stroke:currentColor; fill:none;
+             stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+
+  .empty-state { padding:var(--s6) var(--s5); color:var(--muted-fg); text-align:center; }
+
+  @media (max-width: 1024px) { .sender { width:160px; flex-basis:160px; } }
+  @media (max-width: 768px)  { .sender { display:none; } }
+  @media (max-width: 560px)  {
+    .row { padding-left:var(--s3); padding-right:var(--s3); }
+    .eid { display:none; }
+    .cat, .cat.cat { width:88px; flex-basis:88px; }
+  }
+</style>
+
+{% if not emails %}
+  <p class="empty-state">No emails match this filter.</p>
+{% else %}
+<div class="list">
+  {% for e in emails %}
+  <a class="row" href="/email/{{ e.email_id }}">
+    <span class="eid">{{ e.email_id.replace('email_','') }}</span>
+    <span class="cat">
+      {% set c = cats.get(e.email_id, {}).get('category') %}
+      {% if c %}<span class="badge">{{ c }}</span>
+      {% else %}<span class="cat-slot" aria-label="Not yet classified"></span>{% endif %}
+    </span>
+    <span class="subject">{{ e.subject }}</span>
+    <span class="sender">{{ e['from'] }}</span>
+    <span class="att">
+      {% if e.attachments %}
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        <span>{{ e.attachments|length }}</span>
+        <span class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">attachments</span>
+      {% endif %}
+    </span>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

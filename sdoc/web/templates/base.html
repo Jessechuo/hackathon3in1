@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}SDOC Inbox{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Fira+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%232563EB'/><path d='M3.5 5h9M3.5 8h9M3.5 11h5.5' stroke='white' stroke-width='1.5' stroke-linecap='round'/></svg>">
+<style>
+/* ── Design tokens ──────────────────────────────────────────────────────
+   Style: Minimalism & Swiss. Density 8/10. Variance 2/10. Motion 2/10.
+   Light palette is the source of truth; dark redefines the same roles. */
+:root {
+  --bg:#FFFFFF; --fg:#0F172A;
+  --muted:#F1F5FD; --muted-fg:#475569;
+  --border:#E4ECFC;
+  --primary:#2563EB; --on-primary:#FFFFFF;
+  --destructive:#DC2626;
+  --ring:#2563EB;
+
+  --sans:"Fira Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Fira Code",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
+  --row:40px;
+  --radius:6px;
+  --t:180ms cubic-bezier(.2,0,0,1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#0B1120; --fg:#E2E8F0;
+    --muted:#131C2E; --muted-fg:#94A3B8;
+    --border:#1E293B;
+    --primary:#60A5FA; --on-primary:#0B1120;
+    --destructive:#F87171;
+    --ring:#60A5FA;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#0B1120; --fg:#E2E8F0;
+  --muted:#131C2E; --muted-fg:#94A3B8;
+  --border:#1E293B;
+  --primary:#60A5FA; --on-primary:#0B1120;
+  --destructive:#F87171;
+  --ring:#60A5FA;
+}
+
+*,*::before,*::after { box-sizing:border-box; }
+html { -webkit-text-size-adjust:100%; }
+body {
+  margin:0; background:var(--bg); color:var(--fg);
+  font-family:var(--sans); font-size:15px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* Accessibility: visible focus on every interactive element. */
+a:focus-visible, button:focus-visible {
+  outline:2px solid var(--ring); outline-offset:2px; border-radius:2px;
+}
+a { cursor:pointer; }
+
+.skip {
+  position:absolute; left:-9999px; top:0; z-index:10;
+  background:var(--primary); color:var(--on-primary);
+  padding:var(--s2) var(--s4); border-radius:var(--radius); font-weight:500;
+}
+.skip:focus { left:var(--s3); top:var(--s3); }
+
+@media (prefers-reduced-motion: reduce) {
+  *,*::before,*::after { transition-duration:.01ms !important; animation-duration:.01ms !important; }
+}
+
+/* ── Header ─────────────────────────────────────────────────────────── */
+header {
+  position:sticky; top:0; z-index:5; background:var(--bg);
+  border-bottom:1px solid var(--border);
+  padding:var(--s3) var(--s5);
+  display:flex; align-items:center; gap:var(--s4); flex-wrap:wrap;
+}
+header h1 {
+  margin:0; font-size:15px; font-weight:600; letter-spacing:-.01em;
+  font-family:var(--mono);
+}
+header .count { color:var(--muted-fg); font-size:13px; font-variant-numeric:tabular-nums; }
+
+nav { display:flex; gap:var(--s1); flex-wrap:wrap; margin-left:auto; align-items:center; }
+nav .pill {
+  font-size:12px; font-weight:500; line-height:1;
+  padding:7px 11px; border-radius:99px;
+  border:1px solid var(--border); color:var(--muted-fg);
+  text-decoration:none; background:transparent;
+  transition:color var(--t), border-color var(--t), background var(--t);
+  min-height:24px; display:inline-flex; align-items:center;
+}
+nav .pill:hover { color:var(--fg); border-color:var(--muted-fg); }
+nav .pill[aria-current="true"] {
+  background:var(--fg); color:var(--bg); border-color:var(--fg);
+}
+nav .pill.inert { opacity:.45; cursor:not-allowed; }
+nav .pill.inert:hover { color:var(--muted-fg); border-color:var(--border); }
+
+.notice {
+  padding:var(--s2) var(--s5);
+  background:var(--muted); border-bottom:1px solid var(--border);
+  color:var(--muted-fg); font-size:13px;
+}
+.notice code { font-family:var(--mono); font-size:12px; color:var(--fg); }
+
+main { padding:0; }
+
+/* ── Category slot ──────────────────────────────────────────────────────
+   Reserved now, filled after classification runs. Fixed width so adding
+   real badges tomorrow does not relayout the table. */
+.cat { width:108px; flex:0 0 108px; display:flex; align-items:center; }
+.cat-slot {
+  display:block; width:100%; height:18px;
+  border:1px dashed var(--border); border-radius:4px;
+}
+.badge {
+  display:inline-flex; align-items:center; height:18px; padding:0 7px;
+  border-radius:4px; font-size:11px; font-weight:600; letter-spacing:.02em;
+  font-family:var(--mono); white-space:nowrap;
+  background:var(--muted); color:var(--muted-fg);
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header>
+  <h1>SDOC Inbox</h1>
+  <span class="count">{% block count %}{% endblock %}</span>
+  <nav aria-label="Filter by category">
+    <a class="pill" href="/" aria-current="{{ 'true' if not active else 'false' }}">All</a>
+    {% for c in categories_list %}
+      {% if has_categories %}
+        <a class="pill" href="/?category={{ c }}"
+           aria-current="{{ 'true' if active == c else 'false' }}">{{ c }}</a>
+      {% else %}
+        <span class="pill inert" aria-disabled="true"
+              title="Available once classification has run">{{ c }}</span>
+      {% endif %}
+    {% endfor %}
+  </nav>
+</header>
+{% if not has_categories %}
+<p class="notice">
+  Classification has not run yet — every email is unfiled. Run
+  <code>python -m sdoc.run_classify</code> to populate categories.
+</p>
+{% endif %}
+<main id="main">{% block content %}{% endblock %}</main>
+</body>
+</html>
