@@ -3,103 +3,169 @@
 {% block count %}{{ email.email_id }}{% endblock %}
 {% block content %}
 <style>
-  .wrap { max-width:860px; margin:0 auto; padding:var(--s5); }
+  .doc { max-width:1040px; margin:0 auto; padding:var(--xl) var(--lg) var(--xl); }
 
+  .toolbar {
+    display:flex; align-items:center; gap:var(--md); flex-wrap:wrap;
+    margin-bottom:var(--xl);
+  }
   .back {
-    display:inline-flex; align-items:center; gap:6px;
-    color:var(--muted-fg); text-decoration:none; font-size:13px;
-    min-height:24px; transition:color var(--t);
+    display:inline-flex; align-items:center; gap:6px; height:28px;
+    color:var(--fg-muted); font-size:13px; transition:color var(--t);
   }
   .back:hover { color:var(--primary); }
-  .back svg { width:14px; height:14px; stroke:currentColor; fill:none;
-              stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .back kbd {
+    font-family:var(--mono); font-size:10px; color:var(--fg-subtle);
+    border:1px solid var(--border-strong); border-radius:3px; padding:1px 5px;
+  }
+  .toolbar .tags { display:flex; align-items:center; gap:var(--md); margin-left:var(--lg); }
+  .toolbar .why { color:var(--fg-subtle); font-size:12px; font-style:italic; }
+  .toolbar .nav { margin-left:auto; display:flex; gap:var(--xs); }
 
-  h2 {
-    margin:var(--s4) 0 var(--s2);
-    font-size:19px; font-weight:600; line-height:1.35; letter-spacing:-.01em;
+  .panel {
+    background:var(--l1); border:1px solid var(--border);
+    border-radius:var(--r-ctl);
+  }
+  .head { padding:var(--lg) var(--xl); }
+  .head h1 { margin:0 0 var(--md); font-size:20px; line-height:28px; font-weight:600;
+             letter-spacing:-.01em; overflow-wrap:anywhere; }
+  .head .meta {
+    font-family:var(--mono); font-size:11px; line-height:18px; color:var(--fg-muted);
     overflow-wrap:anywhere;
   }
-  .meta {
-    color:var(--muted-fg); font-size:13px; font-family:var(--mono);
-    overflow-wrap:anywhere;
-  }
-  .filed { margin-top:var(--s3); display:flex; align-items:center; gap:var(--s2); }
-  .filed .why { color:var(--muted-fg); font-size:12px; font-style:italic; }
+  .head .meta b { color:var(--primary); font-weight:500; }
 
   .body {
-    margin:var(--s5) 0;
-    background:var(--muted); border:1px solid var(--border);
-    border-radius:var(--radius); padding:var(--s4);
-    font-family:var(--mono); font-size:13px; line-height:1.65;
+    margin-top:var(--lg); padding:var(--xl);
+    background:var(--l2); border:1px solid var(--border); border-radius:var(--r-ctl);
+    font-family:var(--mono); font-size:13px; line-height:20px;
     white-space:pre-wrap; overflow-wrap:anywhere;
   }
 
-  /* Reserved for the Day-2 SI vs BL comparison table. */
-  .slot {
-    margin:var(--s5) 0; padding:var(--s5) var(--s4);
-    border:1px dashed var(--border); border-radius:var(--radius);
-    color:var(--muted-fg); font-size:13px; text-align:center;
+  /* Reserved for the Day-2 SI vs BL diff. */
+  .report {
+    margin-top:var(--lg); padding:var(--xl);
+    background:var(--l1); border:1px dashed var(--border-strong);
+    border-radius:var(--r-ctl); text-align:center;
+  }
+  .report .t {
+    display:inline-flex; align-items:center; gap:var(--md);
+    color:var(--primary); font-size:14px; font-weight:600;
+  }
+  .report .s {
+    margin-top:var(--md); color:var(--fg-subtle);
+    font-family:var(--mono); font-size:11px;
   }
 
-  .atts { border-top:1px solid var(--border); padding-top:var(--s4); }
-  .atts h3 {
-    margin:0 0 var(--s3); font-size:11px; font-weight:600;
-    letter-spacing:.06em; text-transform:uppercase; color:var(--muted-fg);
+  .atts { margin-top:var(--xl); }
+  .atts .hdr {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:var(--md); color:var(--fg-subtle);
   }
-  .atts ul { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:var(--s3); }
-  .atts a {
-    display:inline-flex; align-items:center; gap:6px; min-height:24px;
-    color:var(--primary); text-decoration:none; font-size:13px;
-    font-family:var(--mono);
-    transition:opacity var(--t);
+  .atts .files { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:var(--lg); }
+  .file {
+    display:flex; align-items:center; gap:var(--lg);
+    padding:var(--lg); background:var(--l1);
+    border:1px solid var(--border); border-radius:var(--r-ctl);
+    transition:border-color var(--t), background var(--t);
   }
-  .atts a:hover { text-decoration:underline; }
-  .atts svg { width:13px; height:13px; stroke:currentColor; fill:none;
-              stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
-  .none { color:var(--muted-fg); font-size:13px; }
+  .file:hover { border-color:var(--primary); background:var(--l2); }
+  .file .ic {
+    width:32px; height:32px; flex:none; border-radius:var(--r-ctl);
+    background:var(--l2); color:var(--fg-muted);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .file .txt { min-width:0; flex:1; }
+  .file .nm { display:block; font-family:var(--mono); font-size:12px; color:var(--fg);
+              overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .file .sz { display:block; margin-top:2px;
+              font-family:var(--mono); font-size:11px; color:var(--fg-subtle); }
+  .file .go {
+    height:26px; padding:0 var(--lg); border-radius:var(--r-ctl);
+    border:1px solid var(--border-strong); color:var(--fg);
+    display:inline-flex; align-items:center; font-size:12px;
+  }
+  .file .go:hover { background:var(--l2); }
+  .nofiles { color:var(--fg-subtle); font-size:12px; }
 
-  @media (max-width:560px) { .wrap { padding:var(--s4) var(--s3); } }
+  .foot {
+    margin-top:var(--xl); padding-top:var(--lg); border-top:1px solid var(--border);
+    display:flex; justify-content:space-between; gap:var(--lg); flex-wrap:wrap;
+    font-family:var(--mono); font-size:11px; color:var(--fg-subtle);
+  }
 </style>
 
-<div class="wrap">
-  <a class="back" href="/">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-    Inbox
-  </a>
+<div class="doc">
+  <div class="toolbar">
+    <a class="back" href="/"><svg class="ico ico-sm"><use href="#i-back"/></svg> Inbox <kbd>Esc</kbd></a>
+    <div class="tags">
+      {% if cat and cat.get('category') %}
+        <span class="badge {{ cat.category }}">{{ cat.category }}</span>
+        {% if cat.get('status') %}
+          <span class="status {{ cat.status }}">{{ 'REVIEW' if cat.status == 'NEEDS_REVIEW' else cat.status }}</span>
+        {% endif %}
+        {% if cat.get('reason') %}<span class="why">{{ cat.reason }}</span>{% endif %}
+      {% else %}
+        <span class="slot-badge" style="width:120px"></span>
+        <span class="why">Not yet classified</span>
+      {% endif %}
+    </div>
+    <div class="nav">
+      {% if prev_id %}<a class="iconbtn" href="/email/{{ prev_id }}" title="Previous (K)" style="width:auto;padding:0 8px;font-family:var(--mono);font-size:11px">K</a>{% endif %}
+      {% if next_id %}<a class="iconbtn" href="/email/{{ next_id }}" title="Next (J)" style="width:auto;padding:0 8px;font-family:var(--mono);font-size:11px">J</a>{% endif %}
+    </div>
+  </div>
 
-  <h2>{{ email.subject }}</h2>
-  <div class="meta">{{ email.email_id }} · {{ email['from'] }}</div>
-
-  <div class="filed">
-    {% if cat %}
-      <span class="badge">{{ cat.category }}</span>
-      {% if cat.reason %}<span class="why">{{ cat.reason }}</span>{% endif %}
-    {% else %}
-      <span class="cat"><span class="cat-slot" aria-label="Not yet classified"></span></span>
-      <span class="why">Not yet classified</span>
-    {% endif %}
+  <div class="panel head">
+    <h1>{{ email.subject }}</h1>
+    <div class="meta"><b>{{ email.email_id }}</b> &middot; from {{ email['from'] }}</div>
   </div>
 
   <pre class="body">{{ email.body }}</pre>
 
-  <div class="slot">SI vs BL comparison appears here once the pipeline runs.</div>
+  <div class="report">
+    <span class="t"><svg class="ico"><use href="#i-diff"/></svg> Comparison report</span>
+    <div class="s">Reserved slot for the automated SI vs BL discrepancy diff</div>
+  </div>
 
   <section class="atts">
-    <h3>Attachments</h3>
+    <div class="hdr">
+      <span class="t-label-hdr">Attachments ({{ email.attachments|length }})</span>
+    </div>
     {% if email.attachments %}
-      <ul>
-        {% for a in email.attachments %}
-        <li>
-          <a href="/attachment/{{ a }}">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-            {{ a.split('/')[-1] }}
-          </a>
-        </li>
+      <div class="files">
+        {% for a in attachments %}
+        <a class="file" href="/attachment/{{ a.path }}">
+          <span class="ic"><svg class="ico"><use href="#i-doc"/></svg></span>
+          <span class="txt">
+            <span class="nm">{{ a.name }}</span>
+            <span class="sz">{{ a.size }} &middot; {{ a.kind }}</span>
+          </span>
+          <span class="go">Preview</span>
+        </a>
         {% endfor %}
-      </ul>
+      </div>
     {% else %}
-      <p class="none">None</p>
+      <p class="nofiles">No attachments on this email.</p>
     {% endif %}
   </section>
+
+  <div class="foot">
+    <span>Source: {{ email.email_id }}.json</span>
+    <span>{{ email.attachments|length }} file(s) referenced</span>
+  </div>
 </div>
+{% endblock %}
+
+{% block script %}
+<script>
+document.addEventListener("keydown", function (ev) {
+  if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+  var t = ev.target.tagName;
+  if (t === "INPUT" || t === "TEXTAREA") return;
+  if (ev.key === "Escape") location.href = "/";
+  {% if next_id %}else if (ev.key === "j" || ev.key === "J") location.href = "/email/{{ next_id }}";{% endif %}
+  {% if prev_id %}else if (ev.key === "k" || ev.key === "K") location.href = "/email/{{ prev_id }}";{% endif %}
+});
+</script>
 {% endblock %}

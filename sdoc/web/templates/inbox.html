@@ -1,75 +1,238 @@
 {% extends "base.html" %}
-{% block count %}{{ emails|length }}{% if emails|length != total %} of {{ total }}{% endif %} emails{% endblock %}
+{% block count %}{{ total }} emails{% endblock %}
 {% block content %}
 <style>
-  .list { display:flex; flex-direction:column; }
-  .row {
-    display:flex; align-items:center; gap:var(--s3);
-    min-height:var(--row); padding:var(--s2) var(--s5);
+  /* ── Statistics & filter ribbon ─────────────────────────────────── */
+  .ribbon {
+    background:var(--l1); border-bottom:1px solid var(--border);
+    padding:var(--sm) var(--lg);
+    display:flex; align-items:center; gap:var(--lg); flex-wrap:wrap;
+  }
+  .metric { display:flex; align-items:center; gap:var(--xs); }
+  .metric .lbl { color:var(--fg-subtle); }
+  .metric .big { font-family:var(--mono); font-size:13px; font-weight:600; color:var(--fg); }
+  .metric .sub { font-family:var(--mono); font-size:11px; color:var(--fg-subtle); }
+  .metric .pend { font-family:var(--mono); font-size:11px; color:var(--fg-subtle); }
+  .search {
+    margin-left:auto; position:relative; display:flex; align-items:center;
+  }
+  .search svg { position:absolute; left:8px; color:var(--fg-subtle); pointer-events:none; }
+  .search input {
+    height:28px; width:280px; max-width:46vw;
+    padding:0 var(--md) 0 28px;
+    background:var(--l2); color:var(--fg);
+    border:1px solid transparent; border-radius:var(--r-ctl);
+    font-family:var(--mono); font-size:11px;
+  }
+  .search input::placeholder { color:var(--fg-subtle); }
+  .search input:focus { outline:none; background:var(--l1); border-color:var(--primary); }
+  .search kbd {
+    position:absolute; right:7px; font-family:var(--mono); font-size:10px;
+    color:var(--fg-subtle); border:1px solid var(--border-strong);
+    border-radius:3px; padding:0 4px; pointer-events:none;
+  }
+  .search input:focus + kbd { display:none; }
+
+  /* ── Dense triage grid ──────────────────────────────────────────── */
+  .grid { width:100%; overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; text-align:left; min-width:940px; }
+  thead tr { height:34px; background:var(--l2); }
+  th {
+    font-size:11px; line-height:14px; font-weight:600;
+    letter-spacing:.05em; text-transform:uppercase; color:var(--fg-subtle);
+    padding:0 var(--md); white-space:nowrap; user-select:none;
     border-bottom:1px solid var(--border);
-    text-decoration:none; color:inherit;
+  }
+  .c-id   { width:56px; }
+  .c-cat  { width:132px; }
+  .c-ver  { width:124px; }
+  .c-from { width:210px; }
+  .c-att  { width:52px; text-align:center; }
+
+  tbody tr {
+    height:var(--row); background:var(--l1);
+    border-bottom:1px solid var(--border);
+    border-left:2px solid transparent;
     transition:background var(--t);
   }
-  .row:hover { background:var(--muted); }
-  .row:focus-visible { outline:2px solid var(--ring); outline-offset:-2px; }
+  tbody tr:hover { background:var(--l2); }
+  tbody tr.on {
+    background:var(--primary-soft);
+    border-left-color:var(--primary);
+  }
+  tbody tr:focus-within { outline:1px dashed var(--primary); outline-offset:-2px; }
+  td { padding:0 var(--md); vertical-align:middle; }
 
-  .eid {
-    font-family:var(--mono); font-size:12px; color:var(--muted-fg);
-    width:74px; flex:0 0 74px; font-variant-numeric:tabular-nums;
+  td.id a {
+    font-family:var(--mono); font-size:11px; color:var(--fg-subtle);
+    display:block; padding:11px 0;
   }
-  .subject {
-    flex:1 1 auto; min-width:0;
-    font-size:14px; font-weight:500;
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  td.subject { max-width:0; }
+  td.subject a {
+    display:block; padding:11px 0;
+    font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
-  .row:hover .subject { color:var(--primary); }
-  .sender {
-    width:210px; flex:0 0 210px;
-    font-size:12px; color:var(--muted-fg);
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  tr:hover td.subject a { color:var(--primary); }
+  tr.spam td.subject a { color:var(--fg-subtle); text-decoration:line-through; }
+  td.from {
+    font-family:var(--mono); font-size:11px; color:var(--fg-muted);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:210px;
   }
-  .att {
-    width:40px; flex:0 0 40px;
-    display:flex; align-items:center; justify-content:flex-end; gap:3px;
-    font-size:12px; color:var(--muted-fg); font-variant-numeric:tabular-nums;
-  }
-  .att svg { width:13px; height:13px; stroke:currentColor; fill:none;
-             stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  td.att { text-align:center; color:var(--fg-muted); }
+  td.att span { display:inline-flex; align-items:center; gap:3px;
+                font-family:var(--mono); font-size:11px; }
+  td.att .dash { color:var(--border-strong); }
 
-  .empty-state { padding:var(--s6) var(--s5); color:var(--muted-fg); text-align:center; }
-
-  @media (max-width: 1024px) { .sender { width:160px; flex-basis:160px; } }
-  @media (max-width: 768px)  { .sender { display:none; } }
-  @media (max-width: 560px)  {
-    .row { padding-left:var(--s3); padding-right:var(--s3); }
-    .eid { display:none; }
-    .cat, .cat.cat { width:88px; flex-basis:88px; }
+  .shortcuts {
+    display:flex; align-items:center; gap:var(--lg); flex-wrap:wrap;
+    padding:var(--md) var(--lg); border-top:1px solid var(--border);
+    background:var(--l1); color:var(--fg-subtle); font-size:11px;
   }
+  .shortcuts b { font-weight:600; letter-spacing:.05em; text-transform:uppercase; font-size:10px; }
+  .shortcuts kbd {
+    font-family:var(--mono); font-size:10px; color:var(--fg-muted);
+    border:1px solid var(--border-strong); border-radius:3px; padding:1px 5px;
+    margin-right:3px;
+  }
+  .none { padding:var(--xl) var(--lg); text-align:center; color:var(--fg-subtle); }
+
+  @media (max-width:1100px) { .c-from, td.from { display:none; } }
 </style>
 
-{% if not emails %}
-  <p class="empty-state">No emails match this filter.</p>
-{% else %}
-<div class="list">
-  {% for e in emails %}
-  <a class="row" href="/email/{{ e.email_id }}">
-    <span class="eid">{{ e.email_id.replace('email_','') }}</span>
-    <span class="cat">
-      {% set c = cats.get(e.email_id, {}).get('category') %}
-      {% if c %}<span class="badge">{{ c }}</span>
-      {% else %}<span class="cat-slot" aria-label="Not yet classified"></span>{% endif %}
-    </span>
-    <span class="subject">{{ e.subject }}</span>
-    <span class="sender">{{ e['from'] }}</span>
-    <span class="att">
-      {% if e.attachments %}
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-        <span>{{ e.attachments|length }}</span>
-        <span class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">attachments</span>
-      {% endif %}
-    </span>
-  </a>
-  {% endfor %}
+<section class="ribbon">
+  <div class="metric">
+    <span class="lbl t-label-hdr">Queue size:</span>
+    <span class="big" id="shown">{{ emails|length }}</span>
+    <span class="sub">/ {{ total }} total</span>
+  </div>
+  <span class="vr"></span>
+  <div class="metric">
+    <span class="lbl t-label-hdr">B/L pending check:</span>
+    {% if has_comparison %}
+      <span class="pend" style="color:var(--mismatch)">{{ n_mismatch }} mismatches</span>
+      <span class="pend">&middot;</span>
+      <span class="pend" style="color:var(--review)">{{ n_review }} needs review</span>
+      <span class="pend">&middot;</span>
+      <span class="pend" style="color:var(--ok)">{{ n_ok }} OK</span>
+    {% else %}
+      <span class="pend">awaiting comparison</span>
+    {% endif %}
+  </div>
+  <div class="search">
+    <svg class="ico ico-sm"><use href="#i-search"/></svg>
+    <input id="q" type="search" autocomplete="off" placeholder="Filter subject, sender, or ID...">
+    <kbd>/</kbd>
+  </div>
+</section>
+
+<div class="grid">
+  <table id="triage">
+    <thead>
+      <tr>
+        <th class="c-id">ID</th>
+        <th class="c-cat">Category</th>
+        <th class="c-ver">Verification</th>
+        <th>Subject line / reference track</th>
+        <th class="c-from">Sender</th>
+        <th class="c-att" title="Attachments">Att</th>
+      </tr>
+    </thead>
+    <tbody id="rows">
+      {% for e in emails %}
+      {% set r = cats.get(e.email_id, {}) %}
+      <tr data-id="{{ e.email_id }}"
+          data-q="{{ (e.email_id ~ ' ' ~ e.subject ~ ' ' ~ e['from'])|lower }}"
+          class="{{ 'spam' if r.get('category') == 'SPAM' else '' }}">
+        <td class="id"><a href="/email/{{ e.email_id }}" tabindex="-1">{{ e.email_id.replace('email_','') }}</a></td>
+        <td>
+          {% if r.get('category') %}<span class="badge {{ r.category }}">{{ r.category }}</span>
+          {% else %}<span class="slot-badge" aria-label="Not yet classified"></span>{% endif %}
+        </td>
+        <td>
+          {% if r.get('status') %}
+            <span class="status {{ r.status }}">{{ 'REVIEW' if r.status == 'NEEDS_REVIEW' else r.status }}</span>
+          {% else %}<span class="slot-badge" aria-label="Not yet verified"></span>{% endif %}
+        </td>
+        <td class="subject"><a href="/email/{{ e.email_id }}">{{ e.subject }}</a></td>
+        <td class="from">{{ e['from'] }}</td>
+        <td class="att">
+          {% if e.attachments %}
+            <span><svg class="ico ico-sm"><use href="#i-clip"/></svg>{{ e.attachments|length }}</span>
+            <span class="vh">attachments</span>
+          {% else %}<span class="dash">&ndash;</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if not emails %}<p class="none">No emails match this filter.</p>{% endif %}
 </div>
-{% endif %}
+
+<div class="shortcuts">
+  <b>Shortcuts</b>
+  <span><kbd>J</kbd><kbd>K</kbd> Navigate</span>
+  <span><kbd>Enter</kbd> Open</span>
+  <span><kbd>/</kbd> Search</span>
+  <span><kbd>Esc</kbd> Clear</span>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+(function () {
+  var rows = Array.prototype.slice.call(document.querySelectorAll("#rows tr"));
+  var q = document.getElementById("q");
+  var shown = document.getElementById("shown");
+  var cur = -1;
+
+  function visible() { return rows.filter(function (r) { return r.style.display !== "none"; }); }
+
+  function select(i) {
+    var v = visible();
+    if (!v.length) return;
+    i = Math.max(0, Math.min(i, v.length - 1));
+    rows.forEach(function (r) { r.classList.remove("on"); });
+    v[i].classList.add("on");
+    v[i].scrollIntoView({ block: "nearest" });
+    cur = i;
+  }
+
+  function filter() {
+    var term = q.value.trim().toLowerCase();
+    var n = 0;
+    rows.forEach(function (r) {
+      var hit = !term || r.dataset.q.indexOf(term) !== -1;
+      r.style.display = hit ? "" : "none";
+      if (hit) n++;
+    });
+    shown.textContent = n;
+    cur = -1;
+  }
+
+  q.addEventListener("input", filter);
+
+  document.addEventListener("keydown", function (ev) {
+    if (ev.target === q) {
+      if (ev.key === "Escape") { q.value = ""; filter(); q.blur(); }
+      return;
+    }
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+
+    if (ev.key === "/") { ev.preventDefault(); q.focus(); q.select(); }
+    else if (ev.key === "j" || ev.key === "J") { ev.preventDefault(); select(cur + 1); }
+    else if (ev.key === "k" || ev.key === "K") { ev.preventDefault(); select(cur - 1); }
+    else if (ev.key === "Enter" && cur >= 0) {
+      var row = visible()[cur];
+      if (row) location.href = "/email/" + row.dataset.id;
+    }
+  });
+
+  rows.forEach(function (r, i) {
+    r.addEventListener("click", function (ev) {
+      if (ev.target.closest("a")) return;
+      location.href = "/email/" + r.dataset.id;
+    });
+  });
+})();
+</script>
 {% endblock %}

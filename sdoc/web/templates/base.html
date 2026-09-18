@@ -6,150 +6,310 @@
 <title>{% block title %}SDOC Inbox{% endblock %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Fira+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%232563EB'/><path d='M3.5 5h9M3.5 8h9M3.5 11h5.5' stroke='white' stroke-width='1.5' stroke-linecap='round'/></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%232563eb'/><path d='M3.5 5h9M3.5 8h9M3.5 11h5.5' stroke='white' stroke-width='1.5' stroke-linecap='round'/></svg>">
 <style>
-/* ── Design tokens ──────────────────────────────────────────────────────
-   Style: Minimalism & Swiss. Density 8/10. Variance 2/10. Motion 2/10.
-   Light palette is the source of truth; dark redefines the same roles. */
+/* ══ SDOC Operational Triage ═════════════════════════════════════════════
+   Ported from design/sdoc_operational_triage/DESIGN.md.
+   Hand-authored CSS rather than the Tailwind CDN so the demo works with no
+   network. Inline SVG rather than the Material Symbols font, same reason. */
+
 :root {
-  --bg:#FFFFFF; --fg:#0F172A;
-  --muted:#F1F5FD; --muted-fg:#475569;
-  --border:#E4ECFC;
-  --primary:#2563EB; --on-primary:#FFFFFF;
-  --destructive:#DC2626;
-  --ring:#2563EB;
+  /* Elevation levels — hairlines and tonal shifts, never shadows. */
+  --l0:#f8fafc;            /* app shell          */
+  --l1:#ffffff;            /* rows, work surfaces */
+  --l2:#f1f5f9;            /* hover, sub-panes    */
+  --l3:#e8e7f1;            /* chips               */
+  --border:#e2e8f0;
+  --border-strong:#cbd5e1;
+
+  --fg:#0f172a;
+  --fg-muted:#475569;
+  --fg-subtle:#737686;
+
+  --primary:#2563eb;
+  --on-primary:#ffffff;
+  --primary-soft:#eff6ff;
+
+  --ok:#16a34a;
+  --mismatch:#dc2626;
+  --review:#d97706;
+
+  /* Category badges: 10% tint, full-contrast border and label. */
+  --bl-fg:#2563eb;  --bl-bd:#93c5fd;  --bl-bg:#eff6ff;
+  --si-fg:#7c3aed;  --si-bd:#c4b5fd;  --si-bg:#f5f3ff;
+  --iq-fg:#d97706;  --iq-bd:#fcd34d;  --iq-bg:#fffbeb;
+  --ge-fg:#64748b;  --ge-bd:#cbd5e1;  --ge-bg:#f8fafc;
+  --sp-fg:#dc2626;  --sp-bd:#fca5a5;  --sp-bg:#fef2f2;
 
   --sans:"Fira Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
-  --mono:"Fira Code",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 
-  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
-  --row:40px;
-  --radius:6px;
-  --t:180ms cubic-bezier(.2,0,0,1);
+  --xs:.25rem; --sm:.375rem; --md:.5rem; --lg:.75rem; --xl:1rem;
+  --row:40px; --rail:48px; --head:48px;
+  --r-ctl:4px; --r-badge:2px;
+  --t:80ms linear;            /* sub-100ms, per the spec */
 }
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg:#0B1120; --fg:#E2E8F0;
-    --muted:#131C2E; --muted-fg:#94A3B8;
-    --border:#1E293B;
-    --primary:#60A5FA; --on-primary:#0B1120;
-    --destructive:#F87171;
-    --ring:#60A5FA;
+    --l0:#09090b; --l1:#18181b; --l2:#27272a; --l3:#3f3f46;
+    --border:#27272a; --border-strong:#3f3f46;
+    --fg:#fafafa; --fg-muted:#a1a1aa; --fg-subtle:#8b8b93;
+    --primary:#60a5fa; --on-primary:#09090b; --primary-soft:#1e293b;
+    --ok:#22c55e; --mismatch:#ef4444; --review:#f59e0b;
+    --bl-fg:#93c5fd; --bl-bd:#1e40af; --bl-bg:#172554;
+    --si-fg:#c4b5fd; --si-bd:#5b21b6; --si-bg:#2e1065;
+    --iq-fg:#fcd34d; --iq-bd:#92400e; --iq-bg:#451a03;
+    --ge-fg:#94a3b8; --ge-bd:#334155; --ge-bg:#0f172a;
+    --sp-fg:#fca5a5; --sp-bd:#991b1b; --sp-bg:#450a0a;
   }
 }
 :root[data-theme="dark"] {
-  --bg:#0B1120; --fg:#E2E8F0;
-  --muted:#131C2E; --muted-fg:#94A3B8;
-  --border:#1E293B;
-  --primary:#60A5FA; --on-primary:#0B1120;
-  --destructive:#F87171;
-  --ring:#60A5FA;
+  --l0:#09090b; --l1:#18181b; --l2:#27272a; --l3:#3f3f46;
+  --border:#27272a; --border-strong:#3f3f46;
+  --fg:#fafafa; --fg-muted:#a1a1aa; --fg-subtle:#8b8b93;
+  --primary:#60a5fa; --on-primary:#09090b; --primary-soft:#1e293b;
+  --ok:#22c55e; --mismatch:#ef4444; --review:#f59e0b;
+  --bl-fg:#93c5fd; --bl-bd:#1e40af; --bl-bg:#172554;
+  --si-fg:#c4b5fd; --si-bd:#5b21b6; --si-bg:#2e1065;
+  --iq-fg:#fcd34d; --iq-bd:#92400e; --iq-bg:#451a03;
+  --ge-fg:#94a3b8; --ge-bd:#334155; --ge-bg:#0f172a;
+  --sp-fg:#fca5a5; --sp-bd:#991b1b; --sp-bg:#450a0a;
 }
 
 *,*::before,*::after { box-sizing:border-box; }
 html { -webkit-text-size-adjust:100%; }
 body {
-  margin:0; background:var(--bg); color:var(--fg);
-  font-family:var(--sans); font-size:15px; line-height:1.5;
+  margin:0; background:var(--l0); color:var(--fg);
+  font-family:var(--sans); font-size:13px; line-height:18px;
   -webkit-font-smoothing:antialiased;
+  font-variant-numeric:tabular-nums;   /* no jitter while sorting */
 }
-
-/* Accessibility: visible focus on every interactive element. */
-a:focus-visible, button:focus-visible {
-  outline:2px solid var(--ring); outline-offset:2px; border-radius:2px;
-}
-a { cursor:pointer; }
-
-.skip {
-  position:absolute; left:-9999px; top:0; z-index:10;
-  background:var(--primary); color:var(--on-primary);
-  padding:var(--s2) var(--s4); border-radius:var(--radius); font-weight:500;
-}
-.skip:focus { left:var(--s3); top:var(--s3); }
-
+a { color:inherit; text-decoration:none; cursor:pointer; }
+button { font:inherit; cursor:pointer; }
+:focus-visible { outline:2px solid var(--primary); outline-offset:1px; }
 @media (prefers-reduced-motion: reduce) {
-  *,*::before,*::after { transition-duration:.01ms !important; animation-duration:.01ms !important; }
+  *,*::before,*::after { transition-duration:.01ms !important; }
+}
+.skip { position:absolute; left:-9999px; top:0; z-index:99;
+  background:var(--primary); color:var(--on-primary);
+  padding:var(--md) var(--xl); border-radius:var(--r-ctl); font-weight:600; }
+.skip:focus { left:var(--lg); top:var(--lg); }
+.vh { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+
+/* ── Type scale ─────────────────────────────────────────────────────── */
+.t-headline-lg { font-size:20px; line-height:28px; font-weight:600; letter-spacing:-.01em; }
+.t-headline-sm { font-size:14px; line-height:20px; font-weight:600; }
+.t-body-sm     { font-size:12px; line-height:16px; }
+.t-mono-lg     { font-family:var(--mono); font-size:13px; line-height:18px; font-weight:500; }
+.t-mono-sm     { font-family:var(--mono); font-size:11px; line-height:14px; }
+.t-label-hdr   { font-size:11px; line-height:14px; font-weight:600;
+                 letter-spacing:.05em; text-transform:uppercase; }
+
+/* ── Icons (inline sprite) ──────────────────────────────────────────── */
+.ico { width:16px; height:16px; flex:none; stroke:currentColor; fill:none;
+       stroke-width:1.75; stroke-linecap:round; stroke-linejoin:round; }
+.ico-sm { width:13px; height:13px; }
+.ico-lg { width:20px; height:20px; }
+
+/* ── App shell ──────────────────────────────────────────────────────── */
+header.app {
+  position:fixed; inset:0 0 auto 0; z-index:50; height:var(--head);
+  background:var(--l1); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:var(--lg);
+  padding:0 var(--lg);
+}
+.brand { display:flex; align-items:center; gap:var(--sm); color:var(--fg); }
+.brand svg { color:var(--primary); }
+.vr { width:1px; height:16px; background:var(--border-strong); flex:none; }
+.chip-count {
+  font-family:var(--mono); font-size:11px; line-height:14px;
+  background:var(--l3); color:var(--fg-muted);
+  padding:3px var(--md); border-radius:var(--r-ctl); white-space:nowrap;
+}
+.filters { display:flex; align-items:center; gap:3px; margin-left:auto; flex-wrap:wrap; }
+.head-right { display:flex; align-items:center; gap:var(--xs); }
+
+/* Filter buttons: mono uppercase micro-labels. */
+.fbtn {
+  height:28px; padding:0 var(--md); border-radius:var(--r-ctl);
+  font-family:var(--mono); font-size:10px; line-height:12px; font-weight:600;
+  letter-spacing:.04em; text-transform:uppercase;
+  display:inline-flex; align-items:center; gap:5px;
+  background:transparent; color:var(--fg-muted);
+  border:1px solid var(--border-strong);
+  transition:background var(--t), color var(--t), border-color var(--t);
+  white-space:nowrap;
+}
+.fbtn:hover { background:var(--l2); color:var(--fg); }
+.fbtn[aria-pressed="true"] { background:var(--primary); color:var(--on-primary); border-color:var(--primary); }
+.fbtn[aria-disabled="true"] { opacity:.4; cursor:not-allowed; }
+.fbtn[aria-disabled="true"]:hover { background:transparent; color:var(--fg-muted); }
+.fbtn.k-BL_COMPARISON { color:var(--bl-fg); border-color:var(--bl-bd); }
+.fbtn.k-SI_REQUEST    { color:var(--si-fg); border-color:var(--si-bd); }
+.fbtn.k-INVOICE_QUERY { color:var(--iq-fg); border-color:var(--iq-bd); }
+.fbtn.k-GENERAL       { color:var(--ge-fg); border-color:var(--ge-bd); }
+.fbtn.k-SPAM          { color:var(--sp-fg); border-color:var(--sp-bd); }
+.iconbtn {
+  width:28px; height:28px; border-radius:var(--r-ctl);
+  border:1px solid var(--border-strong); background:transparent;
+  color:var(--fg-muted); display:inline-flex; align-items:center; justify-content:center;
+  transition:background var(--t), color var(--t);
+}
+.iconbtn:hover { background:var(--l2); color:var(--fg); }
+
+/* Collapsible navigation rail. */
+aside.rail {
+  position:fixed; left:0; top:var(--head); bottom:0; width:var(--rail); z-index:40;
+  background:var(--l1); border-right:1px solid var(--border);
+  display:flex; flex-direction:column; align-items:center; justify-content:space-between;
+  padding:var(--md) 0;
+}
+.rail nav { display:flex; flex-direction:column; gap:var(--xs); }
+.rail a, .rail span.item {
+  width:36px; height:36px; border-radius:var(--r-ctl);
+  display:flex; align-items:center; justify-content:center;
+  color:var(--fg-muted); transition:background var(--t), color var(--t);
+}
+.rail a:hover { background:var(--l2); color:var(--fg); }
+.rail a[aria-current="page"] { background:var(--primary); color:var(--on-primary); }
+.rail span.item { opacity:.3; cursor:not-allowed; }
+
+.shell { padding-left:var(--rail); padding-top:var(--head); }
+
+/* ── Badges & status ────────────────────────────────────────────────── */
+.badge {
+  display:inline-flex; align-items:center; height:20px; padding:0 6px;
+  border-radius:var(--r-badge); border:1px solid;
+  font-family:var(--mono); font-size:10px; line-height:12px; font-weight:600;
+  letter-spacing:.04em; white-space:nowrap;
+}
+.badge.BL_COMPARISON { color:var(--bl-fg); border-color:var(--bl-bd); background:var(--bl-bg); }
+.badge.SI_REQUEST    { color:var(--si-fg); border-color:var(--si-bd); background:var(--si-bg); }
+.badge.INVOICE_QUERY { color:var(--iq-fg); border-color:var(--iq-bd); background:var(--iq-bg); }
+.badge.GENERAL       { color:var(--ge-fg); border-color:var(--ge-bd); background:var(--ge-bg); }
+.badge.SPAM          { color:var(--sp-fg); border-color:var(--sp-bd); background:var(--sp-bg); }
+
+/* Reserved slot — fixed size so filling it later causes no relayout. */
+.slot-badge {
+  display:inline-block; width:100%; height:20px;
+  border:1px dashed var(--border); border-radius:var(--r-badge);
 }
 
-/* ── Header ─────────────────────────────────────────────────────────── */
-header {
-  position:sticky; top:0; z-index:5; background:var(--bg);
-  border-bottom:1px solid var(--border);
-  padding:var(--s3) var(--s5);
-  display:flex; align-items:center; gap:var(--s4); flex-wrap:wrap;
-}
-header h1 {
-  margin:0; font-size:15px; font-weight:600; letter-spacing:-.01em;
-  font-family:var(--mono);
-}
-header .count { color:var(--muted-fg); font-size:13px; font-variant-numeric:tabular-nums; }
-
-nav { display:flex; gap:var(--s1); flex-wrap:wrap; margin-left:auto; align-items:center; }
-nav .pill {
-  font-size:12px; font-weight:500; line-height:1;
-  padding:7px 11px; border-radius:99px;
-  border:1px solid var(--border); color:var(--muted-fg);
-  text-decoration:none; background:transparent;
-  transition:color var(--t), border-color var(--t), background var(--t);
-  min-height:24px; display:inline-flex; align-items:center;
-}
-nav .pill:hover { color:var(--fg); border-color:var(--muted-fg); }
-nav .pill[aria-current="true"] {
-  background:var(--fg); color:var(--bg); border-color:var(--fg);
-}
-nav .pill.inert { opacity:.45; cursor:not-allowed; }
-nav .pill.inert:hover { color:var(--muted-fg); border-color:var(--border); }
+/* Dot + label, never colour alone. */
+.status { display:inline-flex; align-items:center; gap:5px;
+  font-family:var(--mono); font-size:10px; line-height:12px; font-weight:600;
+  letter-spacing:.04em; }
+.status::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor; flex:none; }
+.status.OK           { color:var(--ok); }
+.status.MISMATCH     { color:var(--mismatch); }
+.status.NEEDS_REVIEW { color:var(--review); }
 
 .notice {
-  padding:var(--s2) var(--s5);
-  background:var(--muted); border-bottom:1px solid var(--border);
-  color:var(--muted-fg); font-size:13px;
+  background:var(--primary-soft); border-bottom:1px solid var(--border);
+  padding:var(--md) var(--lg); color:var(--fg-muted); font-size:12px;
+  display:flex; align-items:center; gap:var(--md);
 }
-.notice code { font-family:var(--mono); font-size:12px; color:var(--fg); }
-
-main { padding:0; }
-
-/* ── Category slot ──────────────────────────────────────────────────────
-   Reserved now, filled after classification runs. Fixed width so adding
-   real badges tomorrow does not relayout the table. */
-.cat { width:108px; flex:0 0 108px; display:flex; align-items:center; }
-.cat-slot {
-  display:block; width:100%; height:18px;
-  border:1px dashed var(--border); border-radius:4px;
-}
-.badge {
-  display:inline-flex; align-items:center; height:18px; padding:0 7px;
-  border-radius:4px; font-size:11px; font-weight:600; letter-spacing:.02em;
-  font-family:var(--mono); white-space:nowrap;
-  background:var(--muted); color:var(--muted-fg);
-}
+.notice code { font-family:var(--mono); font-size:11px; color:var(--fg); }
+.notice svg { color:var(--primary); }
 </style>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
-<header>
-  <h1>SDOC Inbox</h1>
-  <span class="count">{% block count %}{% endblock %}</span>
-  <nav aria-label="Filter by category">
-    <a class="pill" href="/" aria-current="{{ 'true' if not active else 'false' }}">All</a>
-    {% for c in categories_list %}
-      {% if has_categories %}
-        <a class="pill" href="/?category={{ c }}"
-           aria-current="{{ 'true' if active == c else 'false' }}">{{ c }}</a>
-      {% else %}
-        <span class="pill inert" aria-disabled="true"
+
+<svg class="vh" aria-hidden="true"><defs>
+  <symbol id="i-anchor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="3"/><path d="M12 22V8M5 12H2a10 10 0 0 0 20 0h-3"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></symbol>
+  <symbol id="i-clip-board" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></symbol>
+  <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1V2l-2 1-2-1-2 1-2-1-2 1-2-1z"/><path d="M8 7h8M8 11h8M8 15h5"/></symbol>
+  <symbol id="i-diff" viewBox="0 0 24 24"><path d="M12 3v18M6 8l-3 4 3 4M18 8l3 4-3 4"/></symbol>
+  <symbol id="i-tune" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
+  <symbol id="i-contrast" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></symbol>
+</defs></svg>
+
+<header class="app">
+  <a class="brand" href="/">
+    <svg class="ico ico-lg"><use href="#i-anchor"/></svg>
+    <span class="t-headline-sm">SDOC Inbox</span>
+  </a>
+  <span class="vr"></span>
+  <span class="chip-count">{% block count %}{{ total }} emails{% endblock %}</span>
+
+  <div class="filters">
+    {% if has_categories %}
+      <a class="fbtn" href="/" aria-pressed="{{ 'true' if not active else 'false' }}">All</a>
+      {% for c in categories_list %}
+        <a class="fbtn k-{{ c }}" href="/?category={{ c }}"
+           aria-pressed="{{ 'true' if active == c else 'false' }}">{{ c }}</a>
+      {% endfor %}
+    {% else %}
+      <span class="fbtn" aria-pressed="true">All</span>
+      {% for c in categories_list %}
+        <span class="fbtn k-{{ c }}" aria-disabled="true"
               title="Available once classification has run">{{ c }}</span>
-      {% endif %}
+      {% endfor %}
+    {% endif %}
+    <span class="vr"></span>
+    <span class="fbtn" aria-disabled="true" title="Available once comparison has run">Status: All</span>
+    {% for s in ["OK","MISMATCH","NEEDS_REVIEW"] %}
+      <span class="fbtn" aria-disabled="true" title="Available once comparison has run">
+        <span class="status {{ s }}"></span>{{ 'REVIEW' if s == 'NEEDS_REVIEW' else s }}
+      </span>
     {% endfor %}
-  </nav>
+  </div>
+
+  <div class="head-right">
+    <span class="vr"></span>
+    <button class="iconbtn" id="theme-toggle" title="Toggle light / dark" aria-label="Toggle light or dark theme">
+      <svg class="ico"><use href="#i-contrast"/></svg>
+    </button>
+  </div>
 </header>
-{% if not has_categories %}
-<p class="notice">
-  Classification has not run yet — every email is unfiled. Run
-  <code>python -m sdoc.run_classify</code> to populate categories.
-</p>
-{% endif %}
-<main id="main">{% block content %}{% endblock %}</main>
+
+<aside class="rail">
+  <nav aria-label="Sections">
+    <a href="/" aria-current="page" title="Triage Queue"><svg class="ico ico-lg"><use href="#i-inbox"/></svg><span class="vh">Triage Queue</span></a>
+    <span class="item" title="Bills of Lading — not built yet"><svg class="ico ico-lg"><use href="#i-doc"/></svg></span>
+    <span class="item" title="Shipping Instructions — not built yet"><svg class="ico ico-lg"><use href="#i-clip-board"/></svg></span>
+    <span class="item" title="Customs &amp; Invoices — not built yet"><svg class="ico ico-lg"><use href="#i-receipt"/></svg></span>
+    <span class="item" title="Discrepancy Log — not built yet"><svg class="ico ico-lg"><use href="#i-diff"/></svg></span>
+  </nav>
+  <span class="item" title="Settings — not built yet"><svg class="ico ico-lg"><use href="#i-tune"/></svg></span>
+</aside>
+
+<div class="shell">
+  {% if not has_categories %}
+  <p class="notice">
+    <svg class="ico ico-sm"><use href="#i-info"/></svg>
+    <span>Classification has not run — category and verification columns are reserved but empty.
+    Run <code>python -m sdoc.run_classify</code> to populate them.</span>
+  </p>
+  {% endif %}
+  <main id="main">{% block content %}{% endblock %}</main>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  try {
+    var saved = localStorage.getItem("sdoc-theme");
+    if (saved) root.setAttribute("data-theme", saved);
+  } catch (e) {}
+  var btn = document.getElementById("theme-toggle");
+  if (btn) btn.addEventListener("click", function () {
+    var dark = getComputedStyle(root).getPropertyValue("--l0").trim() === "#09090b";
+    var next = dark ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("sdoc-theme", next); } catch (e) {}
+  });
+})();
+</script>
+{% block script %}{% endblock %}
 </body>
 </html>
