@@ -48,7 +48,7 @@ def process(email: dict, cls: dict) -> dict:
     # 1. Attachments
     attachments = email.get("attachments") or []
     if not attachments:
-        if cls.get("says_documents_are_attached"):
+        if cls.get("documents_meant_to_be_attached"):
             return _review(r, "missing_attachment",
                            "The email says the SI and BL are attached, but no files came through.")
         r["note"] = "No documents attached yet - the sender is asking for the draft BL to be sent."

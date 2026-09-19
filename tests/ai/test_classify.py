@@ -41,10 +41,43 @@ def test_prompt_keeps_check_requests_with_bad_attachments_as_comparison():
     assert "missing" in prompt
 
 
-def test_prompt_asks_whether_documents_are_said_to_be_attached():
+def flat(text: str) -> str:
+    return " ".join(text.split()).lower()
+
+
+def test_prompt_asks_about_intent_not_literal_attachment():
+    """email_506/508/510 say the attachments 'appear to have been dropped'.
+    Asked 'does it say documents are attached?', the model correctly said
+    no. The question that matters is whether they were MEANT to be."""
     email = {"from": "a@b.com", "subject": "S", "body": "B", "email_id": "email_001"}
+    prompt = flat(classify.build_prompt(email))
+    assert "documents_meant_to_be_attached" in prompt
+    assert "even when they say the files are missing or were dropped" in prompt
+    assert "says_documents_are_attached" not in prompt
+
+
+def test_prompt_says_to_judge_the_newest_message_not_the_thread():
+    """email_119 was read as a 'follow-up reminder' because of the quoted
+    history at the bottom, not the check request at the top."""
+    email = {"from": "a@b.com", "subject": "S", "body": "B", "email_id": "email_001"}
+    prompt = flat(classify.build_prompt(email))
+    assert "newest message" in prompt and "quoted" in prompt
+
+
+def test_prompt_lists_attachment_file_names():
+    """30 emails say 'Pls assist to check the draft BL against the SI'. Haiku
+    got 29 of 30 whatever the wording, but WHICH one it missed moved with
+    each prompt change (email_119, then email_468). A person triaging would
+    see the SI and BL attached; the model never did."""
+    email = {"from": "a@b.com", "subject": "S", "body": "B", "email_id": "email_468",
+             "attachments": ["attachments/email_468_SI.txt", "attachments/email_468_BL.txt"]}
     prompt = classify.build_prompt(email)
-    assert "says_documents_are_attached" in prompt
+    assert "Attachments: email_468_SI.txt, email_468_BL.txt" in prompt
+
+
+def test_prompt_says_when_nothing_is_attached():
+    email = {"from": "a@b.com", "subject": "S", "body": "B", "email_id": "e", "attachments": []}
+    assert "Attachments: none" in classify.build_prompt(email)
 
 
 def test_classify_delegates_to_the_client(monkeypatch):
@@ -53,7 +86,7 @@ def test_classify_delegates_to_the_client(monkeypatch):
     def fake_call(prompt, schema, model):
         captured["prompt"] = prompt
         captured["model"] = model
-        return schema(category="SPAM", says_documents_are_attached=False, reason="prize scam")
+        return schema(category="SPAM", documents_meant_to_be_attached=False, reason="prize scam")
 
     monkeypatch.setattr(classify, "call_structured", fake_call)
 

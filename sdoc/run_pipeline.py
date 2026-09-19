@@ -42,7 +42,8 @@ def run(emails: list[dict], categories: dict, previous: dict, workers: int = 4) 
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-    logging.getLogger("httpx").setLevel(logging.WARNING)
+    for noisy in ("httpx", "httpx2"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--only", help="comma-separated email ids, e.g. email_004,email_013")
     ap.add_argument("--limit", type=int, help="only the first N emails")

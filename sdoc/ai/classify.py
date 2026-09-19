@@ -14,7 +14,9 @@ class Classification(BaseModel):
     # Only matters for BL_COMPARISON emails with no attachments: "please send
     # me the draft BL" (nothing promised, fine) vs "compare the attached"
     # (documents promised but missing, escalate). Only the body tells them apart.
-    says_documents_are_attached: bool
+    # Named for INTENT: an earlier name, says_documents_are_attached, was read
+    # literally - "attachments appear to have been dropped" got false.
+    documents_meant_to_be_attached: bool
     reason: str
 
 
@@ -46,24 +48,38 @@ recipient to DO next?
   "send me the draft BL for checking" -> BL_COMPARISON
   "confirm the BL is in order" (wrong file attached) -> BL_COMPARISON
 
+Emails often end with quoted earlier messages (below a line of underscores,
+or after a "From: ... Sent: ..." header). Classify on the newest message at
+the top; the quoted history is background only, even when it reads like a
+reminder or a follow-up.
+
 From: {sender}
 Subject: {subject}
+Attachments: {attachments}
 Body:
 {body}
 
-Also answer says_documents_are_attached: true if the sender says documents
-are attached to THIS email, or asks the recipient to compare documents they
-have supposedly provided; false if they ask for documents to be sent or
-prepared later, or mention no documents at all.
+Also answer documents_meant_to_be_attached: true if the sender meant the SI
+and/or BL to come with THIS email - they refer to documents as attached or
+enclosed, or ask the recipient to check or compare documents now - even when
+they say the files are missing or were dropped. False if they ask for
+documents to be sent or prepared later, or mention no documents at all.
 
-Give the category, says_documents_are_attached, and a short reason (under
+Give the category, documents_meant_to_be_attached, and a short reason (under
 15 words)."""
+
+
+def _attachment_names(email: dict) -> str:
+    # What an email client shows a person triaging: the attached file names.
+    names = [path.split("/")[-1] for path in email.get("attachments") or []]
+    return ", ".join(names) if names else "none"
 
 
 def build_prompt(email: dict) -> str:
     return PROMPT.format(
         sender=email["from"],
         subject=email["subject"],
+        attachments=_attachment_names(email),
         body=email["body"],
     )
 

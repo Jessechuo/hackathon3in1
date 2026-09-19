@@ -17,7 +17,7 @@ def fields(**over):
     return ShipmentFields(**base)
 
 
-BL = {"category": "BL_COMPARISON", "reason": "check", "says_documents_are_attached": True}
+BL = {"category": "BL_COMPARISON", "reason": "check", "documents_meant_to_be_attached": True}
 TWO = {"email_id": "email_900",
        "attachments": ["attachments/email_900_SI.txt", "attachments/email_900_BL.txt"]}
 
@@ -39,7 +39,7 @@ def test_other_categories_pass_through():
 
 
 def test_no_attachments_and_none_promised_is_ok():
-    r = pipeline.process({"email_id": "e", "attachments": []}, {**BL, "says_documents_are_attached": False})
+    r = pipeline.process({"email_id": "e", "attachments": []}, {**BL, "documents_meant_to_be_attached": False})
     assert (r["status"], r["review_reason"]) == ("OK", None)
 
 

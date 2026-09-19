@@ -145,8 +145,12 @@ Reload the web UI and the category badges are populated.
 
 ```bash
 python -m sdoc.run_classify --limit 50       # first 50 emails only
+python -m sdoc.run_classify --only email_119,email_506   # just these emails
 python -m sdoc.run_classify --workers 4      # fewer parallel requests
 ```
+
+`--only` and `--limit` update `out/categories.json` rather than replacing it,
+so testing a prompt change on a handful of emails never loses the rest.
 
 ## Run the comparison
 
