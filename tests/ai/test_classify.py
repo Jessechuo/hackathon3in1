@@ -41,13 +41,19 @@ def test_prompt_keeps_check_requests_with_bad_attachments_as_comparison():
     assert "missing" in prompt
 
 
+def test_prompt_asks_whether_documents_are_said_to_be_attached():
+    email = {"from": "a@b.com", "subject": "S", "body": "B", "email_id": "email_001"}
+    prompt = classify.build_prompt(email)
+    assert "says_documents_are_attached" in prompt
+
+
 def test_classify_delegates_to_the_client(monkeypatch):
     captured = {}
 
     def fake_call(prompt, schema, model):
         captured["prompt"] = prompt
         captured["model"] = model
-        return schema(category="SPAM", reason="prize scam")
+        return schema(category="SPAM", says_documents_are_attached=False, reason="prize scam")
 
     monkeypatch.setattr(classify, "call_structured", fake_call)
 

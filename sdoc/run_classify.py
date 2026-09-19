@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from sdoc.ai.classify import classify
+from sdoc.ai.client import usage_summary
 from sdoc.config import OUT_DIR
 from sdoc.inbox import load_emails
 
@@ -21,11 +22,17 @@ def _one(email: dict) -> tuple[str, dict]:
     eid = email["email_id"]
     try:
         result = classify(email)
-        return eid, {"category": result.category, "reason": result.reason, "error": None}
+        return eid, {
+            "category": result.category,
+            "says_documents_are_attached": result.says_documents_are_attached,
+            "reason": result.reason,
+            "error": None,
+        }
     except Exception:
         log.warning("classification failed for %s", eid)
         return eid, {
             "category": FALLBACK_CATEGORY,
+            "says_documents_are_attached": None,
             "reason": "classification failed",
             "error": traceback.format_exc(),
         }
@@ -63,6 +70,7 @@ def main() -> None:
     log.info("category mix: %s", counts)
     if failures:
         log.warning("%d emails failed and fell back to %s", failures, FALLBACK_CATEGORY)
+    log.info(usage_summary())
 
 
 if __name__ == "__main__":

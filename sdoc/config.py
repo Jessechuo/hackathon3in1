@@ -16,3 +16,10 @@ CACHE_DIR = Path(os.environ.get("SDOC_CACHE", ROOT / ".cache"))
 CLASSIFY_MODEL = "claude-haiku-4-5"
 EXTRACT_MODEL = "claude-opus-5"
 VISION_MODEL = "claude-opus-5"
+
+# USD per 1M tokens (input, output). Used only to print a cost line after
+# each run so spend is visible; Anthropic bills from its own records.
+PRICES = {
+    "claude-opus-5": (5.00, 25.00),
+    "claude-haiku-4-5": (1.00, 5.00),
+}

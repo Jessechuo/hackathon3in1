@@ -11,6 +11,10 @@ CATEGORIES = ["BL_COMPARISON", "SI_REQUEST", "INVOICE_QUERY", "GENERAL", "SPAM"]
 
 class Classification(BaseModel):
     category: Literal["BL_COMPARISON", "SI_REQUEST", "INVOICE_QUERY", "GENERAL", "SPAM"]
+    # Only matters for BL_COMPARISON emails with no attachments: "please send
+    # me the draft BL" (nothing promised, fine) vs "compare the attached"
+    # (documents promised but missing, escalate). Only the body tells them apart.
+    says_documents_are_attached: bool
     reason: str
 
 
@@ -47,7 +51,13 @@ Subject: {subject}
 Body:
 {body}
 
-Give the category and a short reason (under 15 words)."""
+Also answer says_documents_are_attached: true if the sender says documents
+are attached to THIS email, or asks the recipient to compare documents they
+have supposedly provided; false if they ask for documents to be sent or
+prepared later, or mention no documents at all.
+
+Give the category, says_documents_are_attached, and a short reason (under
+15 words)."""
 
 
 def build_prompt(email: dict) -> str:

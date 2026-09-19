@@ -5,7 +5,7 @@ from sdoc.ai.classify import Classification
 def test_classifies_every_email(monkeypatch):
     monkeypatch.setattr(
         run_classify, "classify",
-        lambda e: Classification(category="SPAM", reason="test"),
+        lambda e: Classification(category="SPAM", says_documents_are_attached=False, reason="test"),
     )
     emails = [{"email_id": f"email_{i:03d}"} for i in range(1, 6)]
 
@@ -14,6 +14,7 @@ def test_classifies_every_email(monkeypatch):
     assert len(result) == 5
     assert result["email_001"]["category"] == "SPAM"
     assert result["email_001"]["error"] is None
+    assert result["email_001"]["says_documents_are_attached"] is False
 
 
 def test_one_failure_does_not_kill_the_batch(monkeypatch):
@@ -22,7 +23,7 @@ def test_one_failure_does_not_kill_the_batch(monkeypatch):
     def flaky(email):
         if email["email_id"] == "email_003":
             raise RuntimeError("boom")
-        return Classification(category="GENERAL", reason="ok")
+        return Classification(category="GENERAL", says_documents_are_attached=False, reason="ok")
 
     monkeypatch.setattr(run_classify, "classify", flaky)
     emails = [{"email_id": f"email_{i:03d}"} for i in range(1, 6)]
