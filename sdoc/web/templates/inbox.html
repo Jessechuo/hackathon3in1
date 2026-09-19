@@ -149,7 +149,7 @@
           {% else %}<span class="slot-badge" aria-label="Not yet classified"></span>{% endif %}
         </td>
         <td>
-          {% if r.get('status') %}
+          {% if r.get('category') == 'BL_COMPARISON' and r.get('status') and r.get('note') != 'Not processed yet.' %}
             <span class="status {{ r.status }}">{{ 'REVIEW' if r.status == 'NEEDS_REVIEW' else r.status }}</span>
           {% else %}<span class="slot-badge" aria-label="Not yet verified"></span>{% endif %}
         </td>

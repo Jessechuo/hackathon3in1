@@ -147,6 +147,24 @@
     display:flex; justify-content:space-between; gap:var(--lg); flex-wrap:wrap;
     font-family:var(--mono); font-size:11px; color:var(--fg-subtle);
   }
+  .cmp { margin-top:var(--lg); background:var(--l1); border:1px solid var(--border); border-radius:var(--r-ctl); overflow:hidden; }
+  .cmp-head { display:flex; align-items:center; gap:var(--md); flex-wrap:wrap;
+              padding:var(--lg) var(--xl); border-bottom:1px solid var(--border); }
+  .cmp-head .t { display:inline-flex; align-items:center; gap:var(--md); color:var(--primary); font-size:14px; font-weight:600; }
+  .cmp-head .rr { font-family:var(--mono); font-size:11px; color:var(--review); }
+  .cmp-note { margin:0; padding:var(--md) var(--xl); color:var(--fg-muted); font-size:13px; }
+  .cmp-table { width:100%; border-collapse:collapse; }
+  .cmp-table th { text-align:left; font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase;
+                  color:var(--fg-subtle); padding:var(--sm) var(--xl); background:var(--l2); border-top:1px solid var(--border); }
+  .cmp-table td { padding:var(--sm) var(--xl); border-top:1px solid var(--border);
+                  font-family:var(--mono); font-size:12px; overflow-wrap:anywhere; }
+  .cmp-table td.fn { font-family:var(--sans); color:var(--fg-muted); white-space:nowrap; }
+  .cmp-table td.mk { width:40px; text-align:center; font-family:var(--sans); font-weight:700; }
+  .cmp-table tr.bad td { background:rgba(220,38,38,.12); }
+  .cmp-table tr.bad td.mk { color:var(--mismatch); }
+  .cmp-table tr.miss td { background:rgba(217,119,6,.10); }
+  .cmp-table tr.ok td.mk { color:var(--ok); }
+  .cmp-muted { margin-top:var(--lg); color:var(--fg-subtle); font-size:12px; }
 </style>
 
 <div class="doc">
@@ -155,7 +173,7 @@
     <div class="tags">
       {% if cat and cat.get('category') %}
         <span class="badge {{ cat.category }}">{{ cat.category }}</span>
-        {% if cat.get('status') %}
+        {% if cat.get('category') == 'BL_COMPARISON' and cat.get('status') %}
           <span class="status {{ cat.status }}">{{ 'REVIEW' if cat.status == 'NEEDS_REVIEW' else cat.status }}</span>
         {% endif %}
         {% if cat.get('reason') %}<span class="why">{{ cat.reason }}</span>{% endif %}
@@ -205,10 +223,39 @@
 
   <pre class="body">{{ email.body }}</pre>
 
+  {% if cat and cat.get('category') == 'BL_COMPARISON' and 'fields' in cat %}
+  <section class="cmp" aria-label="Comparison report">
+    <div class="cmp-head">
+      <span class="t"><svg class="ico"><use href="#i-diff"/></svg> Comparison report</span>
+      <span class="status {{ cat.status }}">{{ 'REVIEW' if cat.status == 'NEEDS_REVIEW' else cat.status }}</span>
+      {% if cat.get('review_reason') %}<span class="rr">{{ cat.review_reason }}</span>{% endif %}
+    </div>
+    {% if cat.get('note') %}<p class="cmp-note">{{ cat.note }}</p>{% endif %}
+    {% if cat.fields %}
+    <table class="cmp-table">
+      <thead><tr><th>Field</th><th>SI (reference)</th><th>BL (draft)</th><th></th></tr></thead>
+      <tbody>
+      {% for f in cat.fields %}
+        {% set state = 'bad' if f.match is sameas false else ('miss' if f.match is none else 'ok') %}
+        <tr class="{{ state }}">
+          <td class="fn">{{ f.name }}</td>
+          <td>{{ f.si if f.si is not none else '(blank)' }}</td>
+          <td>{{ f.bl if f.bl is not none else '(blank)' }}</td>
+          <td class="mk" title="{{ {'bad': 'differs', 'miss': 'blank', 'ok': 'matches'}[state] }}">{{ {'bad': '✗', 'miss': '?', 'ok': '✓'}[state] }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </section>
+  {% elif cat and cat.get('category') and cat.get('category') != 'BL_COMPARISON' %}
+  <p class="cmp-muted">Not a document-check request, so no SI vs BL comparison is needed.</p>
+  {% else %}
   <div class="report">
     <span class="t"><svg class="ico"><use href="#i-diff"/></svg> Comparison report</span>
-    <div class="s">Reserved slot for the automated SI vs BL discrepancy diff</div>
+    <div class="s">Appears here once the pipeline has run</div>
   </div>
+  {% endif %}
 
   <section class="atts">
     <div class="hdr">

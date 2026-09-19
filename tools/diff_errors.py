@@ -57,8 +57,22 @@ def main() -> int:
     if len(wrong_fields) > args.limit:
         print(f"  ... and {len(wrong_fields) - args.limit} more")
 
-    if not wrong_category and not wrong_fields:
-        print("\nNothing wrong. Suspicious — check the submission is not empty.")
+    wrong_review = []
+    for eid, truth in gt.items():
+        mine = sub.get(eid, {})
+        want = (truth.get("status"), truth.get("review_reason"))
+        got = (mine.get("status"), mine.get("review_reason"))
+        if "NEEDS_REVIEW" in (want[0], got[0]) and want != got:
+            wrong_review.append((eid, got, want))
+
+    print(f"\nESCALATION WRONG: {len(wrong_review)}")
+    for eid, got, want in wrong_review[: args.limit]:
+        print(f"  {eid}  said {got} actual {want}")
+    if len(wrong_review) > args.limit:
+        print(f"  ... and {len(wrong_review) - args.limit} more")
+
+    if not wrong_category and not wrong_fields and not wrong_review:
+        print("\nNothing wrong. Suspicious - check the submission is not empty.")
     return 0
 
 

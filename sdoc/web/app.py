@@ -14,7 +14,8 @@ from fastapi.templating import Jinja2Templates
 
 from sdoc.ai.classify import CATEGORIES
 from sdoc.config import BUNDLE_DIR, OUT_DIR
-from sdoc.inbox import load_emails, read_attachment_text
+from sdoc.extract import read_document
+from sdoc.inbox import load_emails
 
 app = FastAPI(title="SDOC Inbox")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
@@ -42,6 +43,7 @@ def load_results() -> dict:
 
 
 DECISIONS = {"verified", "mismatch"}
+STATUSES = ["OK", "MISMATCH", "NEEDS_REVIEW"]
 
 
 def load_review() -> dict:
@@ -78,23 +80,27 @@ def _attachment_meta(paths: list[str]) -> list[dict]:
     return meta
 
 
-def _shell(results: dict, active: str | None) -> dict:
+def _shell(results: dict, active: str | None, active_status: str | None = None) -> dict:
     """Context the base template needs for the header, rail and filters."""
-    statuses = [r.get("status") for r in results.values() if r.get("status")]
+    statuses = [r.get("status") for r in results.values()
+                if r.get("category") == "BL_COMPARISON" and r.get("status")
+                and r.get("note") != "Not processed yet."]
     return {
         "cats": results,
         "categories_list": CATEGORIES,
+        "statuses": STATUSES,
         "has_categories": bool(results),
-        "has_comparison": bool(statuses),
+        "has_comparison": bool(statuses),     # categories.json entries carry no status
         "n_ok": statuses.count("OK"),
         "n_mismatch": statuses.count("MISMATCH"),
         "n_review": statuses.count("NEEDS_REVIEW"),
         "active": active,
+        "active_status": active_status,
     }
 
 
 @app.get("/", response_class=HTMLResponse)
-def inbox(request: Request, category: str | None = None):
+def inbox(request: Request, category: str | None = None, status: str | None = None):
     all_emails = load_emails()
     results = load_results()
 
@@ -102,13 +108,19 @@ def inbox(request: Request, category: str | None = None):
     if category:
         if category not in CATEGORIES:
             raise HTTPException(status_code=400, detail=f"unknown category: {category}")
-        emails = [e for e in all_emails
+        emails = [e for e in emails
                   if results.get(e["email_id"], {}).get("category") == category]
+    if status:
+        if status not in STATUSES:
+            raise HTTPException(status_code=400, detail=f"unknown status: {status}")
+        emails = [e for e in emails
+                  if results.get(e["email_id"], {}).get("category") == "BL_COMPARISON"
+                  and results.get(e["email_id"], {}).get("status") == status]
 
     return templates.TemplateResponse(
         request=request,
         name="inbox.html",
-        context={"emails": emails, "total": len(all_emails), **_shell(results, category)},
+        context={"emails": emails, "total": len(all_emails), **_shell(results, category, status)},
     )
 
 
@@ -170,16 +182,11 @@ def attachment(path: str):
     if not path.startswith("attachments/") or ".." in path:
         raise HTTPException(status_code=400, detail="bad attachment path")
 
-    try:
-        text = read_attachment_text(path)
-    except FileNotFoundError:
+    doc = read_document(path)
+    if doc.problem == "file not found":
         raise HTTPException(status_code=404, detail=f"missing file: {path}")
+    text = doc.text if doc.readable else f"(This file cannot be read: {doc.problem}.)"
 
-    if not text.strip():
-        text = "(this file is empty)"
-
-    # Binary formats (.pdf/.docx/.xlsx) decode to mojibake here. That is
-    # expected until Day 2's extract/ module can render their real text.
     name = escape(path.split("/")[-1])
     return HTMLResponse(
         "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
