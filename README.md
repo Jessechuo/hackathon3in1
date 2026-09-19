@@ -112,7 +112,8 @@ notice bar in the UI says so.
 ## Run the classifier
 
 Needs an API key. Get one at [console.anthropic.com](https://console.anthropic.com)
-and add credit — a full run over 520 emails costs roughly **$2**.
+and add credit. Classification runs on Claude Haiku, so a full run over 520
+emails costs roughly **$0.70**.
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...          # macOS / Linux / Git Bash
@@ -193,11 +194,17 @@ or path written anywhere else.
 | `SDOC_CACHE` | `./.cache` | Where LLM responses are cached |
 | `ANTHROPIC_API_KEY` | — | Required only to run the classifier |
 
-To try a cheaper model, change one line in `sdoc/config.py`:
+Models are chosen per task in `sdoc/config.py`:
 
 ```python
-CLASSIFY_MODEL = "claude-haiku-4-5"    # was claude-opus-5
+CLASSIFY_MODEL = "claude-haiku-4-5"   # easy, high-volume step
+EXTRACT_MODEL  = "claude-opus-5"      # hard step that decides the field-match score
+VISION_MODEL   = "claude-opus-5"      # scanned PDFs
 ```
+
+Cost of a full classification run: ~$3.53 on Opus (measured), ~$0.70 on Haiku
+(estimated from pricing — Haiku is 5× cheaper per token).
+Changing a model changes the cache key, so the next run re-calls the API.
 
 ## Layout
 

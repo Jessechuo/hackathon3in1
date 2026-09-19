@@ -1,4 +1,5 @@
 from sdoc.ai import classify
+from sdoc.config import CLASSIFY_MODEL
 
 
 def test_prompt_contains_all_five_categories():
@@ -45,5 +46,5 @@ def test_classify_delegates_to_the_client(monkeypatch):
 
     assert result.category == "SPAM"
     assert result.reason == "prize scam"
-    assert captured["model"] == "claude-opus-5"
+    assert captured["model"] == CLASSIFY_MODEL
     assert "You WON" in captured["prompt"]

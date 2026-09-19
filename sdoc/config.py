@@ -8,8 +8,11 @@ BUNDLE_DIR = Path(os.environ.get("SDOC_BUNDLE", ROOT / "sdoc-hackathon-bundle"))
 OUT_DIR = Path(os.environ.get("SDOC_OUT", ROOT / "out"))
 CACHE_DIR = Path(os.environ.get("SDOC_CACHE", ROOT / ".cache"))
 
-# One model for everything on day 1. Change here to experiment; nothing
-# else in the codebase names a model.
-CLASSIFY_MODEL = "claude-opus-5"
+# Nothing else in the codebase names a model; change them here.
+# Classification is the easy, high-volume step, so it runs on Haiku: ~$0.70
+# per full 520-email run (estimated) vs ~$3.53 on Opus (measured). Document
+# extraction is the hard step that decides the exact-field score, so it
+# stays on Opus.
+CLASSIFY_MODEL = "claude-haiku-4-5"
 EXTRACT_MODEL = "claude-opus-5"
 VISION_MODEL = "claude-opus-5"
