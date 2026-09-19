@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}Overview — SDOC Inbox{% endblock %}
+{% block count %}Overview{% endblock %}
+{% block content %}
+<style>
+  .dash { padding:var(--xl) var(--lg) var(--xl); }
+  .dash-head { display:flex; align-items:baseline; gap:var(--md); flex-wrap:wrap; margin-bottom:var(--xl); }
+  .dash-head h1 { margin:0; font-size:20px; line-height:28px; font-weight:600; letter-spacing:-.01em; }
+  .dash-head .when { font-family:var(--mono); font-size:11px; color:var(--fg-subtle); }
+
+  /* ── KPI row ────────────────────────────────────────────────────────
+     Accent colour lives on the left edge and the icon only; the number
+     and its label stay in text tokens. Red/amber are reserved for the
+     two statuses they mean everywhere else in the app. */
+  .tiles { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:var(--lg); }
+  @media (max-width:1100px) { .tiles { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+  @media (max-width:600px)  { .tiles { grid-template-columns:1fr; } }
+
+  .stat-tile {
+    --accent:var(--primary);
+    display:flex; flex-direction:column; gap:var(--md);
+    padding:var(--xl); background:var(--l1); color:inherit;
+    border:1px solid var(--border); border-left:3px solid var(--accent);
+    border-radius:var(--r-ctl);
+    transition:background var(--t);
+  }
+  a.stat-tile:hover { background:var(--l2); }
+  .stat-tile .top { display:flex; align-items:center; gap:var(--lg); }
+  .stat-tile .ic {
+    width:44px; height:44px; flex:none; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--accent); background:color-mix(in srgb, var(--accent) 14%, transparent);
+  }
+  .stat-tile .ic svg { width:20px; height:20px; }
+  .stat-tile .lbl { font-size:11px; line-height:14px; font-weight:600; letter-spacing:.05em;
+                    text-transform:uppercase; color:var(--fg-muted); }
+  /* Big standalone numbers use proportional figures, not the app's tabular default. */
+  /* flex + baseline: the smaller "of 66" must not change the line box, or
+     that tile's caption drops out of line with its neighbours. */
+  .stat-tile .val { display:flex; align-items:baseline; gap:6px;
+                    font-size:32px; line-height:38px; font-weight:600; color:var(--fg);
+                    font-variant-numeric:normal; letter-spacing:-.01em; }
+  .stat-tile .val small { font-size:15px; font-weight:500; color:var(--fg-muted); letter-spacing:0; }
+  .stat-tile .sub { margin-top:auto; font-size:12px; line-height:16px; color:var(--fg-muted); }
+  .stat-tile .sub code { font-family:var(--mono); font-size:11px; color:var(--fg); }
+  .t-total  { --accent:var(--primary); }
+  .t-bad    { --accent:var(--mismatch); }
+  .t-review { --accent:var(--review); }
+  .t-human  { --accent:var(--si-fg); }
+
+  /* ── Bar lists ──────────────────────────────────────────────────────
+     One series each, so one hue and no legend: the panel title names it.
+     Thin bars, square at the baseline, 4px rounded data-end, value at the
+     tip in text ink. Each list is a real table, so the numbers read without
+     colour. */
+  .panels { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:var(--lg); margin-top:var(--lg); }
+  @media (max-width:900px) { .panels { grid-template-columns:1fr; } }
+  .panel { background:var(--l1); border:1px solid var(--border); border-radius:var(--r-ctl); padding:var(--xl); }
+  .panel h2 { margin:0; font-size:14px; line-height:20px; font-weight:600; }
+  .panel .desc { margin:2px 0 var(--lg); font-size:12px; color:var(--fg-muted); }
+  .bars { width:100%; border-collapse:collapse; }
+  .bars tr { transition:background var(--t); }
+  .bars tbody tr:hover { background:var(--l2); }
+  .bars td { padding:5px var(--sm); vertical-align:middle; }
+  .bars td.name { width:1%; white-space:nowrap; font-family:var(--mono); font-size:11px; color:var(--fg-muted); padding-right:var(--lg); }
+  .bars td.name a { color:var(--fg); }
+  .bars td.name a:hover { color:var(--primary); text-decoration:underline; }
+  .track { display:flex; align-items:center; gap:var(--md); }
+  .bar { display:block; height:10px; min-width:2px; background:var(--primary); border-radius:0 4px 4px 0; }
+  .track .n { font-size:12px; color:var(--fg); font-variant-numeric:tabular-nums; }
+  .empty { font-size:12px; color:var(--fg-subtle); margin:0; }
+  .empty code { font-family:var(--mono); font-size:11px; color:var(--fg); }
+</style>
+
+<div class="dash">
+  <div class="dash-head">
+    <h1>Overview</h1>
+  </div>
+
+  <section class="tiles" aria-label="Key figures">
+    <a class="stat-tile t-total" href="/">
+      <div class="top">
+        <span class="ic"><svg class="ico" aria-hidden="true"><use href="#i-inbox"/></svg></span>
+        <div>
+          <div class="lbl">Total emails</div>
+          <div class="val">{{ "{:,}".format(total) }}</div>
+        </div>
+      </div>
+      <div class="sub">{% if last_run %}Last run {{ last_run }}{% else %}Not classified yet{% endif %}</div>
+    </a>
+
+    <a class="stat-tile t-bad" href="/?status=MISMATCH">
+      <div class="top">
+        <span class="ic"><svg class="ico" aria-hidden="true"><use href="#i-flag"/></svg></span>
+        <div>
+          <div class="lbl">Mismatches</div>
+          <div class="val">{{ stats.mismatches if stats.has_comparison else "—" }}</div>
+        </div>
+      </div>
+      <div class="sub">{% if stats.has_comparison %}SI and BL disagree — click to view them{% else %}Run <code>python -m sdoc.run_pipeline</code>{% endif %}</div>
+    </a>
+
+    <a class="stat-tile t-review" href="/?status=NEEDS_REVIEW">
+      <div class="top">
+        <span class="ic"><svg class="ico" aria-hidden="true"><use href="#i-alert"/></svg></span>
+        <div>
+          <div class="lbl">Needs review</div>
+          <div class="val">{{ stats.needs_review if stats.has_comparison else "—" }}</div>
+        </div>
+      </div>
+      <div class="sub">{% if stats.has_comparison %}Could not be decided — open the review queue{% else %}Waiting for the comparison{% endif %}</div>
+    </a>
+
+    <a class="stat-tile t-human" href="/?status=NEEDS_REVIEW">
+      <div class="top">
+        <span class="ic"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg></span>
+        <div>
+          <div class="lbl">Human decisions</div>
+          <div class="val">{% if stats.has_comparison %}{{ stats.decided }} <small>of {{ stats.attention }}</small>{% else %}—{% endif %}</div>
+        </div>
+      </div>
+      <div class="sub">Flagged emails checked by a person</div>
+    </a>
+  </section>
+
+  <section class="panels">
+    <div class="panel">
+      <h2>Emails by category</h2>
+      <p class="desc">What the classifier decided each email is. Click a category to open it.</p>
+      {% if stats.by_category %}
+      <table class="bars">
+        <thead class="vh"><tr><th>Category</th><th>Emails</th></tr></thead>
+        <tbody>
+        {% for r in stats.by_category %}
+          <tr title="{{ r.label }}: {{ r.count }} emails, {{ r.share }}% of the inbox">
+            <td class="name"><a href="{{ r.href }}">{{ r.label }}</a></td>
+            <td><div class="track"><span class="bar" style="width:{{ r.width * 0.85 }}%"></span><span class="n">{{ r.count }}</span></div></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">Run <code>python -m sdoc.run_classify</code> to see the categories.</p>
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <h2>Most common mismatches</h2>
+      <p class="desc">Which of the seven fields differ between SI and BL most often.</p>
+      {% if stats.by_field %}
+      <table class="bars">
+        <thead class="vh"><tr><th>Field</th><th>Mismatched emails</th></tr></thead>
+        <tbody>
+        {% for r in stats.by_field %}
+          <tr title="{{ r.label }}: wrong in {{ r.count }} emails, {{ r.share }}% of all field mismatches">
+            <td class="name">{{ r.label }}</td>
+            <td><div class="track"><span class="bar" style="width:{{ r.width * 0.85 }}%"></span><span class="n">{{ r.count }}</span></div></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% elif stats.has_comparison %}
+      <p class="empty">No mismatches found.</p>
+      {% else %}
+      <p class="empty">Run <code>python -m sdoc.run_pipeline</code> to compare the documents.</p>
+      {% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}

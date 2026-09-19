@@ -160,7 +160,6 @@ header.app {
   white-space:nowrap;
 }
 .fbtn:hover { background:var(--l2); color:var(--fg); }
-.fbtn[aria-pressed="true"] { background:var(--primary); color:var(--on-primary); border-color:var(--primary); }
 .fbtn[aria-disabled="true"] { opacity:.4; cursor:not-allowed; }
 .fbtn[aria-disabled="true"]:hover { background:transparent; color:var(--fg-muted); }
 .fbtn.k-BL_COMPARISON { color:var(--bl-fg); border-color:var(--bl-bd); }
@@ -168,6 +167,11 @@ header.app {
 .fbtn.k-INVOICE_QUERY { color:var(--iq-fg); border-color:var(--iq-bd); }
 .fbtn.k-GENERAL       { color:var(--ge-fg); border-color:var(--ge-bd); }
 .fbtn.k-SPAM          { color:var(--sp-fg); border-color:var(--sp-bd); }
+/* Selected state must come AFTER the category colours: same specificity, so
+   the later rule wins. Before, a selected category kept its blue/violet
+   text on the blue fill and the label vanished. */
+.fbtn[aria-pressed="true"],
+.fbtn[aria-pressed="true"]:hover { background:var(--primary); color:var(--on-primary); border-color:var(--primary); }
 .iconbtn {
   width:28px; height:28px; border-radius:var(--r-ctl);
   border:1px solid var(--border-strong); background:transparent;
@@ -252,6 +256,8 @@ aside.rail {
   <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
   <symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
   <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
 </defs></svg>
 
@@ -305,7 +311,8 @@ aside.rail {
 
 <aside class="rail">
   <nav aria-label="Sections">
-    <a href="/" aria-current="page" title="Triage Queue"><svg class="ico ico-lg"><use href="#i-inbox"/></svg><span class="vh">Triage Queue</span></a>
+    <a href="/dashboard" aria-current="{{ 'page' if page == 'dashboard' else 'false' }}" title="Overview"><svg class="ico ico-lg"><use href="#i-grid"/></svg><span class="vh">Overview</span></a>
+    <a href="/" aria-current="{{ 'page' if page != 'dashboard' else 'false' }}" title="Triage Queue"><svg class="ico ico-lg"><use href="#i-inbox"/></svg><span class="vh">Triage Queue</span></a>
     <span class="item" title="Bills of Lading — not built yet"><svg class="ico ico-lg"><use href="#i-doc"/></svg></span>
     <span class="item" title="Shipping Instructions — not built yet"><svg class="ico ico-lg"><use href="#i-clip-board"/></svg></span>
     <span class="item" title="Customs &amp; Invoices — not built yet"><svg class="ico ico-lg"><use href="#i-receipt"/></svg></span>

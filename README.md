@@ -99,6 +99,9 @@ python -m uvicorn sdoc.web.app:app --reload --port 8000
 
 Open **http://localhost:8000**
 
+- **Overview** (`/dashboard`, top icon in the left rail) — total emails,
+  mismatches, needs review and human decisions as clickable cards, plus emails
+  per category and the most commonly mismatched fields
 - **Inbox** — all 520 emails, dense triage grid, category and verification columns
 - **Click a subject** — full email, metadata, attachments
 - **Click an attachment** — the raw SI or BL content
@@ -206,7 +209,7 @@ ground truth.
 python -m pytest -v
 ```
 
-93 tests, no API key required, no network. Every LLM call is replaced by a test
+105 tests, no API key required, no network. Every LLM call is replaced by a test
 double, so the entire pipeline is verifiable offline.
 
 ---
@@ -258,7 +261,7 @@ sdoc/
 tools/
 ├── make_submission.py categories.json -> submission.json
 └── diff_errors.py     which emails did we get wrong? (dev tool)
-tests/                 mirrors the sdoc/ layout — 93 tests, no API key needed
+tests/                 mirrors the sdoc/ layout — 105 tests, no API key needed
 docs/superpowers/      design spec and implementation plan
 design/                UI design system and mockups
 ```

@@ -4,6 +4,7 @@ Renders whatever exists: with no categories.json it still shows all 520
 emails, with the category and verification columns reserved but empty.
 """
 import json
+from collections import Counter
 from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
@@ -99,6 +100,69 @@ def _shell(results: dict, active: str | None, active_status: str | None = None) 
     }
 
 
+def _bar_rows(counts: Counter, href=None) -> list[dict]:
+    """Rank largest first; widths are relative to the largest bar."""
+    ranked = counts.most_common()
+    if not ranked:
+        return []
+    top = ranked[0][1]
+    total = sum(counts.values())
+    return [{
+        "label": label,
+        "count": n,
+        "width": round(n / top * 100, 1),
+        "share": round(n / total * 100),
+        "href": href(label) if href else None,
+    } for label, n in ranked]
+
+
+def dashboard_stats(results: dict, review: dict) -> dict:
+    """Every number on the dashboard, from results.json and review.json only."""
+    checked = {eid: r for eid, r in results.items()
+               if r.get("category") == "BL_COMPARISON" and r.get("status")
+               and r.get("note") != "Not processed yet."}
+    mismatches = [eid for eid, r in checked.items() if r["status"] == "MISMATCH"]
+    reviews = [eid for eid, r in checked.items() if r["status"] == "NEEDS_REVIEW"]
+    attention = set(mismatches) | set(reviews)
+    by_field = Counter(f for eid in mismatches for f in results[eid].get("defect_fields") or [])
+    by_category = Counter(r["category"] for r in results.values() if r.get("category"))
+    return {
+        "total": len(results),
+        "has_comparison": bool(checked),
+        "mismatches": len(mismatches),
+        "needs_review": len(reviews),
+        "attention": len(attention),
+        # Only decisions on flagged emails count as reviewing the flagged work.
+        "decided": sum(1 for eid in attention if eid in review),
+        "by_category": _bar_rows(by_category, lambda c: f"/?category={c}"),
+        "by_field": _bar_rows(by_field),
+    }
+
+
+def _last_run() -> str | None:
+    for name in ("results.json", "categories.json"):
+        path = Path(OUT_DIR) / name
+        if path.exists():
+            return datetime.fromtimestamp(path.stat().st_mtime).strftime("%d %b %Y, %H:%M:%S")
+    return None
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard(request: Request):
+    results = load_results()
+    return templates.TemplateResponse(
+        request=request,
+        name="dashboard.html",
+        context={
+            "page": "dashboard",
+            "total": len(load_emails()),
+            "stats": dashboard_stats(results, load_review()),
+            "last_run": _last_run(),
+            **_shell(results, None),
+        },
+    )
+
+
 @app.get("/", response_class=HTMLResponse)
 def inbox(request: Request, category: str | None = None, status: str | None = None):
     all_emails = load_emails()
@@ -120,7 +184,8 @@ def inbox(request: Request, category: str | None = None, status: str | None = No
     return templates.TemplateResponse(
         request=request,
         name="inbox.html",
-        context={"emails": emails, "total": len(all_emails), **_shell(results, category, status)},
+        context={"page": "inbox", "emails": emails, "total": len(all_emails),
+                 **_shell(results, category, status)},
     )
 
 
@@ -139,6 +204,7 @@ def email_detail(request: Request, email_id: str):
         request=request,
         name="email.html",
         context={
+            "page": "inbox",
             "email": email,
             "cat": results.get(email_id),
             "review": load_review().get(email_id),

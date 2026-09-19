@@ -1,0 +1,74 @@
+import json
+
+import pytest
+from fastapi.testclient import TestClient
+
+from sdoc.web import app as web
+
+RESULTS = {
+    "email_001": {"category": "BL_COMPARISON", "status": "MISMATCH",
+                  "defect_fields": ["container_count", "gross_weight_kg"]},
+    "email_002": {"category": "BL_COMPARISON", "status": "MISMATCH",
+                  "defect_fields": ["container_count"]},
+    "email_003": {"category": "BL_COMPARISON", "status": "NEEDS_REVIEW", "defect_fields": []},
+    "email_004": {"category": "BL_COMPARISON", "status": "OK", "defect_fields": []},
+    "email_005": {"category": "SPAM", "status": "OK", "defect_fields": []},
+    "email_006": {"category": "SPAM", "status": "OK", "defect_fields": []},
+}
+
+
+def test_stats_count_the_things_that_need_attention():
+    s = web.dashboard_stats(RESULTS, review={"email_001": {"decision": "verified"},
+                                             "email_006": {"decision": "verified"}})
+    assert s["total"] == 6
+    assert s["mismatches"] == 2
+    assert s["needs_review"] == 1
+    assert s["attention"] == 3
+    # email_006 is SPAM, so a decision on it is not a decision on flagged work
+    assert s["decided"] == 1
+
+
+def test_category_rows_are_ranked_and_scaled_to_the_largest():
+    rows = web.dashboard_stats(RESULTS, review={})["by_category"]
+    assert [(r["label"], r["count"]) for r in rows] == [("BL_COMPARISON", 4), ("SPAM", 2)]
+    assert rows[0]["width"] == 100 and rows[1]["width"] == 50
+    assert rows[0]["href"] == "/?category=BL_COMPARISON"
+
+
+def test_field_rows_count_each_mismatched_field():
+    rows = web.dashboard_stats(RESULTS, review={})["by_field"]
+    assert [(r["label"], r["count"]) for r in rows] == [("container_count", 2), ("gross_weight_kg", 1)]
+
+
+def test_stats_before_the_comparison_has_run():
+    cats_only = {"email_001": {"category": "BL_COMPARISON"}, "email_002": {"category": "SPAM"}}
+    s = web.dashboard_stats(cats_only, review={})
+    assert s["has_comparison"] is False
+    assert s["mismatches"] == 0 and s["by_field"] == []
+
+
+@pytest.fixture
+def site(tmp_path, monkeypatch):
+    monkeypatch.setattr(web, "OUT_DIR", tmp_path)
+    return TestClient(web.app), tmp_path
+
+
+def test_dashboard_page_links_every_card_into_the_inbox(site):
+    client, tmp = site
+    (tmp / "results.json").write_text(json.dumps(RESULTS), encoding="utf-8")
+    html = client.get("/dashboard").text
+    assert "stat-tile" in html
+    for href in ('href="/"', 'href="/?status=MISMATCH"', 'href="/?status=NEEDS_REVIEW"'):
+        assert href in html
+    assert "Emails by category" in html and "Most common mismatches" in html
+
+
+def test_dashboard_without_results_explains_what_to_run(site):
+    client, _ = site
+    html = client.get("/dashboard").text
+    assert "python -m sdoc.run_pipeline" in html
+
+
+def test_rail_links_to_the_dashboard(site):
+    client, _ = site
+    assert 'href="/dashboard"' in client.get("/").text
