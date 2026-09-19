@@ -33,12 +33,14 @@ telling a real discrepancy apart from a formatting difference.
 | ✅ Email classifier | Claude-based, intent-driven rather than keyword matching |
 | ✅ Disk-cached LLM client | Re-runs are free and instant |
 | ✅ Batch runner + submission builder | All 520 classified, scored output produced |
-| 🚧 Document extraction | txt / pdf / docx / xlsx — in progress |
-| 🚧 Field comparison + escalation | In progress |
-| 🚧 Human review queue | In progress |
+| ✅ Document reading | txt, xlsx, docx, pdf; scanned or broken files flagged as unreadable |
+| ✅ Field comparison + escalation | Claude reads both documents, Python decides; the four review reasons |
+| ✅ Comparison report in the UI | SI and BL side by side, status filter, Mark Verified / Flag Mismatch |
+| 🚧 Vision for scanned PDFs | Deferred — those emails escalate to a human either way |
 
-Because comparison is not built yet, a submission currently reports every email
-as `status: OK` with no defects. That scores the classification stage only.
+Scanned PDFs are not OCR'd yet: they go straight to human review as
+`unreadable`, which is also what the brief asks for when a document cannot
+be read dependably.
 
 ---
 
@@ -46,8 +48,8 @@ as `status: OK` with no defects. That scores the classification stage only.
 
 - **Python 3.11+** (developed on 3.13)
 - **The dataset** — see below. Not included in this repo.
-- **An Anthropic API key** — only needed to run the classifier. The web UI and
-  the whole test suite run without one.
+- **An Anthropic API key** — needed to run the classifier and the comparison.
+  The web UI and the whole test suite run without one.
 
 ## Install
 
@@ -146,7 +148,30 @@ python -m sdoc.run_classify --limit 50       # first 50 emails only
 python -m sdoc.run_classify --workers 4      # fewer parallel requests
 ```
 
+## Run the comparison
+
+Needs `out/categories.json` from the classifier. Document extraction runs on
+Claude Opus, one call per document-check email (about 120 calls).
+
+```bash
+python -m sdoc.run_pipeline --only email_004,email_013   # a couple first
+python -m sdoc.run_pipeline                              # everything
+```
+
+Writes `out/results.json` (the full report the web UI shows) and
+`out/submission.json` (the five scored keys for all 520 emails). Every run
+ends with a line showing API calls made and their approximate cost; re-runs
+come from the cache and cost nothing.
+
+If an email fails during processing it is kept, marked `NEEDS_REVIEW`, and
+its error is stored in `results.json`. Retry just that email with
+`python -m sdoc.run_pipeline --only email_123` — the rest of the results
+are kept.
+
 ## Score a submission
+
+`run_pipeline` already writes `out/submission.json`. To score classification
+alone, before the comparison has run:
 
 ```bash
 python tools/make_submission.py              # out/categories.json -> out/submission.json
@@ -177,7 +202,7 @@ ground truth.
 python -m pytest -v
 ```
 
-22 tests, no API key required, no network. Every LLM call is replaced by a test
+93 tests, no API key required, no network. Every LLM call is replaced by a test
 double, so the entire pipeline is verifiable offline.
 
 ---
@@ -192,7 +217,7 @@ or path written anywhere else.
 | `SDOC_BUNDLE` | `./sdoc-hackathon-bundle` | Where the dataset lives |
 | `SDOC_OUT` | `./out` | Where results are written |
 | `SDOC_CACHE` | `./.cache` | Where LLM responses are cached |
-| `ANTHROPIC_API_KEY` | — | Required only to run the classifier |
+| `ANTHROPIC_API_KEY` | — | Required to run the classifier and the comparison |
 
 Models are chosen per task in `sdoc/config.py`:
 
@@ -210,18 +235,26 @@ Changing a model changes the cache key, so the next run re-calls the API.
 
 ```
 sdoc/
-├── config.py          all paths and model names
+├── config.py          all paths, model names and prices
 ├── inbox.py           reads the bundle — knows nothing about AI
+├── extract.py         txt / xlsx / docx / pdf -> text, or why it can't be read
+├── core/
+│   ├── fields.py      the seven compared fields
+│   ├── normalize.py   blanks, weights, counts, ports, party names
+│   └── compare.py     SI vs BL, field by field — no AI
 ├── ai/
 │   ├── cache.py       content-addressed disk cache
-│   ├── client.py      the only file that imports `anthropic`
-│   └── classify.py    email -> category, owns the prompt
-├── run_classify.py    CLI: fan classification across the inbox
+│   ├── client.py      the only file that imports `anthropic`; counts cost
+│   ├── classify.py    email -> category, owns the prompt
+│   └── extract_pair.py SI + BL -> document types and raw field values
+├── pipeline.py        the checks, in order -> one decision per email
+├── run_classify.py    CLI: classify the inbox
+├── run_pipeline.py    CLI: check the documents
 └── web/               FastAPI + Jinja templates
 tools/
 ├── make_submission.py categories.json -> submission.json
 └── diff_errors.py     which emails did we get wrong? (dev tool)
-tests/                 mirrors the sdoc/ layout — 22 tests, no API key needed
+tests/                 mirrors the sdoc/ layout — 93 tests, no API key needed
 docs/superpowers/      design spec and implementation plan
 design/                UI design system and mockups
 ```

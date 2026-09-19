@@ -1,3 +1,9 @@
+# Secrets — API keys must never reach this public repo.
+.env
+.env.*
+*.env
+.env.txt
+
 # Python
 __pycache__/
 *.pyc
