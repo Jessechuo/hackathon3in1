@@ -31,6 +31,16 @@ def test_prompt_warns_that_subjects_mislead():
     assert "intent" in prompt or "asking" in prompt
 
 
+def test_prompt_keeps_check_requests_with_bad_attachments_as_comparison():
+    """email_504 asked for a BL check but attached a packing list, and was
+    classified SI_REQUEST, so it never reached the wrong-document check.
+    A check request stays BL_COMPARISON whatever is (or isn't) attached."""
+    email = {"from": "a@b.com", "subject": "S", "body": "B", "email_id": "email_001"}
+    prompt = classify.build_prompt(email).lower()
+    assert "wrong type" in prompt
+    assert "missing" in prompt
+
+
 def test_classify_delegates_to_the_client(monkeypatch):
     captured = {}
 

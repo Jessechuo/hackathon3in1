@@ -20,7 +20,10 @@ Classify this email into exactly one category.
 
 BL_COMPARISON  Someone is asking for a draft Bill of Lading to be CHECKED or
                COMPARED against a Shipping Instruction, or asking for the draft
-               BL to be sent so it can be checked.
+               BL to be sent so it can be checked. This stays BL_COMPARISON
+               even when the attached files are the wrong type (e.g. a packing
+               list instead of the BL) or are missing: the request is still a
+               check, and the attachment problem is handled later.
 SI_REQUEST     Someone is PROVIDING shipment details and asking that a Shipping
                Instruction or a draft BL be PREPARED from them.
 INVOICE_QUERY  About invoices, billing, GR postings, local charges, D&D,
@@ -37,6 +40,7 @@ recipient to DO next?
   "make me a BL from these details"   -> SI_REQUEST
   "check this BL against the SI"      -> BL_COMPARISON
   "send me the draft BL for checking" -> BL_COMPARISON
+  "confirm the BL is in order" (wrong file attached) -> BL_COMPARISON
 
 From: {sender}
 Subject: {subject}
