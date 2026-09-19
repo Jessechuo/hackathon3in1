@@ -109,6 +109,12 @@ button { font:inherit; cursor:pointer; }
 @media (prefers-reduced-motion: reduce) {
   *,*::before,*::after { transition-duration:.01ms !important; }
 }
+/* Hover fades on tiles, buttons and rows must not run when the THEME flips,
+   or those elements lag ~80ms behind the instantly-repainted page and the
+   switch looks like a flash. The toggle sets this class for one frame. */
+.theme-switching *, .theme-switching *::before, .theme-switching *::after {
+  transition:none !important;
+}
 .skip { position:absolute; left:-9999px; top:0; z-index:99;
   background:var(--primary); color:var(--on-primary);
   padding:var(--md) var(--xl); border-radius:var(--r-ctl); font-weight:600; }
@@ -344,11 +350,31 @@ aside.rail {
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   }
 
+  // Repaint the whole page in one frame: suspend transitions, apply the
+  // change, force the browser to compute the new colours NOW (offsetHeight),
+  // then re-enable transitions once that frame has painted. Because the new
+  // colours are already applied, re-enabling starts no fades.
+  function withoutTransitions(change) {
+    root.classList.add("theme-switching");
+    change();
+    void root.offsetHeight;
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { root.classList.remove("theme-switching"); });
+    });
+  }
+
   btn.addEventListener("click", function () {
     var next = current() === "dark" ? "light" : "dark";
-    root.setAttribute("data-theme", next);
+    withoutTransitions(function () { root.setAttribute("data-theme", next); });
     btn.setAttribute("aria-pressed", next === "dark" ? "true" : "false");
     try { localStorage.setItem("sdoc-theme", next); } catch (e) {}
+  });
+
+  // Following the OS theme (no choice saved) can flip mid-session too.
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () {
+    if (root.getAttribute("data-theme")) return;
+    withoutTransitions(function () {});
+    btn.setAttribute("aria-pressed", current() === "dark" ? "true" : "false");
   });
 
   btn.setAttribute("aria-pressed", current() === "dark" ? "true" : "false");

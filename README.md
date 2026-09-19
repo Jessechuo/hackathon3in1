@@ -209,7 +209,7 @@ ground truth.
 python -m pytest -v
 ```
 
-105 tests, no API key required, no network. Every LLM call is replaced by a test
+108 tests, no API key required, no network. Every LLM call is replaced by a test
 double, so the entire pipeline is verifiable offline.
 
 ---
@@ -261,7 +261,7 @@ sdoc/
 tools/
 ├── make_submission.py categories.json -> submission.json
 └── diff_errors.py     which emails did we get wrong? (dev tool)
-tests/                 mirrors the sdoc/ layout — 105 tests, no API key needed
+tests/                 mirrors the sdoc/ layout — 108 tests, no API key needed
 docs/superpowers/      design spec and implementation plan
 design/                UI design system and mockups
 ```
