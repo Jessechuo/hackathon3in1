@@ -291,12 +291,16 @@ aside.rail {
     {% endif %}
     <span class="vr"></span>
     {% if has_comparison %}
-      <a class="fbtn" href="/" aria-pressed="{{ 'true' if not active_status else 'false' }}">Status: All</a>
+      <a class="fbtn" href="/" aria-pressed="{{ 'true' if not active_status and not active_reviewed else 'false' }}">Status: All</a>
       {% for s in statuses %}
         <a class="fbtn" href="/?status={{ s }}" aria-pressed="{{ 'true' if active_status == s else 'false' }}">
           <span class="status {{ s }}"></span>{{ 'REVIEW' if s == 'NEEDS_REVIEW' else s }}
         </a>
       {% endfor %}
+      <a class="fbtn" href="/?reviewed=1" aria-pressed="{{ 'true' if active_reviewed else 'false' }}"
+         title="Emails a person has decided">
+        <svg class="ico ico-sm" aria-hidden="true"><use href="#i-check"/></svg>Reviewed{% if n_reviewed %} {{ n_reviewed }}{% endif %}
+      </a>
     {% else %}
       <span class="fbtn" aria-disabled="true" title="Available once comparison has run">Status: All</span>
       {% for s in statuses %}

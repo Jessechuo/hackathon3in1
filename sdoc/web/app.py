@@ -15,8 +15,10 @@ from fastapi.templating import Jinja2Templates
 
 from sdoc.ai.classify import CATEGORIES
 from sdoc.config import BUNDLE_DIR, OUT_DIR
+from sdoc.core.fields import FIELDS
 from sdoc.extract import read_document
 from sdoc.inbox import load_emails
+from sdoc.review import apply_reviews
 
 app = FastAPI(title="SDOC Inbox")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
@@ -43,7 +45,6 @@ def load_results() -> dict:
     return {}
 
 
-DECISIONS = {"verified", "mismatch"}
 STATUSES = ["OK", "MISMATCH", "NEEDS_REVIEW"]
 
 
@@ -61,6 +62,12 @@ def save_review(state: dict) -> None:
     (Path(OUT_DIR) / "review.json").write_text(
         json.dumps(state, indent=2), encoding="utf-8"
     )
+
+
+def load_view() -> dict:
+    """What every page shows: the pipeline's results with any reviewer
+    decisions applied on top. submission.json is never touched by this."""
+    return apply_reviews(load_results(), load_review())
 
 
 def _human_size(n: int) -> str:
@@ -81,7 +88,8 @@ def _attachment_meta(paths: list[str]) -> list[dict]:
     return meta
 
 
-def _shell(results: dict, active: str | None, active_status: str | None = None) -> dict:
+def _shell(results: dict, active: str | None, active_status: str | None = None,
+           active_reviewed: bool = False) -> dict:
     """Context the base template needs for the header, rail and filters."""
     statuses = [r.get("status") for r in results.values()
                 if r.get("category") == "BL_COMPARISON" and r.get("status")
@@ -95,8 +103,10 @@ def _shell(results: dict, active: str | None, active_status: str | None = None) 
         "n_ok": statuses.count("OK"),
         "n_mismatch": statuses.count("MISMATCH"),
         "n_review": statuses.count("NEEDS_REVIEW"),
+        "n_reviewed": sum(1 for r in results.values() if r.get("reviewed")),
         "active": active,
         "active_status": active_status,
+        "active_reviewed": active_reviewed,
     }
 
 
@@ -117,23 +127,28 @@ def _bar_rows(counts: Counter, href=None) -> list[dict]:
 
 
 def dashboard_stats(results: dict, review: dict) -> dict:
-    """Every number on the dashboard, from results.json and review.json only."""
-    checked = {eid: r for eid, r in results.items()
+    """Every number on the dashboard, from results.json and review.json only.
+
+    Mismatches and needs-review reflect reviewer decisions, so the review
+    queue empties as a person works through it. 'Flagged' is what the
+    SYSTEM flagged: the denominator for human decisions."""
+    view = apply_reviews(results, review)
+    checked = {eid: r for eid, r in view.items()
                if r.get("category") == "BL_COMPARISON" and r.get("status")
                and r.get("note") != "Not processed yet."}
     mismatches = [eid for eid, r in checked.items() if r["status"] == "MISMATCH"]
     reviews = [eid for eid, r in checked.items() if r["status"] == "NEEDS_REVIEW"]
-    attention = set(mismatches) | set(reviews)
-    by_field = Counter(f for eid in mismatches for f in results[eid].get("defect_fields") or [])
-    by_category = Counter(r["category"] for r in results.values() if r.get("category"))
+    flagged = [eid for eid, r in checked.items()
+               if r["system_status"] in ("MISMATCH", "NEEDS_REVIEW")]
+    by_field = Counter(f for eid in mismatches for f in view[eid].get("defect_fields") or [])
+    by_category = Counter(r["category"] for r in view.values() if r.get("category"))
     return {
-        "total": len(results),
+        "total": len(view),
         "has_comparison": bool(checked),
         "mismatches": len(mismatches),
         "needs_review": len(reviews),
-        "attention": len(attention),
-        # Only decisions on flagged emails count as reviewing the flagged work.
-        "decided": sum(1 for eid in attention if eid in review),
+        "attention": len(flagged),
+        "decided": sum(1 for eid in flagged if view[eid]["reviewed"]),
         "by_category": _bar_rows(by_category, lambda c: f"/?category={c}"),
         "by_field": _bar_rows(by_field),
     }
@@ -149,24 +164,25 @@ def _last_run() -> str | None:
 
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request):
-    results = load_results()
+    results, decisions = load_results(), load_review()
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
         context={
             "page": "dashboard",
             "total": len(load_emails()),
-            "stats": dashboard_stats(results, load_review()),
+            "stats": dashboard_stats(results, decisions),
             "last_run": _last_run(),
-            **_shell(results, None),
+            **_shell(apply_reviews(results, decisions), None),
         },
     )
 
 
 @app.get("/", response_class=HTMLResponse)
-def inbox(request: Request, category: str | None = None, status: str | None = None):
+def inbox(request: Request, category: str | None = None, status: str | None = None,
+          reviewed: bool = False):
     all_emails = load_emails()
-    results = load_results()
+    results = load_view()
 
     emails = all_emails
     if category:
@@ -180,12 +196,14 @@ def inbox(request: Request, category: str | None = None, status: str | None = No
         emails = [e for e in emails
                   if results.get(e["email_id"], {}).get("category") == "BL_COMPARISON"
                   and results.get(e["email_id"], {}).get("status") == status]
+    if reviewed:
+        emails = [e for e in emails if results.get(e["email_id"], {}).get("reviewed")]
 
     return templates.TemplateResponse(
         request=request,
         name="inbox.html",
         context={"page": "inbox", "emails": emails, "total": len(all_emails),
-                 **_shell(results, category, status)},
+                 **_shell(results, category, status, reviewed)},
     )
 
 
@@ -198,7 +216,12 @@ def email_detail(request: Request, email_id: str):
 
     i = index[email_id]
     email = ordered[i]
-    results = load_results()
+    results = load_view()
+    cat = results.get(email_id) or {}
+    review = cat.get("review")
+    # The tick list starts from the reviewer's own fields, else the system's findings.
+    preticked = (review.get("fields") if review and review.get("decision") == "mismatch"
+                 else cat.get("system_defect_fields")) or []
 
     return templates.TemplateResponse(
         request=request,
@@ -206,8 +229,11 @@ def email_detail(request: Request, email_id: str):
         context={
             "page": "inbox",
             "email": email,
-            "cat": results.get(email_id),
-            "review": load_review().get(email_id),
+            "cat": cat or None,
+            "review": review,
+            "can_review": cat.get("category") == "BL_COMPARISON",
+            "field_names": FIELDS,
+            "preticked": preticked,
             "attachments": _attachment_meta(email["attachments"]),
             "prev_id": ordered[i - 1]["email_id"] if i > 0 else None,
             "next_id": ordered[i + 1]["email_id"] if i + 1 < len(ordered) else None,
@@ -220,25 +246,42 @@ def email_detail(request: Request, email_id: str):
 
 @app.post("/review/{email_id}")
 async def record_review(email_id: str, request: Request):
-    """Record a human decision. Toggling the same decision clears it."""
+    """Record a reviewer's final word on a document-check email.
+
+    {"decision": "verified"}                        the documents are fine
+    {"decision": "mismatch", "fields": [...]}       these fields differ
+    {"decision": null}                              clear; the system's answer stands
+    """
     if not any(e["email_id"] == email_id for e in load_emails()):
         raise HTTPException(status_code=404, detail=f"no such email: {email_id}")
+    if load_results().get(email_id, {}).get("category") != "BL_COMPARISON":
+        raise HTTPException(status_code=400,
+                            detail="only document-check (BL_COMPARISON) emails can be reviewed")
 
     payload = await request.json()
     decision = payload.get("decision")
-    if decision not in DECISIONS:
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+    if decision is None:
+        current = None
+    elif decision == "verified":
+        current = {"decision": "verified", "at": now}
+    elif decision == "mismatch":
+        fields = payload.get("fields") or []
+        unknown = [f for f in fields if f not in FIELDS]
+        if not fields or unknown:
+            raise HTTPException(status_code=400,
+                                detail=f"tick at least one of {FIELDS}; unknown: {unknown}")
+        current = {"decision": "mismatch", "fields": [f for f in FIELDS if f in fields], "at": now}
+    else:
         raise HTTPException(status_code=400, detail=f"bad decision: {decision!r}")
 
     state = load_review()
-    if state.get(email_id, {}).get("decision") == decision:
-        state.pop(email_id, None)          # clicking the same button undoes it
-        current = None
+    if current is None:
+        state.pop(email_id, None)
     else:
-        current = {"decision": decision,
-                   "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
         state[email_id] = current
     save_review(state)
-
     return JSONResponse({"email_id": email_id, "review": current})
 
 

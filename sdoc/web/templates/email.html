@@ -165,6 +165,19 @@
   .cmp-table tr.miss td { background:rgba(217,119,6,.10); }
   .cmp-table tr.ok td.mk { color:var(--ok); }
   .cmp-muted { margin-top:var(--lg); color:var(--fg-subtle); font-size:12px; }
+  .cmp-head .by { font-size:12px; color:var(--fg-muted); }
+  .cmp-head .by b { font-weight:600; color:var(--fg); }
+
+  /* Reviewer's tick list: which of the seven fields are wrong. */
+  .picker { margin-top:var(--lg); padding:var(--xl); background:var(--l1);
+            border:1px solid var(--mismatch); border-radius:var(--r-ctl); }
+  .picker-head { font-size:14px; font-weight:600; margin-bottom:var(--lg); }
+  .picker-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:var(--md); }
+  .picker-grid label { display:flex; align-items:center; gap:var(--md);
+                       font-family:var(--mono); font-size:12px; cursor:pointer; }
+  .picker-grid input { width:16px; height:16px; accent-color:var(--mismatch); cursor:pointer; }
+  .picker-err { margin:var(--lg) 0 0; color:var(--mismatch); font-size:12px; }
+  .picker-acts { display:flex; gap:var(--md); margin-top:var(--xl); flex-wrap:wrap; }
 </style>
 
 <div class="doc">
@@ -183,6 +196,7 @@
       {% endif %}
     </div>
     <div class="acts">
+      {% if can_review %}
       <button class="act primary" id="verify"
               aria-pressed="{{ 'true' if review and review.decision == 'verified' else 'false' }}">
         <svg class="ico ico-sm"><use href="#i-check"/></svg>
@@ -197,6 +211,7 @@
       </button>
       <span class="saved" id="saved">{% if review %}saved {{ review.at[11:16] }} UTC{% endif %}</span>
       <span class="vr"></span>
+      {% endif %}
       <span class="pager">
         {% if prev_id %}
           <a href="/email/{{ prev_id }}" title="Previous (K)" aria-label="Previous email"><svg class="ico"><use href="#i-up"/></svg></a>
@@ -211,6 +226,23 @@
       </span>
     </div>
   </div>
+
+  {% if can_review %}
+  <div class="picker" id="picker" hidden>
+    <div class="picker-head">Which fields are wrong?</div>
+    <div class="picker-grid">
+      {% for name in field_names %}
+      <label><input type="checkbox" value="{{ name }}"{{ ' checked' if name in preticked else '' }}> {{ name }}</label>
+      {% endfor %}
+    </div>
+    <p class="picker-err" id="picker-err" hidden>Tick at least one field.</p>
+    <div class="picker-acts">
+      <button class="act danger" id="picker-save">Save mismatch</button>
+      <button class="act" id="picker-cancel">Cancel</button>
+      {% if review %}<button class="act" id="picker-clear">Clear decision</button>{% endif %}
+    </div>
+  </div>
+  {% endif %}
 
   <div class="panel head">
     <button class="copy" id="copy" title="Copy subject and id" aria-label="Copy subject and id">
@@ -229,6 +261,11 @@
       <span class="t"><svg class="ico"><use href="#i-diff"/></svg> Comparison report</span>
       <span class="status {{ cat.status }}">{{ 'REVIEW' if cat.status == 'NEEDS_REVIEW' else cat.status }}</span>
       {% if cat.get('review_reason') %}<span class="rr">{{ cat.review_reason }}</span>{% endif %}
+      {% if cat.get('reviewed') %}
+        <span class="by">Decided by <b>a reviewer</b>{% if cat.reviewer_changed %} &middot; the system said
+          {{ 'REVIEW' if cat.system_status == 'NEEDS_REVIEW' else cat.system_status }}
+          {%- if cat.system_defect_fields %} ({{ cat.system_defect_fields|join(', ') }}){% endif %}{% endif %}</span>
+      {% endif %}
     </div>
     {% if cat.get('note') %}<p class="cmp-note">{{ cat.note }}</p>{% endif %}
     {% if cat.fields %}
@@ -236,7 +273,8 @@
       <thead><tr><th>Field</th><th>SI (reference)</th><th>BL (draft)</th><th></th></tr></thead>
       <tbody>
       {% for f in cat.fields %}
-        {% set state = 'bad' if f.match is sameas false else ('miss' if f.match is none else 'ok') %}
+        {# colour by the FINAL answer: a reviewer's decision replaces the system's #}
+        {% set state = 'bad' if f.name in cat.defect_fields else ('miss' if f.match is none else 'ok') %}
         <tr class="{{ state }}">
           <td class="fn">{{ f.name }}</td>
           <td>{{ f.si if f.si is not none else '(blank)' }}</td>
@@ -290,39 +328,56 @@
 <script>
 (function () {
   var EID = "{{ email.email_id }}";
+  var CAN_REVIEW = {{ 'true' if can_review else 'false' }};
+  var DECISION = {{ (review.decision if review else none) | tojson }};
+
   var verify = document.getElementById("verify");
   var flag = document.getElementById("flag");
   var saved = document.getElementById("saved");
+  var picker = document.getElementById("picker");
 
-  var LABELS = {
-    verified: { on: "Verified", off: "Mark Verified" },
-    mismatch: { on: "Flagged", off: "Flag Mismatch" }
-  };
-
-  function paint(review) {
-    var d = review ? review.decision : null;
-    verify.setAttribute("aria-pressed", d === "verified" ? "true" : "false");
-    flag.setAttribute("aria-pressed", d === "mismatch" ? "true" : "false");
-    document.getElementById("verify-label").textContent =
-      d === "verified" ? LABELS.verified.on : LABELS.verified.off;
-    document.getElementById("flag-label").textContent =
-      d === "mismatch" ? LABELS.mismatch.on : LABELS.mismatch.off;
-    saved.textContent = review ? "saved " + review.at.slice(11, 16) + " UTC" : "";
-  }
-
-  function decide(decision) {
-    fetch("/review/" + EID, {
+  // The whole report (status chips, table colours, the inbox behind) is
+  // rendered server-side from the decision, so reload rather than trying to
+  // repaint half a dozen places by hand.
+  function send(payload) {
+    return fetch("/review/" + EID, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ decision: decision })
+      body: JSON.stringify(payload)
     })
-      .then(function (r) { return r.json(); })
-      .then(function (d) { paint(d.review); })
-      .catch(function () { saved.textContent = "save failed"; });
+      .then(function (r) {
+        if (!r.ok) throw new Error(r.status);
+        location.reload();
+      })
+      .catch(function () { if (saved) saved.textContent = "save failed"; });
   }
 
-  verify.addEventListener("click", function () { decide("verified"); });
-  flag.addEventListener("click", function () { decide("mismatch"); });
+  function showPicker(open) {
+    if (!picker) return;
+    picker.hidden = !open;
+    if (open) picker.scrollIntoView({ block: "nearest" });
+  }
+
+  if (CAN_REVIEW) {
+    // Verified is a toggle; a second click clears the decision.
+    verify.addEventListener("click", function () {
+      send({ decision: DECISION === "verified" ? null : "verified" });
+    });
+    // Flagging needs to know WHICH fields, so it opens the tick list.
+    flag.addEventListener("click", function () { showPicker(picker.hidden); });
+    document.getElementById("picker-cancel").addEventListener("click", function () { showPicker(false); });
+
+    document.getElementById("picker-save").addEventListener("click", function () {
+      var fields = [].slice.call(picker.querySelectorAll("input:checked")).map(function (i) { return i.value; });
+      var err = document.getElementById("picker-err");
+      if (!fields.length) { err.hidden = false; return; }
+      err.hidden = true;
+      send({ decision: "mismatch", fields: fields });
+    });
+
+    var clear = document.getElementById("picker-clear");
+    if (clear) clear.addEventListener("click", function () { send({ decision: null }); });
+  }
 
   document.getElementById("copy").addEventListener("click", function (ev) {
     var text = EID + " — " + document.querySelector(".head h1").textContent.trim();
@@ -338,9 +393,10 @@
     var t = ev.target.tagName;
     if (t === "INPUT" || t === "TEXTAREA") return;
     var k = ev.key.toLowerCase();
-    if (ev.key === "Escape") location.href = "/";
-    else if (k === "v") { ev.preventDefault(); decide("verified"); }
-    else if (k === "f") { ev.preventDefault(); decide("mismatch"); }
+    var pickerOpen = picker && !picker.hidden;
+    if (ev.key === "Escape") { if (pickerOpen) showPicker(false); else location.href = "/"; }
+    else if (CAN_REVIEW && k === "v") { ev.preventDefault(); verify.click(); }
+    else if (CAN_REVIEW && k === "f") { ev.preventDefault(); flag.click(); }
     {% if next_id %}else if (k === "j") location.href = "/email/{{ next_id }}";{% endif %}
     {% if prev_id %}else if (k === "k") location.href = "/email/{{ prev_id }}";{% endif %}
   });

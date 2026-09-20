@@ -21,11 +21,20 @@ def test_stats_count_the_things_that_need_attention():
     s = web.dashboard_stats(RESULTS, review={"email_001": {"decision": "verified"},
                                              "email_006": {"decision": "verified"}})
     assert s["total"] == 6
-    assert s["mismatches"] == 2
+    # a reviewer cleared email_001, so only email_002 is still a mismatch
+    assert s["mismatches"] == 1
     assert s["needs_review"] == 1
+    # 'attention' is what the SYSTEM flagged: the denominator for human work
     assert s["attention"] == 3
     # email_006 is SPAM, so a decision on it is not a decision on flagged work
     assert s["decided"] == 1
+
+
+def test_a_reviewers_fields_replace_the_systems_in_the_bar_list():
+    s = web.dashboard_stats(RESULTS, review={"email_002": {"decision": "mismatch",
+                                                           "fields": ["shipper"]}})
+    assert [(r["label"], r["count"]) for r in s["by_field"]] == [
+        ("container_count", 1), ("gross_weight_kg", 1), ("shipper", 1)]
 
 
 def test_category_rows_are_ranked_and_scaled_to_the_largest():

@@ -35,7 +35,8 @@ telling a real discrepancy apart from a formatting difference.
 | ✅ Batch runner + submission builder | All 520 classified, scored output produced |
 | ✅ Document reading | txt, xlsx, docx, pdf; scanned or broken files flagged as unreadable |
 | ✅ Field comparison + escalation | Claude reads both documents, Python decides; the four review reasons |
-| ✅ Comparison report in the UI | SI and BL side by side, status filter, Mark Verified / Flag Mismatch |
+| ✅ Comparison report in the UI | SI and BL side by side, status filter, overview dashboard |
+| ✅ Human review loop | A reviewer's Mark Verified / Flag Mismatch becomes the final answer in the app: the email leaves the review queue, the report says what the system had said, and `submission.json` stays the system's own answers |
 | 🚧 Vision for scanned PDFs | Deferred — those emails escalate to a human either way |
 
 Scanned PDFs are not OCR'd yet: they go straight to human review as
@@ -105,6 +106,9 @@ Open **http://localhost:8000**
 - **Inbox** — all 520 emails, dense triage grid, category and verification columns
 - **Click a subject** — full email, metadata, attachments
 - **Click an attachment** — the raw SI or BL content
+- **Mark Verified / Flag Mismatch** (document-check emails only) — record a
+  person's decision; Flag Mismatch asks which of the seven fields are wrong.
+  Decided emails leave the Review queue and appear under **Reviewed**
 - `/` search · `J`/`K` navigate · `Enter` open · `Esc` back · theme toggle top-right
 
 Category and verification columns stay empty until the classifier has run; a
@@ -209,7 +213,7 @@ ground truth.
 python -m pytest -v
 ```
 
-108 tests, no API key required, no network. Every LLM call is replaced by a test
+121 tests, no API key required, no network. Every LLM call is replaced by a test
 double, so the entire pipeline is verifiable offline.
 
 ---
@@ -261,7 +265,7 @@ sdoc/
 tools/
 ├── make_submission.py categories.json -> submission.json
 └── diff_errors.py     which emails did we get wrong? (dev tool)
-tests/                 mirrors the sdoc/ layout — 108 tests, no API key needed
+tests/                 mirrors the sdoc/ layout — 121 tests, no API key needed
 docs/superpowers/      design spec and implementation plan
 design/                UI design system and mockups
 ```

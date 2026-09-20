@@ -95,6 +95,8 @@
     margin-right:3px;
   }
   .none { padding:var(--xl) var(--lg); text-align:center; color:var(--fg-subtle); }
+  /* Decided by a person: a small check beside the status, not a colour. */
+  .rv { display:inline-flex; vertical-align:middle; margin-left:6px; color:var(--fg-muted); }
 
   @media (max-width:1100px) { .c-from, td.from { display:none; } }
 </style>
@@ -151,6 +153,7 @@
         <td>
           {% if r.get('category') == 'BL_COMPARISON' and r.get('status') and r.get('note') != 'Not processed yet.' %}
             <span class="status {{ r.status }}">{{ 'REVIEW' if r.status == 'NEEDS_REVIEW' else r.status }}</span>
+            {% if r.get('reviewed') %}<span class="rv" title="Decided by a reviewer{{ ' (system said ' ~ r.system_status ~ ')' if r.reviewer_changed else '' }}"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-check"/></svg><span class="vh">reviewed</span></span>{% endif %}
           {% else %}<span class="slot-badge" aria-label="Not yet verified"></span>{% endif %}
         </td>
         <td class="subject"><a href="/email/{{ e.email_id }}">{{ e.subject }}</a></td>
