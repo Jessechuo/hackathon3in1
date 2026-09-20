@@ -42,6 +42,7 @@ telling a real discrepancy apart from a formatting difference.
 | ✅ Human review loop | A reviewer's Mark Verified / Flag Mismatch becomes the final answer in the app: the email leaves the review queue, the report says what the system had said, and `submission.json` stays the system's own answers |
 | ✅ Live mailbox | Email `hackathon3in1@gmail.com` and it is classified and compared within 20 seconds |
 | ✅ Sending, with the documents checked first | Send from the app and the attachments are compared before the message leaves |
+| ✅ Accounts | Sign in to send; reading stays open so nobody is blocked from looking |
 | ✅ Deployed | One process serves the UI and polls the mailbox |
 | 🚧 Vision for scanned PDFs | Deferred — those emails escalate to a human either way |
 
@@ -240,16 +241,27 @@ discrepancy is worth catching before a draft leaves, not after the customer
 finds it. The sent message is stored alongside received mail with its own
 category and verdict, marked `TO` in the queue.
 
-Sending is **off** unless a passphrase is configured:
+**Sending needs an account.** Reading the queue does not — anyone with the link
+sees everything, which is deliberate: a login wall in front of a demo just
+stops people looking. But a message leaves under the shipping desk's own
+address, so that needs an identity.
+
+Sign in at `/login`. Create the first account at `/register`, which needs a
+one-time signup code:
 
 ```
-SDOC_SEND_TOKEN=some-passphrase-you-choose
+SDOC_SIGNUP_CODE=something-only-you-know
+SDOC_SECRET_KEY=a-long-random-string      # or sessions reset on every deploy
 ```
 
-That is not optional hardening. This app runs on a public URL, and a send form
-with no lock on it is an open relay — strangers would be mailing the world from
-your account until Google suspended it. With no token set the form renders
-disabled and the endpoint returns 503.
+Both matter. This app runs on a public URL: open signup plus the ability to
+send is an open relay wearing a hat — a stranger registers, then mails the
+world from your account until Google suspends it. With no code configured,
+registration is closed and the form says so.
+
+Passwords are stored as salted scrypt hashes in `out/users.json`, which is
+gitignored. Set `SDOC_REQUIRE_LOGIN=1` if you want reading to need an account
+too.
 
 > Keep attachment contents above ~50 characters. Below that the reader
 > correctly reports "almost no readable text" — the same gate that catches
@@ -303,7 +315,7 @@ ground truth.
 python -m pytest -v
 ```
 
-188 tests, no API key required, no network. Every LLM call is replaced by a test
+218 tests, no API key required, no network. Every LLM call is replaced by a test
 double, so the entire pipeline is verifiable offline.
 
 ---
@@ -322,7 +334,9 @@ or path written anywhere else.
 | `ANTHROPIC_API_KEY` | — | Required to run the classifier and the comparison |
 | `SDOC_MAIL_USER` | — | Gmail address the watcher polls |
 | `SDOC_MAIL_PASSWORD` | — | Gmail App Password for that address |
-| `SDOC_SEND_TOKEN` | — | Passphrase required to send mail; unset means sending is off |
+| `SDOC_SIGNUP_CODE` | — | Code required to create an account; unset means registration is closed |
+| `SDOC_SECRET_KEY` | generated | Signs session cookies; unset means sign-ins reset on restart |
+| `SDOC_REQUIRE_LOGIN` | `0` | Set to `1` to require an account for reading too |
 | `SDOC_WATCH` | `1` | Set to `0` to stop the app polling the mailbox |
 
 The last three are read from `.env` or `.env.txt` if present — both are
@@ -368,11 +382,13 @@ sdoc/
 ├── run_classify.py    CLI: classify the inbox
 ├── run_pipeline.py    CLI: check the documents
 ├── run_watch.py       CLI: watch a mailbox
-└── web/               FastAPI + Jinja templates; watcher.py runs the poll in-process
+└── web/               FastAPI + Jinja templates
+    ├── auth.py        accounts, scrypt hashes, sessions
+    └── watcher.py     runs the mailbox poll inside the web process
 tools/
 ├── make_submission.py categories.json -> submission.json
 └── diff_errors.py     which emails did we get wrong? (dev tool)
-tests/                 mirrors the sdoc/ layout — 188 tests, no API key needed
+tests/                 mirrors the sdoc/ layout — 218 tests, no API key needed
 docs/superpowers/      design spec and implementation plan
 design/                UI design system and mockups
 ```

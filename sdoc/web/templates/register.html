@@ -1,0 +1,39 @@
+{% extends "_auth.html" %}
+{% block title %}Create an account — SDOC Inbox{% endblock %}
+{% block count %}Create an account{% endblock %}
+{% block heading %}Create an account{% endblock %}
+{% block lede %}An account lets you send mail from
+{{ mail_address or 'this account' }}. Anyone can read the queue without one.{% endblock %}
+
+{% block form %}
+<form method="post" action="/register">
+  <label class="field">
+    <span class="lbl">Email</span>
+    <input type="email" name="email" required autocomplete="username"
+           value="{{ email or '' }}" {% if not signup_open %}disabled{% endif %} autofocus>
+  </label>
+
+  <label class="field">
+    <span class="lbl">Password</span>
+    <input type="password" name="password" required autocomplete="new-password"
+           minlength="8" {% if not signup_open %}disabled{% endif %}>
+    <p class="hint">At least 8 characters.</p>
+  </label>
+
+  <label class="field">
+    <span class="lbl">Signup code</span>
+    <input type="password" name="code" required autocomplete="off"
+           {% if not signup_open %}disabled{% endif %}>
+    <p class="hint">Typed once, here. After this you just sign in.</p>
+  </label>
+
+  <button type="submit" {% if not signup_open %}disabled{% endif %}>Create account</button>
+</form>
+
+<p class="alt">
+  {% if not signup_open %}
+    New accounts are turned off. Set <code>SDOC_SIGNUP_CODE</code> to allow them.<br>
+  {% endif %}
+  Already have one? <a href="/login">Sign in</a>.
+</p>
+{% endblock %}

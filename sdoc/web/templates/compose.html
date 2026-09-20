@@ -53,10 +53,10 @@
   finds it.</p>
 
   {% if not can_send %}
-  <p class="locked"><b>Sending is turned off.</b> Set <code>SDOC_SEND_TOKEN</code>
-  to a passphrase to enable it. It is off by default because this app is on a
-  public URL, and an unlocked send form would let strangers mail the world from
-  this account.</p>
+  <p class="locked"><b><a href="/login?next=/compose">Sign in</a> to send.</b>
+  Reading the queue needs no account; sending does, because the message leaves
+  under this address. This app is on a public URL, and an unlocked send form
+  would let strangers mail the world from it.</p>
   {% endif %}
 
   <form method="post" action="/compose" enctype="multipart/form-data">
@@ -92,12 +92,6 @@
       <code>BL.txt</code> is enough. txt, pdf, docx and xlsx can be read and compared.</p>
     </label>
 
-    <label class="field">
-      <span class="lbl">Passphrase</span>
-      <input type="password" name="token" required autocomplete="off"
-             placeholder="required to send" {% if not can_send %}disabled{% endif %}>
-      <p class="hint">Stops anyone who finds this page from sending mail as this account.</p>
-    </label>
 
     <button class="send" type="submit" {% if not can_send %}disabled{% endif %}>
       <svg class="ico ico-sm"><use href="#i-send"/></svg> Check and send

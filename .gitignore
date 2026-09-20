@@ -13,6 +13,9 @@ __pycache__/
 # LLM response cache — local state, and large. Re-runs rebuild it.
 .cache/
 
+# Accounts. Password hashes, created at runtime - never commit them.
+out/users.json
+
 # Verdicts for mail received at runtime; pairs with mail/ below, which is
 # not committed either. Committing it would put results in the dashboard
 # for emails that do not exist on the server.

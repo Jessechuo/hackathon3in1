@@ -1,0 +1,33 @@
+{% extends "_auth.html" %}
+{% block title %}Sign in — SDOC Inbox{% endblock %}
+{% block count %}Sign in{% endblock %}
+{% block heading %}Sign in{% endblock %}
+{% block lede %}Reading the queue needs no account. Signing in is what lets you
+send mail from {{ mail_address or 'this account' }}.{% endblock %}
+
+{% block form %}
+<form method="post" action="/login">
+  <input type="hidden" name="next" value="{{ next }}">
+
+  <label class="field">
+    <span class="lbl">Email</span>
+    <input type="email" name="email" required autocomplete="username"
+           value="{{ email or '' }}" autofocus>
+  </label>
+
+  <label class="field">
+    <span class="lbl">Password</span>
+    <input type="password" name="password" required autocomplete="current-password">
+  </label>
+
+  <button type="submit">Sign in</button>
+</form>
+
+<p class="alt">
+  {% if signup_open %}
+    No account yet? <a href="/register">Create one</a> — you will need the signup code.
+  {% else %}
+    New accounts are turned off. Set <code>SDOC_SIGNUP_CODE</code> to allow them.
+  {% endif %}
+</p>
+{% endblock %}

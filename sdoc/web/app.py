@@ -14,6 +14,7 @@ from pathlib import Path
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.sessions import SessionMiddleware
 
 from sdoc.ai.classify import CATEGORIES
 from sdoc.config import MAIL_DIR, OUT_DIR
@@ -22,10 +23,10 @@ from sdoc.extract import read_document
 from sdoc.ingest import ingest, load_mail_results
 from sdoc.inbox import attachment_path, load_all_emails, load_received
 from sdoc.mail.send import send as send_mail
-from sdoc.mail.send import sending_enabled, token_ok, valid_address
+from sdoc.mail.send import valid_address
 from sdoc.mail.store import save_email
 from sdoc.review import apply_reviews
-from sdoc.web import watcher
+from sdoc.web import auth, watcher
 
 
 @asynccontextmanager
@@ -44,6 +45,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="SDOC Inbox", lifespan=lifespan)
+# Signed cookie, not server-side storage: one process, no database, and the
+# only thing in it is which account is signed in.
+app.add_middleware(SessionMiddleware, secret_key=auth.session_secret(),
+                   same_site="lax", https_only=False)
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
 KINDS = {
@@ -121,7 +126,7 @@ def _attachment_meta(paths: list[str]) -> list[dict]:
 
 
 def _shell(results: dict, active: str | None, active_status: str | None = None,
-           active_reviewed: bool = False) -> dict:
+           active_reviewed: bool = False, user: str | None = None) -> dict:
     """Context the base template needs for the header, rail and filters."""
     statuses = [r.get("status") for r in results.values()
                 if r.get("category") == "BL_COMPARISON" and r.get("status")
@@ -141,6 +146,7 @@ def _shell(results: dict, active: str | None, active_status: str | None = None,
         "n_received": len(load_received()),
         # Read per request, not at import: the watcher may be started later.
         "mail_address": os.environ.get("SDOC_MAIL_USER") or None,
+        "user": user,
         "active": active,
         "active_status": active_status,
         "active_reviewed": active_reviewed,
@@ -210,7 +216,7 @@ def dashboard(request: Request):
             "total": len(load_all_emails()),
             "stats": dashboard_stats(results, decisions),
             "last_run": _last_run(),
-            **_shell(apply_reviews(results, decisions), None),
+            **_shell(apply_reviews(results, decisions), None, user=auth.current_user(request)),
         },
     )
 
@@ -240,7 +246,8 @@ def inbox(request: Request, category: str | None = None, status: str | None = No
         request=request,
         name="inbox.html",
         context={"page": "inbox", "emails": emails, "total": len(all_emails),
-                 **_shell(results, category, status, reviewed)},
+                 **_shell(results, category, status, reviewed,
+                          user=auth.current_user(request))},
     )
 
 
@@ -276,7 +283,7 @@ def email_detail(request: Request, email_id: str):
             "next_id": ordered[i + 1]["email_id"] if i + 1 < len(ordered) else None,
             "position": i + 1,
             "total": len(ordered),
-            **_shell(results, None),
+            **_shell(results, None, user=auth.current_user(request)),
         },
     )
 
@@ -322,6 +329,77 @@ async def record_review(email_id: str, request: Request):
     return JSONResponse({"email_id": email_id, "review": current})
 
 
+def _safe_next(target: str) -> str:
+    """Where to go after signing in. Same-site paths only.
+
+    `next` arrives from the URL, so it is attacker-controlled. A leading
+    slash is not enough of a check: `//evil.example/x` starts with one and
+    browsers read it as protocol-relative, landing on another host.
+    """
+    if not target or not target.startswith("/") or target.startswith("//"):
+        return "/"
+    return target
+
+
+def _auth_page(request: Request, name: str, **extra):
+    return templates.TemplateResponse(
+        request=request, name=name,
+        context={"page": name.removesuffix(".html"), "total": len(load_all_emails()),
+                 "signup_open": auth.signup_open(),
+                 **_shell(load_view(), None, user=auth.current_user(request)), **extra},
+    )
+
+
+@app.get("/login", response_class=HTMLResponse)
+def login_form(request: Request, next: str = "/compose"):
+    if auth.current_user(request):
+        return RedirectResponse(_safe_next(next), status_code=303)
+    return _auth_page(request, "login.html", next=next)
+
+
+@app.post("/login")
+def login_submit(request: Request, email: str = Form(""), password: str = Form(""),
+                 next: str = Form("/compose")):
+    who = auth.authenticate(email, password, OUT_DIR)
+    if not who:
+        # One message for both halves: saying which was wrong tells an
+        # attacker which addresses have accounts.
+        return _auth_page(request, "login.html", next=next,
+                          error="That email and password do not match an account.",
+                          email=email)
+    request.session[auth.SESSION_KEY] = who
+    return RedirectResponse(_safe_next(next), status_code=303)
+
+
+@app.post("/logout")
+def logout(request: Request):
+    request.session.pop(auth.SESSION_KEY, None)
+    return RedirectResponse("/", status_code=303)
+
+
+@app.get("/register", response_class=HTMLResponse)
+def register_form(request: Request):
+    return _auth_page(request, "register.html")
+
+
+@app.post("/register")
+def register_submit(request: Request, email: str = Form(""), password: str = Form(""),
+                    code: str = Form("")):
+    if not auth.signup_open():
+        return _auth_page(request, "register.html",
+                          error="New accounts are turned off. Set SDOC_SIGNUP_CODE "
+                                "to allow them.")
+    if not auth.code_ok(code):
+        return _auth_page(request, "register.html", email=email,
+                          error="That signup code is not right.")
+    try:
+        auth.create_user(email, password, out_dir=OUT_DIR)
+    except ValueError as e:
+        return _auth_page(request, "register.html", email=email, error=str(e))
+    request.session[auth.SESSION_KEY] = auth.normalise(email)
+    return RedirectResponse("/compose", status_code=303)
+
+
 @app.get("/compose", response_class=HTMLResponse)
 def compose_form(request: Request):
     results = load_view()
@@ -331,14 +409,14 @@ def compose_form(request: Request):
         context={"page": "compose", "total": len(load_all_emails()),
                  "max_attachments": MAX_ATTACHMENTS,
                  "max_mb": MAX_ATTACHMENT_BYTES // 1024 // 1024,
-                 "can_send": sending_enabled(),
-                 **_shell(results, None)},
+                 "can_send": bool(auth.current_user(request)),
+                 **_shell(results, None, user=auth.current_user(request))},
     )
 
 
 @app.post("/compose")
-async def compose_submit(to: str = Form(""), subject: str = Form(""),
-                         body: str = Form(""), token: str = Form(""),
+async def compose_submit(request: Request, to: str = Form(""), subject: str = Form(""),
+                         body: str = Form(""),
                          files: list[UploadFile] = File(default=[])):
     """Check the attached documents, then send the email.
 
@@ -351,12 +429,8 @@ async def compose_submit(to: str = Form(""), subject: str = Form(""),
     which is a 422 full of schema noise; this way blank and whitespace-only
     both give the same readable 400.
     """
-    if not sending_enabled():
-        raise HTTPException(
-            status_code=503,
-            detail="sending is turned off: set SDOC_SEND_TOKEN to enable it")
-    if not token_ok(token):
-        raise HTTPException(status_code=403, detail="wrong passphrase")
+    if not auth.current_user(request):
+        raise HTTPException(status_code=401, detail="sign in to send mail")
 
     to, subject = to.strip(), subject.strip()
     if not valid_address(to):

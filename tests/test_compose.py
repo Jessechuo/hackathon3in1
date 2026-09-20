@@ -3,8 +3,10 @@ from fastapi.testclient import TestClient
 
 from sdoc import inbox
 from sdoc.web import app as web
+from sdoc.web import auth
 
-TOKEN = "open sesame"
+PASSWORD = "a-good-long-password"
+EMAIL = "clerk@shipper.com"
 
 
 @pytest.fixture
@@ -14,8 +16,9 @@ def site(tmp_path, monkeypatch):
     monkeypatch.setattr(web, "OUT_DIR", out)
     monkeypatch.setattr(web, "MAIL_DIR", mail)
     monkeypatch.setattr(inbox, "MAIL_DIR", mail)
-    monkeypatch.setenv("SDOC_SEND_TOKEN", TOKEN)
+    monkeypatch.setattr(auth, "OUT_DIR", out)
     monkeypatch.setenv("SDOC_MAIL_USER", "hackathon3in1@gmail.com")
+    auth.create_user(EMAIL, PASSWORD, out_dir=out)
 
     checked, sent = [], []
     # The real ingest calls Claude and the real send opens an SMTP socket.
@@ -23,12 +26,15 @@ def site(tmp_path, monkeypatch):
     monkeypatch.setattr(web, "send_mail",
                         lambda to, subject, body, attachments: sent.append(
                             (to, subject, body, attachments)))
-    return TestClient(web.app), mail, checked, sent
+    client = TestClient(web.app)
+    client.post("/login", data={"email": EMAIL, "password": PASSWORD},
+                follow_redirects=False)
+    return client, mail, checked, sent
 
 
 def post(client, **over):
     data = {"to": "ops@shipper.com", "subject": "Draft BL for confirmation",
-            "body": "Please confirm.", "token": TOKEN}
+            "body": "Please confirm."}
     data.update(over)
     return client.post("/compose", data=data, follow_redirects=False,
                        files=over.pop("files", None))
@@ -37,10 +43,10 @@ def post(client, **over):
 def test_the_form_asks_who_it_is_going_to(site):
     client, _, _, _ = site
     html = client.get("/compose").text
-    for field in ('name="to"', 'name="subject"', 'name="body"',
-                  'name="files"', 'name="token"'):
+    for field in ('name="to"', 'name="subject"', 'name="body"', 'name="files"'):
         assert field in html
     assert 'name="sender"' not in html      # it sends now; it does not pretend
+    assert 'name="token"' not in html       # a session replaced the passphrase
 
 
 def test_the_page_says_which_account_it_sends_from(site):
@@ -51,8 +57,7 @@ def test_the_page_says_which_account_it_sends_from(site):
 def test_sending_checks_the_documents_then_sends_and_opens_the_result(site):
     client, mail, checked, sent = site
     r = client.post("/compose", data={
-        "to": "ops@shipper.com", "subject": "Draft BL", "body": "Attached.",
-        "token": TOKEN},
+        "to": "ops@shipper.com", "subject": "Draft BL", "body": "Attached."},
         files=[("files", ("SI.txt", b"SHIPPER: ACME", "text/plain")),
                ("files", ("BL.txt", b"SHIPPER: ACME CORP", "text/plain"))],
         follow_redirects=False)
@@ -82,30 +87,30 @@ def test_the_inbox_shows_who_a_sent_email_went_to(site):
     assert ">TO<" in html
 
 
-def test_nothing_is_sent_without_the_passphrase(site):
+def test_a_signed_out_visitor_cannot_send(site):
+    """An unlocked send form on a public URL is an open relay."""
     client, _, checked, sent = site
-    r = post(client, token="wrong")
-    assert r.status_code == 403
+    client.post("/logout", follow_redirects=False)
+    r = post(client)
+    assert r.status_code == 401
     assert sent == [] and checked == []
     assert inbox.load_received() == []       # and nothing is stored either
 
 
-def test_sending_is_refused_outright_when_no_passphrase_is_configured(site, monkeypatch):
-    """An unlocked send form on a public URL is an open relay."""
-    client, _, _, sent = site
-    monkeypatch.delenv("SDOC_SEND_TOKEN", raising=False)
-    r = post(client, token="")
-    assert r.status_code == 503
-    assert "SDOC_SEND_TOKEN" in r.json()["detail"]
-    assert sent == []
-
-
-def test_the_page_says_so_when_sending_is_off(site, monkeypatch):
+def test_a_signed_out_visitor_is_invited_to_sign_in(site):
     client, _, _, _ = site
-    monkeypatch.delenv("SDOC_SEND_TOKEN", raising=False)
+    client.post("/logout", follow_redirects=False)
     html = client.get("/compose").text
-    assert "Sending is turned off" in html
+    assert "/login?next=/compose" in html
     assert "disabled" in html
+
+
+def test_a_signed_out_visitor_can_still_read_everything(site):
+    """A judge given the link must never meet a wall."""
+    client, _, _, _ = site
+    client.post("/logout", follow_redirects=False)
+    for path in ("/", "/dashboard", "/email/email_043", "/?status=MISMATCH"):
+        assert client.get(path).status_code == 200, path
 
 
 def test_a_bad_recipient_address_is_refused(site):
@@ -125,8 +130,7 @@ def test_a_blank_subject_is_refused(site):
 def test_too_many_attachments_are_refused(site):
     client, _, _, sent = site
     files = [("files", (f"f{i}.txt", b"x", "text/plain")) for i in range(6)]
-    r = client.post("/compose", data={"to": "a@b.com", "subject": "s", "body": "b",
-                                      "token": TOKEN},
+    r = client.post("/compose", data={"to": "a@b.com", "subject": "s", "body": "b"},
                     files=files, follow_redirects=False)
     assert r.status_code == 400 and "at most" in r.json()["detail"]
     assert sent == []
@@ -135,8 +139,7 @@ def test_too_many_attachments_are_refused(site):
 def test_an_oversized_attachment_is_refused(site):
     client, _, _, sent = site
     big = b"x" * (web.MAX_ATTACHMENT_BYTES + 1)
-    r = client.post("/compose", data={"to": "a@b.com", "subject": "s", "body": "b",
-                                      "token": TOKEN},
+    r = client.post("/compose", data={"to": "a@b.com", "subject": "s", "body": "b"},
                     files=[("files", ("big.txt", big, "text/plain"))],
                     follow_redirects=False)
     assert r.status_code == 400 and "too large" in r.json()["detail"]
