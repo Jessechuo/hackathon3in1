@@ -17,6 +17,8 @@ import socket
 from email.message import EmailMessage
 
 import sdoc.config  # noqa: F401  - importing loads .env / .env.txt
+from sdoc.mail.api_send import provider as api_provider
+from sdoc.mail.api_send import send_via_api
 
 log = logging.getLogger(__name__)
 
@@ -43,6 +45,10 @@ _REACHABLE: bool | None = None
 
 
 def reachable() -> bool | None:
+    """Can mail leave this machine? An HTTP provider always can - port 443
+    is not blocked anywhere, or nothing would work."""
+    if api_provider():
+        return True
     return _REACHABLE
 
 
@@ -55,6 +61,9 @@ def probe(timeout: float = 5.0) -> bool:
     mystery.
     """
     global _REACHABLE
+    if api_provider():
+        _REACHABLE = True
+        return True
     for port in PORTS:
         try:
             with socket.create_connection((HOST, port), timeout=timeout):
@@ -121,7 +130,12 @@ def send(to: str, subject: str, body: str, attachments: list[tuple[str, bytes]],
     if transport is not None:
         transport(msg)
         return msg
-    deliver(msg, user, password)
+    # An HTTP provider goes over 443, which is what makes sending work on a
+    # host that blocks SMTP. SMTP stays the default for running locally.
+    if api_provider():
+        send_via_api(user, to, subject, body, attachments)
+    else:
+        deliver(msg, user, password)
     return msg
 
 

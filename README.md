@@ -267,13 +267,25 @@ category and verdict, marked `TO` in the queue.
 
 **Sending needs an account**, like everything else behind the sign-in.
 
-> **Most cloud hosts block outbound SMTP**, so their addresses are not used for
-> spam — Railway answers `[Errno 101] Network is unreachable`. The app checks at
-> startup and, where mail cannot leave, the compose form says so instead of
-> offering a button that fails. **Receiving is unaffected**: IMAP is not blocked,
-> and the watcher picks mail up within twenty seconds. Run the app locally and
-> sending works. To send from a host that blocks SMTP you would need an email
-> API over HTTPS rather than SMTP.
+**Sending from a deployed host.** Most cloud providers block outbound SMTP so
+their addresses are not used for spam — Railway answers `[Errno 101] Network is
+unreachable` on every port. Port 443 is never blocked, so set one of these and
+the app sends over HTTPS instead:
+
+```
+SDOC_BREVO_KEY=xkeysib-...      # brevo.com,    300 emails/day free
+SDOC_SENDGRID_KEY=SG....        # sendgrid.com, 100 emails/day free
+```
+
+Whichever is present is used; with neither, it falls back to SMTP, which is
+what you want locally. **Both require the From address to be verified first** —
+they will not send as an address you have not proved you own. Both accept a
+plain Gmail address and confirm it by emailing you a link.
+
+With no key and SMTP blocked, the compose form says so and disables itself
+rather than offering a button that always fails. **Receiving is unaffected
+either way**: IMAP is not blocked, and the watcher picks mail up within twenty
+seconds.
 
 ```
 SDOC_SECRET_KEY=a-long-random-string      # or sign-ins reset on every deploy
@@ -331,7 +343,7 @@ ground truth.
 python -m pytest -v
 ```
 
-246 tests, no API key required, no network. Every LLM call is replaced by a test
+259 tests, no API key required, no network. Every LLM call is replaced by a test
 double, so the entire pipeline is verifiable offline.
 
 ---
@@ -352,6 +364,8 @@ or path written anywhere else.
 | `SDOC_MAIL_PASSWORD` | — | Gmail App Password for that address |
 | `SDOC_SECRET_KEY` | generated | Signs session cookies; unset means sign-ins reset on restart |
 | `SDOC_SIGNUP_CODE` | — | Set it to require a code at registration; unset means signup is open |
+| `SDOC_BREVO_KEY` | — | Send over HTTPS via Brevo instead of SMTP |
+| `SDOC_SENDGRID_KEY` | — | Send over HTTPS via SendGrid instead of SMTP |
 | `SDOC_REQUIRE_LOGIN` | `1` | Set to `0` to let anyone read the queue without an account |
 | `SDOC_WATCH` | `1` | Set to `0` to stop the app polling the mailbox |
 
@@ -391,7 +405,8 @@ sdoc/
 ├── mail/
 │   ├── store.py       writing a received email to disk
 │   ├── parse.py       RFC 822 bytes -> sender, subject, body, files
-│   ├── send.py        SMTP out, behind a passphrase
+│   ├── send.py        mail out: HTTPS provider if set, else SMTP
+│   ├── api_send.py    Brevo / SendGrid over HTTPS, for hosts that block SMTP
 │   └── gmail.py       IMAP; the only file that talks to a mail server
 ├── pipeline.py        the checks, in order -> one decision per email
 ├── ingest.py          one received email -> classified, compared, saved
@@ -404,7 +419,7 @@ sdoc/
 tools/
 ├── make_submission.py categories.json -> submission.json
 └── diff_errors.py     which emails did we get wrong? (dev tool)
-tests/                 mirrors the sdoc/ layout — 246 tests, no API key needed
+tests/                 mirrors the sdoc/ layout — 259 tests, no API key needed
 docs/superpowers/      design spec and implementation plan
 design/                UI design system and mockups
 ```

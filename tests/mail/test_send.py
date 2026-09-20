@@ -110,3 +110,35 @@ def test_the_second_port_is_used_when_the_first_is_blocked(monkeypatch):
 def test_a_blocked_route_fails_fast_rather_than_hanging():
     """No timeout means smtplib waits forever, which reads as the app hanging."""
     assert snd.TIMEOUT > 0
+
+
+# --- HTTP provider takes over when one is configured ---------------------
+
+def test_an_http_provider_is_used_instead_of_smtp(monkeypatch):
+    """Port 443 is what makes sending work where SMTP is blocked."""
+    monkeypatch.setenv("SDOC_BREVO_KEY", "secret")
+    used = {}
+    monkeypatch.setattr(snd, "send_via_api",
+                        lambda s, to, subj, body, att: used.setdefault("api", to))
+    monkeypatch.setattr(snd, "deliver",
+                        lambda *a: used.setdefault("smtp", True))
+
+    snd.send("ops@shipper.com", "Draft BL", "body", [])
+    assert used == {"api": "ops@shipper.com"}      # smtp was never tried
+
+
+def test_smtp_is_still_used_when_no_provider_is_configured(monkeypatch):
+    monkeypatch.delenv("SDOC_BREVO_KEY", raising=False)
+    monkeypatch.delenv("SDOC_SENDGRID_KEY", raising=False)
+    used = {}
+    monkeypatch.setattr(snd, "deliver", lambda *a: used.setdefault("smtp", True))
+    snd.send("ops@shipper.com", "Draft BL", "body", [])
+    assert used == {"smtp": True}
+
+
+def test_a_configured_provider_means_mail_can_always_leave(monkeypatch):
+    """No socket probe needed: 443 is open everywhere or nothing works."""
+    monkeypatch.setenv("SDOC_BREVO_KEY", "secret")
+    monkeypatch.setattr(snd, "_REACHABLE", False)   # SMTP was found blocked
+    assert snd.reachable() is True
+    assert snd.probe(timeout=0.01) is True
