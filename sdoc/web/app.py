@@ -34,6 +34,7 @@ async def lifespan(app: FastAPI):
     watch runs in a daemon thread and stops itself when the app shuts down;
     with no mail credentials set it simply never starts.
     """
+    watcher.seed_output()       # a mounted volume starts empty
     handle = watcher.start()
     yield
     if handle:

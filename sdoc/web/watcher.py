@@ -9,15 +9,45 @@ local run and the whole test suite behave as before.
 """
 import logging
 import os
+import shutil
 import threading
 import traceback
+from pathlib import Path
 
-from sdoc.config import MAIL_DIR, OUT_DIR
+from sdoc.config import MAIL_DIR, OUT_DIR, ROOT
 from sdoc.run_watch import poll_once
 
 log = logging.getLogger(__name__)
 
 INTERVAL = int(os.environ.get("SDOC_WATCH_INTERVAL", "20"))
+
+# Results that ship with the code, copied onto a mounted volume the first
+# time it is used. Without this, pointing SDOC_OUT at a fresh volume would
+# show all 520 emails with no verdicts.
+SEEDED = ("results.json", "categories.json", "submission.json")
+
+
+def seed_output(out_dir: Path | None = None, shipped: Path | None = None) -> list[str]:
+    """Copy shipped results into OUT_DIR if they are not there yet.
+
+    Does nothing when OUT_DIR is the shipped folder itself, which is the
+    normal local case. Never overwrites: a verdict already on the volume is
+    newer than the one baked into the image.
+    """
+    out = Path(out_dir or OUT_DIR)
+    src_dir = Path(shipped) if shipped is not None else Path(ROOT) / "out"
+    if not src_dir.exists() or out.resolve() == src_dir.resolve():
+        return []
+    out.mkdir(parents=True, exist_ok=True)
+    copied = []
+    for name in SEEDED:
+        src, dst = src_dir / name, out / name
+        if src.exists() and not dst.exists():
+            shutil.copy2(src, dst)
+            copied.append(name)
+    if copied:
+        log.info("seeded %s with %s", out, ", ".join(copied))
+    return copied
 
 
 def enabled() -> bool:

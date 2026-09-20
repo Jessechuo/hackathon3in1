@@ -58,3 +58,35 @@ def test_starting_the_app_does_not_poll_when_the_watcher_is_off(monkeypatch):
     with TestClient(web.app) as client:
         assert client.get("/").status_code == 200
     assert started == []
+
+
+def test_a_fresh_volume_is_seeded_with_the_shipped_results(tmp_path):
+    shipped, volume = tmp_path / "shipped", tmp_path / "volume"
+    shipped.mkdir()
+    (shipped / "results.json").write_text('{"email_001": {}}', encoding="utf-8")
+    (shipped / "submission.json").write_text("{}", encoding="utf-8")
+
+    copied = watcher.seed_output(out_dir=volume, shipped=shipped)
+
+    assert sorted(copied) == ["results.json", "submission.json"]
+    assert (volume / "results.json").read_text(encoding="utf-8") == '{"email_001": {}}'
+
+
+def test_seeding_never_overwrites_what_is_already_on_the_volume(tmp_path):
+    """A verdict on the volume is newer than the one baked into the image."""
+    shipped, volume = tmp_path / "shipped", tmp_path / "volume"
+    shipped.mkdir()
+    volume.mkdir()
+    (shipped / "results.json").write_text("SHIPPED", encoding="utf-8")
+    (volume / "results.json").write_text("LIVE", encoding="utf-8")
+
+    assert watcher.seed_output(out_dir=volume, shipped=shipped) == []
+    assert (volume / "results.json").read_text(encoding="utf-8") == "LIVE"
+
+
+def test_seeding_does_nothing_when_out_dir_is_the_shipped_folder(tmp_path):
+    """The normal local case: no volume, so there is nothing to copy."""
+    shipped = tmp_path / "out"
+    shipped.mkdir()
+    (shipped / "results.json").write_text("x", encoding="utf-8")
+    assert watcher.seed_output(out_dir=shipped, shipped=shipped) == []
