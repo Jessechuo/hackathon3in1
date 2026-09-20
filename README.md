@@ -42,7 +42,7 @@ telling a real discrepancy apart from a formatting difference.
 | ✅ Human review loop | A reviewer's Mark Verified / Flag Mismatch becomes the final answer in the app: the email leaves the review queue, the report says what the system had said, and `submission.json` stays the system's own answers |
 | ✅ Live mailbox | Email `hackathon3in1@gmail.com` and it is classified and compared within 20 seconds |
 | ✅ Sending, with the documents checked first | Send from the app and the attachments are compared before the message leaves |
-| ✅ Accounts | Sign in to send; reading stays open so nobody is blocked from looking |
+| ✅ Accounts | Sign-in screen in front of the queue; anyone can register their own operator account |
 | ✅ Deployed | One process serves the UI and polls the mailbox |
 | 🚧 Vision for scanned PDFs | Deferred — those emails escalate to a human either way |
 
@@ -99,6 +99,30 @@ The answer key is **not** here and never will be. `sdoc-hackathon-docker/`
 holds `ground_truth.json` and is gitignored; nothing under `sdoc/` reads it.
 
 ---
+
+## Signing in
+
+The queue sits behind a sign-in screen. **Signup is open** — anyone can create
+their own operator account at `/register`, the way a mail service works, so
+nobody has to be handed credentials.
+
+| | |
+|---|---|
+| `/login` | email and password |
+| `/register` | name, email, password, desk assignment |
+| Password rule | 12+ characters, an uppercase letter, a number and a symbol |
+
+Passwords are salted scrypt hashes in `out/users.json`, which is gitignored.
+
+Two knobs for a deployment that wants something tighter or looser:
+
+```
+SDOC_SIGNUP_CODE=something-only-you-know   # adds a code to the registration form
+SDOC_REQUIRE_LOGIN=0                       # lets anyone read without an account
+```
+
+Set `SDOC_SECRET_KEY` to a long random string, or sessions are signed with a
+fresh key each restart and everyone is signed out on every deploy.
 
 ## Run the web UI
 
@@ -241,27 +265,11 @@ discrepancy is worth catching before a draft leaves, not after the customer
 finds it. The sent message is stored alongside received mail with its own
 category and verdict, marked `TO` in the queue.
 
-**Sending needs an account.** Reading the queue does not — anyone with the link
-sees everything, which is deliberate: a login wall in front of a demo just
-stops people looking. But a message leaves under the shipping desk's own
-address, so that needs an identity.
-
-Sign in at `/login`. Create the first account at `/register`, which needs a
-one-time signup code:
+**Sending needs an account**, like everything else behind the sign-in.
 
 ```
-SDOC_SIGNUP_CODE=something-only-you-know
-SDOC_SECRET_KEY=a-long-random-string      # or sessions reset on every deploy
+SDOC_SECRET_KEY=a-long-random-string      # or sign-ins reset on every deploy
 ```
-
-Both matter. This app runs on a public URL: open signup plus the ability to
-send is an open relay wearing a hat — a stranger registers, then mails the
-world from your account until Google suspends it. With no code configured,
-registration is closed and the form says so.
-
-Passwords are stored as salted scrypt hashes in `out/users.json`, which is
-gitignored. Set `SDOC_REQUIRE_LOGIN=1` if you want reading to need an account
-too.
 
 > Keep attachment contents above ~50 characters. Below that the reader
 > correctly reports "almost no readable text" — the same gate that catches
@@ -315,7 +323,7 @@ ground truth.
 python -m pytest -v
 ```
 
-218 tests, no API key required, no network. Every LLM call is replaced by a test
+229 tests, no API key required, no network. Every LLM call is replaced by a test
 double, so the entire pipeline is verifiable offline.
 
 ---
@@ -334,9 +342,9 @@ or path written anywhere else.
 | `ANTHROPIC_API_KEY` | — | Required to run the classifier and the comparison |
 | `SDOC_MAIL_USER` | — | Gmail address the watcher polls |
 | `SDOC_MAIL_PASSWORD` | — | Gmail App Password for that address |
-| `SDOC_SIGNUP_CODE` | — | Code required to create an account; unset means registration is closed |
 | `SDOC_SECRET_KEY` | generated | Signs session cookies; unset means sign-ins reset on restart |
-| `SDOC_REQUIRE_LOGIN` | `0` | Set to `1` to require an account for reading too |
+| `SDOC_SIGNUP_CODE` | — | Set it to require a code at registration; unset means signup is open |
+| `SDOC_REQUIRE_LOGIN` | `1` | Set to `0` to let anyone read the queue without an account |
 | `SDOC_WATCH` | `1` | Set to `0` to stop the app polling the mailbox |
 
 The last three are read from `.env` or `.env.txt` if present — both are
@@ -388,7 +396,7 @@ sdoc/
 tools/
 ├── make_submission.py categories.json -> submission.json
 └── diff_errors.py     which emails did we get wrong? (dev tool)
-tests/                 mirrors the sdoc/ layout — 218 tests, no API key needed
+tests/                 mirrors the sdoc/ layout — 229 tests, no API key needed
 docs/superpowers/      design spec and implementation plan
 design/                UI design system and mockups
 ```

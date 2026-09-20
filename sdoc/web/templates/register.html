@@ -1,39 +1,197 @@
-{% extends "_auth.html" %}
-{% block title %}Create an account — SDOC Inbox{% endblock %}
-{% block count %}Create an account{% endblock %}
-{% block heading %}Create an account{% endblock %}
-{% block lede %}An account lets you send mail from
-{{ mail_address or 'this account' }}. Anyone can read the queue without one.{% endblock %}
+{% extends "_terminal.html" %}
+{% block title %}Request terminal access — SDOC Inbox{% endblock %}
 
-{% block form %}
-<form method="post" action="/register">
-  <label class="field">
-    <span class="lbl">Email</span>
-    <input type="email" name="email" required autocomplete="username"
-           value="{{ email or '' }}" {% if not signup_open %}disabled{% endif %} autofocus>
-  </label>
+{% block screen %}
+<div class="stack wide">
 
-  <label class="field">
-    <span class="lbl">Password</span>
-    <input type="password" name="password" required autocomplete="new-password"
-           minlength="8" {% if not signup_open %}disabled{% endif %}>
-    <p class="hint">At least 8 characters.</p>
-  </label>
+  <div class="card">
+    <div class="accent steps"><i class="on"></i><i></i><i></i></div>
+    <div class="card-body">
 
-  <label class="field">
-    <span class="lbl">Signup code</span>
-    <input type="password" name="code" required autocomplete="off"
-           {% if not signup_open %}disabled{% endif %}>
-    <p class="hint">Typed once, here. After this you just sign in.</p>
-  </label>
+      <div>
+        <div class="brandline">
+          <span class="left">
+            <span class="glyph"><svg class="ico lg"><use href="#i-anchor"/></svg></span>
+            <span class="words">
+              <span class="a" style="font-size:16px">SDOC</span>
+              <span class="b">Inbox Ops</span>
+            </span>
+          </span>
+          <span class="micro" style="background:var(--l3);padding:2px var(--sm);border-radius:var(--r-badge)">SEC-LVL-2</span>
+        </div>
+        <h1 style="margin-top:var(--lg)">Request Terminal Access / Register</h1>
+        <p class="sub" style="margin-top:var(--xs)">Create an operator account for document triage &amp; BL verification</p>
+      </div>
 
-  <button type="submit" {% if not signup_open %}disabled{% endif %}>Create account</button>
-</form>
+      {% if error %}
+      <p class="error" role="alert">
+        <svg class="ico sm"><use href="#i-alert"/></svg>
+        <span>{{ error }}</span>
+      </p>
+      {% endif %}
 
-<p class="alt">
-  {% if not signup_open %}
-    New accounts are turned off. Set <code>SDOC_SIGNUP_CODE</code> to allow them.<br>
-  {% endif %}
-  Already have one? <a href="/login">Sign in</a>.
-</p>
+      <form method="post" action="/register" style="display:flex;flex-direction:column;gap:var(--lg)">
+
+        <label class="field">
+          <span class="field-head">
+            <span class="lbl">Full legal name</span>
+            <span class="micro dim">REQ_FIELD</span>
+          </span>
+          <span class="input-wrap">
+            <span class="lead"><svg class="ico sm"><use href="#i-badge"/></svg></span>
+            <input type="text" name="name" required placeholder="e.g., Aziz T. / Documentation Lead"
+                   value="{{ name or '' }}" autofocus>
+          </span>
+        </label>
+
+        <label class="field">
+          <span class="field-head">
+            <span class="lbl">Corporate logistics email</span>
+            <span class="micro" style="color:var(--primary)">Authorized Domain</span>
+          </span>
+          <span class="input-wrap">
+            <span class="lead"><svg class="ico sm"><use href="#i-mail"/></svg></span>
+            <input type="email" name="email" required autocomplete="username"
+                   placeholder="operator@shipping-line.com" value="{{ email or '' }}">
+          </span>
+          <p class="hint">Used to sign in. Any working address is accepted.</p>
+        </label>
+
+        <label class="field">
+          <span class="field-head">
+            <span class="lbl">Operator password</span>
+            <span class="micro dim" id="strength">STRENGTH: NONE</span>
+          </span>
+          <span class="input-wrap">
+            <span class="lead"><svg class="ico sm"><use href="#i-key"/></svg></span>
+            <input type="password" name="password" id="pw" required
+                   autocomplete="new-password" placeholder="............">
+            <button type="button" class="trail" id="peek" aria-label="Show password">
+              <svg class="ico sm"><use href="#i-eye"/></svg>
+            </button>
+          </span>
+          <span class="meter" id="meter"><i></i><i></i><i></i><i></i></span>
+          <p class="hint">Min. {{ min_password }} characters, uppercase, number &amp; operational symbol</p>
+        </label>
+
+        <label class="field">
+          <span class="field-head"><span class="lbl">Confirm operator password</span></span>
+          <span class="input-wrap">
+            <span class="lead"><svg class="ico sm"><use href="#i-lock"/></svg></span>
+            <input type="password" name="confirm" id="confirm" required
+                   autocomplete="new-password" placeholder="............">
+          </span>
+          <p class="hint" id="match"></p>
+        </label>
+
+        <label class="field">
+          <span class="field-head">
+            <span class="lbl">Desk / region queue assignment</span>
+            <span class="micro" style="color:var(--primary)">AUTO_ROUTING</span>
+          </span>
+          <select name="desk">
+            <option value="">SELECT OPERATIONAL QUEUE NODE...</option>
+            {% for d in desks %}
+              <option value="{{ d }}" {% if desk == d %}selected{% endif %}>{{ d }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        {% if code_required %}
+        <label class="field">
+          <span class="field-head">
+            <span class="lbl">Access code</span>
+            <span class="micro dim">SUPERVISOR ISSUED</span>
+          </span>
+          <span class="input-wrap">
+            <span class="lead"><svg class="ico sm"><use href="#i-shield"/></svg></span>
+            <input type="password" name="code" required autocomplete="off"
+                   placeholder="issued by the desk supervisor">
+          </span>
+        </label>
+        {% endif %}
+
+        <label class="check">
+          <input type="checkbox" name="acknowledge" value="1" required>
+          <span>I acknowledge the <b style="color:var(--primary)">FED-STD-0027</b> operational
+          security policy and continuous audit logging requirement on all bill of lading
+          interactions.</span>
+        </label>
+
+        <button class="primary-btn" type="submit">
+          <svg class="ico"><use href="#i-badge"/></svg>
+          Register &amp; Request Access
+          <kbd>&crarr;</kbd>
+        </button>
+      </form>
+
+      <p class="alt">Already have an account?
+        <a href="/login">Sign in to Terminal <svg class="ico sm" style="vertical-align:-2px"><use href="#i-arrow"/></svg></a>
+      </p>
+
+      <div class="notice-box">
+        <svg class="ico" style="color:var(--fg-subtle);flex:none"><use href="#i-shield"/></svg>
+        <div>
+          <p class="t">Supervised enrollment</p>
+          <p>Access is granted immediately in this build. Reading the queue and sending
+             mail both become available as soon as the account exists.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="card-foot">
+      <span class="mark" style="gap:var(--xs)">
+        <span class="dot green"></span>
+        <span class="micro">AUTH-SRV: ACTIVE</span>
+      </span>
+      <span class="micro dim">PROTOCOL: TLS 1.3 / E2EE</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  var pw = document.getElementById("pw"),
+      confirm_ = document.getElementById("confirm"),
+      peek = document.getElementById("peek"),
+      meter = document.getElementById("meter").children,
+      strength = document.getElementById("strength"),
+      match = document.getElementById("match"),
+      MIN = {{ min_password }};
+
+  var NAMES = ["NONE", "WEAK", "FAIR", "STRONG", "OPERATIONAL"];
+
+  function score(v) {
+    var n = 0;
+    if (v.length >= MIN) n++;
+    if (/[A-Z]/.test(v)) n++;
+    if (/[0-9]/.test(v)) n++;
+    if (/[^A-Za-z0-9]/.test(v)) n++;
+    return v ? n : 0;
+  }
+
+  function paint() {
+    var n = score(pw.value);
+    strength.textContent = "STRENGTH: " + NAMES[n];
+    for (var i = 0; i < meter.length; i++) {
+      meter[i].className = i < n ? "on-" + n : "";
+    }
+    if (!confirm_.value) { match.textContent = ""; match.className = "hint"; return; }
+    var same = confirm_.value === pw.value;
+    match.textContent = same ? "Passwords match" : "Passwords do not match yet";
+    match.className = same ? "hint" : "hint warn";
+  }
+
+  pw.addEventListener("input", paint);
+  confirm_.addEventListener("input", paint);
+
+  peek.addEventListener("click", function () {
+    var shown = pw.type === "text";
+    pw.type = confirm_.type = shown ? "password" : "text";
+    peek.setAttribute("aria-label", shown ? "Show password" : "Hide password");
+    peek.querySelector("use").setAttribute("href", shown ? "#i-eye" : "#i-eye-off");
+    pw.focus();
+  });
+</script>
 {% endblock %}

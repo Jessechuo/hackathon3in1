@@ -5,7 +5,7 @@ from sdoc import inbox
 from sdoc.web import app as web
 from sdoc.web import auth
 
-PASSWORD = "a-good-long-password"
+PASSWORD = "Operator-2026!x"
 EMAIL = "clerk@shipper.com"
 
 
@@ -18,7 +18,7 @@ def site(tmp_path, monkeypatch):
     monkeypatch.setattr(inbox, "MAIL_DIR", mail)
     monkeypatch.setattr(auth, "OUT_DIR", out)
     monkeypatch.setenv("SDOC_MAIL_USER", "hackathon3in1@gmail.com")
-    auth.create_user(EMAIL, PASSWORD, out_dir=out)
+    auth.create_user(EMAIL, PASSWORD, out_dir=out, name="Test Clerk")
 
     checked, sent = [], []
     # The real ingest calls Claude and the real send opens an SMTP socket.
@@ -105,10 +105,11 @@ def test_a_signed_out_visitor_is_invited_to_sign_in(site):
     assert "disabled" in html
 
 
-def test_a_signed_out_visitor_can_still_read_everything(site):
-    """A judge given the link must never meet a wall."""
+def test_reading_can_be_opened_up_for_a_deployment_that_wants_that(site, monkeypatch):
+    """SDOC_REQUIRE_LOGIN=0 hands out a link instead of credentials."""
     client, _, _, _ = site
     client.post("/logout", follow_redirects=False)
+    monkeypatch.setenv("SDOC_REQUIRE_LOGIN", "0")
     for path in ("/", "/dashboard", "/email/email_043", "/?status=MISMATCH"):
         assert client.get(path).status_code == 200, path
 

@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -45,10 +46,35 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="SDOC Inbox", lifespan=lifespan)
+
+# Reachable without an account: the front door itself, and the way back out.
+OPEN_PATHS = {"/login", "/register", "/logout"}
+
+
+@app.middleware("http")
+async def sign_in_wall(request: Request, call_next):
+    """The queue is behind a sign-in. Signup being open is what makes that
+    fair: nobody is locked out, they make an account first."""
+    path = request.url.path
+    if (auth.require_login() and path not in OPEN_PATHS
+            and not auth.current_user(request)):
+        target = path if request.method == "GET" else "/"
+        return RedirectResponse(f"/login?next={quote(target, safe='/')}",
+                                status_code=303)
+    return await call_next(request)
+
+
+# Added LAST so it is the outermost layer and runs FIRST. Starlette builds
+# the stack in reverse, so registering this before sign_in_wall would leave
+# the wall reading request.session before it exists - it would see nobody
+# signed in, redirect to /login, and loop there forever.
+#
 # Signed cookie, not server-side storage: one process, no database, and the
 # only thing in it is which account is signed in.
 app.add_middleware(SessionMiddleware, secret_key=auth.session_secret(),
                    same_site="lax", https_only=False)
+
+
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
 KINDS = {
@@ -341,17 +367,26 @@ def _safe_next(target: str) -> str:
     return target
 
 
-def _auth_page(request: Request, name: str, **extra):
+def _auth_page(request: Request, template: str, status: int = 200, **extra):
+    """The sign-in and registration screens are their own shell - a person
+    who is not signed in has no queue, no filters and no rail to show.
+
+    The template argument is `template`, not `name`: the registration form
+    posts a field called `name` and it is forwarded straight through here.
+    """
     return templates.TemplateResponse(
-        request=request, name=name,
-        context={"page": name.removesuffix(".html"), "total": len(load_all_emails()),
-                 "signup_open": auth.signup_open(),
-                 **_shell(load_view(), None, user=auth.current_user(request)), **extra},
+        request=request, name=template, status_code=status,
+        context={"page": template.removesuffix(".html"),
+                 "code_required": auth.code_required(),
+                 "desks": auth.DESKS,
+                 "min_password": auth.MIN_PASSWORD,
+                 "mail_address": os.environ.get("SDOC_MAIL_USER") or None,
+                 **extra},
     )
 
 
 @app.get("/login", response_class=HTMLResponse)
-def login_form(request: Request, next: str = "/compose"):
+def login_form(request: Request, next: str = "/"):
     if auth.current_user(request):
         return RedirectResponse(_safe_next(next), status_code=303)
     return _auth_page(request, "login.html", next=next)
@@ -359,15 +394,17 @@ def login_form(request: Request, next: str = "/compose"):
 
 @app.post("/login")
 def login_submit(request: Request, email: str = Form(""), password: str = Form(""),
-                 next: str = Form("/compose")):
+                 next: str = Form("/"), remember: str = Form("")):
     who = auth.authenticate(email, password, OUT_DIR)
     if not who:
         # One message for both halves: saying which was wrong tells an
         # attacker which addresses have accounts.
-        return _auth_page(request, "login.html", next=next,
+        return _auth_page(request, "login.html", status=401, next=next,
                           error="That email and password do not match an account.",
                           email=email)
     request.session[auth.SESSION_KEY] = who
+    # The screen offers to keep the terminal signed in; honour it.
+    request.session["ttl"] = "12h" if remember else "session"
     return RedirectResponse(_safe_next(next), status_code=303)
 
 
@@ -383,21 +420,24 @@ def register_form(request: Request):
 
 
 @app.post("/register")
-def register_submit(request: Request, email: str = Form(""), password: str = Form(""),
-                    code: str = Form("")):
-    if not auth.signup_open():
-        return _auth_page(request, "register.html",
-                          error="New accounts are turned off. Set SDOC_SIGNUP_CODE "
-                                "to allow them.")
+def register_submit(request: Request, name: str = Form(""), email: str = Form(""),
+                    password: str = Form(""), confirm: str = Form(""),
+                    desk: str = Form(""), code: str = Form(""),
+                    acknowledge: str = Form("")):
+    typed = {"name": name, "email": email, "desk": desk}
     if not auth.code_ok(code):
-        return _auth_page(request, "register.html", email=email,
-                          error="That signup code is not right.")
+        return _auth_page(request, "register.html", status=400, **typed,
+                          error="That access code is not right.")
+    if not acknowledge:
+        return _auth_page(request, "register.html", status=400, **typed,
+                          error="You need to acknowledge the audit logging policy.")
     try:
-        auth.create_user(email, password, out_dir=OUT_DIR)
+        auth.create_user(email, password, out_dir=OUT_DIR, name=name, desk=desk,
+                         confirm=confirm)
     except ValueError as e:
-        return _auth_page(request, "register.html", email=email, error=str(e))
+        return _auth_page(request, "register.html", status=400, **typed, error=str(e))
     request.session[auth.SESSION_KEY] = auth.normalise(email)
-    return RedirectResponse("/compose", status_code=303)
+    return RedirectResponse("/", status_code=303)
 
 
 @app.get("/compose", response_class=HTMLResponse)

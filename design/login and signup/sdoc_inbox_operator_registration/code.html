@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_blank" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-tertiary-container":"#e9f0ff","on-tertiary-fixed":"#0b1c30","on-secondary-fixed":"#25005a","primary":"#004ac6","error":"#ba1a1a","on-error-container":"#93000a","secondary-fixed":"#eaddff","inverse-on-surface":"#f1effa","outline-variant":"#c3c6d7","surface-container-highest":"#e3e1ec","surface-variant":"#e3e1ec","secondary-fixed-dim":"#d2bbff","on-secondary-fixed-variant":"#5a00c6","on-secondary":"#ffffff","tertiary-fixed":"#d3e4fe","primary-fixed":"#dbe1ff","surface":"#fbf8ff","surface-container":"#eeedf7","surface-container-lowest":"#ffffff","inverse-surface":"#2f3038","error-container":"#ffdad6","surface-dim":"#dad9e3","inverse-primary":"#b4c5ff","on-background":"#1a1b22","secondary":"#712ae2","on-primary":"#ffffff","on-tertiary":"#ffffff","surface-container-low":"#f4f2fd","surface-bright":"#fbf8ff","outline":"#737686","background":"#fbf8ff","on-primary-fixed-variant":"#003ea8","tertiary":"#46566c","primary-container":"#2563eb","on-primary-container":"#eeefff","on-secondary-container":"#fffbff","on-primary-fixed":"#00174b","on-tertiary-fixed-variant":"#38485d","surface-container-high":"#e8e7f1","on-surface":"#1a1b22","primary-fixed-dim":"#b4c5ff","on-surface-variant":"#434655","tertiary-fixed-dim":"#b7c8e1","tertiary-container":"#5e6e85","surface-tint":"#0053db","on-error":"#ffffff","secondary-container":"#8a4cfc"},borderRadius:{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},spacing:{"space-xl":"1rem","space-sm":"0.375rem","gutter":"0.75rem","space-lg":"0.75rem","space-md":"0.5rem","margin":"1rem","space-xs":"0.25rem"},fontFamily:{"body-md":["Fira Sans"],"headline-md":["Fira Sans"],"mono-data-lg":["JetBrains Mono"],"headline-sm":["Fira Sans"],"label-header":["Fira Sans"],"label-badge":["JetBrains Mono"],"body-sm":["Fira Sans"],"headline-lg":["Fira Sans"],"mono-data-sm":["JetBrains Mono"]},fontSize:{"body-md":["13px",{"lineHeight":"18px","fontWeight":"400"}],"headline-md":["16px",{"lineHeight":"24px","fontWeight":"600"}],"mono-data-lg":["13px",{"lineHeight":"18px","fontWeight":"500"}],"headline-sm":["14px",{"lineHeight":"20px","fontWeight":"600"}],"label-header":["11px",{"lineHeight":"14px","letterSpacing":"0.05em","fontWeight":"600"}],"label-badge":["10px",{"lineHeight":"12px","letterSpacing":"0.04em","fontWeight":"600"}],"body-sm":["12px",{"lineHeight":"16px","fontWeight":"400"}],"headline-lg":["20px",{"lineHeight":"28px","fontWeight":"600"}],"mono-data-sm":["11px",{"lineHeight":"14px","fontWeight":"400"}]}}}}</script></head><body class="bg-background font-body-md text-on-surface min-h-screen flex flex-col justify-between select-none"><header class="w-full bg-surface-container-lowest/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="w-full px-margin h-14 flex items-center justify-between"><div class="flex items-center gap-space-md"><div class="w-8 h-8 rounded bg-primary-container flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">anchor</span></div><div class="flex items-baseline gap-space-xs"><span class="font-headline-md text-headline-md tracking-tight text-on-surface">SDOC</span><span class="font-headline-sm text-headline-sm font-normal text-on-surface-variant">Inbox</span><span class="font-label-badge text-label-badge text-outline uppercase px-space-xs py-0.5 rounded bg-surface-container text-[10px] ml-space-xs">OPS-CORE</span></div></div><div class="flex items-center gap-space-md"><div class="flex items-center gap-space-xs px-space-md py-space-xs rounded bg-surface-container-low"><div class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div><span class="font-mono-data-sm text-mono-data-sm text-on-surface-variant uppercase">SYS_ONLINE : 99.98%</span></div><div class="h-4 w-[1px] bg-outline-variant"></div><span class="font-mono-data-sm text-mono-data-sm text-on-surface-variant">v2.4.12-rc</span></div></div></header><main class="w-full flex-1 flex flex-col items-center justify-center p-margin"><div class="flex flex-col w-full items-center justify-center py-space-xl">
+<div class="w-full max-w-[480px] bg-surface-container-lowest rounded-lg shadow-xl overflow-hidden relative">
+<!-- Top Decorative Status Bar -->
+<div class="h-1 w-full bg-surface-container-high flex">
+<div class="h-full bg-primary-container w-1/3"></div>
+<div class="h-full bg-primary-fixed-dim w-1/4"></div>
+<div class="h-full bg-surface-container-highest flex-1"></div>
+</div>
+<div class="p-space-xl">
+<!-- Card Header -->
+<div class="flex flex-col gap-space-sm pb-space-lg mb-space-lg">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-md">
+<div class="w-7 h-7 rounded bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary text-[16px]">anchor</span>
+</div>
+<div class="flex items-baseline gap-space-xs">
+<span class="font-headline-sm text-headline-sm text-on-surface">SDOC</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant font-medium">Inbox Ops</span>
+</div>
+</div>
+<span class="font-mono-data-sm text-mono-data-sm text-outline uppercase px-space-xs py-0.5 rounded bg-surface-container-low">SEC-LVL-2</span>
+</div>
+<div class="mt-space-xs">
+<h1 class="font-headline-md text-headline-md text-on-surface tracking-tight">Request Terminal Access / Register</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Create an operator account for document triage &amp; BL verification</p>
+</div>
+</div>
+<!-- Registration Form -->
+<form class="flex flex-col gap-space-md" id="accessRequestForm" onsubmit="return handleFormSubmit(event)">
+<!-- Full Name -->
+<div class="flex flex-col gap-space-xs">
+<div class="flex justify-between items-center">
+<label class="font-label-header text-label-header text-on-surface-variant uppercase" for="fullName">Full Legal Name</label>
+<span class="font-mono-data-sm text-mono-data-sm text-outline">REQ_FIELD</span>
+</div>
+<div class="relative flex items-center">
+<input class="w-full h-8 px-space-md bg-surface-container-low text-on-surface font-body-sm text-body-sm rounded focus:bg-surface-container-lowest focus:outline-none transition-colors placeholder:text-outline" id="fullName" placeholder="e.g., Aziz T. / Documentation Lead" required="" type="text"/>
+<span class="material-symbols-outlined text-outline text-[16px] absolute right-space-md pointer-events-none">badge</span>
+</div>
+</div>
+<!-- Corporate Email -->
+<div class="flex flex-col gap-space-xs">
+<div class="flex justify-between items-center">
+<label class="font-label-header text-label-header text-on-surface-variant uppercase" for="corpEmail">Corporate Logistics Email</label>
+<span class="font-label-badge text-label-badge text-primary bg-primary-fixed/40 px-space-xs py-0.5 rounded">Authorized Domain</span>
+</div>
+<div class="relative flex items-center">
+<input class="w-full h-8 px-space-md bg-surface-container-low text-on-surface font-body-sm text-body-sm rounded focus:bg-surface-container-lowest focus:outline-none transition-colors placeholder:text-outline" id="corpEmail" placeholder="operator@shipping-line.com" required="" type="email"/>
+<span class="material-symbols-outlined text-outline text-[16px] absolute right-space-md pointer-events-none">mail</span>
+</div>
+<span class="font-mono-data-sm text-mono-data-sm text-outline flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] text-tertiary">domain_verification</span> Must match authorized shipping carrier or NVOCC domain
+          </span>
+</div>
+<!-- Password -->
+<div class="flex flex-col gap-space-xs">
+<div class="flex justify-between items-center">
+<label class="font-label-header text-label-header text-on-surface-variant uppercase" for="password">Operator Password</label>
+<span class="font-mono-data-sm text-mono-data-sm text-outline" id="strengthLabel">STRENGTH: NONE</span>
+</div>
+<div class="relative flex items-center">
+<input class="w-full h-8 px-space-md bg-surface-container-low text-on-surface font-mono-data-lg text-mono-data-lg rounded focus:bg-surface-container-lowest focus:outline-none transition-colors placeholder:text-outline" id="password" oninput="evaluatePasswordStrength(this.value)" placeholder="••••••••••••" required="" type="password"/>
+<button class="absolute right-space-md text-outline hover:text-on-surface" onclick="togglePassVisibility('password', this)" type="button">
+<span class="material-symbols-outlined text-[16px]">visibility</span>
+</button>
+</div>
+<!-- Password Strength Meter -->
+<div class="w-full bg-surface-container h-1 rounded overflow-hidden flex gap-0.5">
+<div class="h-full w-1/4 bg-surface-container-highest transition-colors duration-200" id="meter1"></div>
+<div class="h-full w-1/4 bg-surface-container-highest transition-colors duration-200" id="meter2"></div>
+<div class="h-full w-1/4 bg-surface-container-highest transition-colors duration-200" id="meter3"></div>
+<div class="h-full w-1/4 bg-surface-container-highest transition-colors duration-200" id="meter4"></div>
+</div>
+<span class="font-mono-data-sm text-mono-data-sm text-outline">Min. 12 characters, uppercase, number &amp; operational symbol</span>
+</div>
+<!-- Confirm Password -->
+<div class="flex flex-col gap-space-xs">
+<label class="font-label-header text-label-header text-on-surface-variant uppercase" for="confirmPassword">Confirm Operator Password</label>
+<div class="relative flex items-center">
+<input class="w-full h-8 px-space-md bg-surface-container-low text-on-surface font-mono-data-lg text-mono-data-lg rounded focus:bg-surface-container-lowest focus:outline-none transition-colors placeholder:text-outline" id="confirmPassword" oninput="checkPasswordMatch()" placeholder="••••••••••••" required="" type="password"/>
+<span class="material-symbols-outlined text-outline text-[16px] absolute right-space-md pointer-events-none" id="matchIcon">lock</span>
+</div>
+</div>
+<!-- Desk / Region Queue Assignment -->
+<div class="flex flex-col gap-space-xs">
+<div class="flex justify-between items-center">
+<label class="font-label-header text-label-header text-on-surface-variant uppercase" for="queueAssignment">Desk / Region Queue Assignment</label>
+<span class="font-label-badge text-label-badge text-secondary-container bg-secondary-fixed/50 px-space-xs py-0.5 rounded">AUTO_ROUTING</span>
+</div>
+<div class="relative flex items-center">
+<select class="w-full h-8 px-space-md bg-surface-container-low text-on-surface font-mono-data-sm text-mono-data-sm rounded focus:bg-surface-container-lowest focus:outline-none transition-colors appearance-none cursor-pointer pr-8" id="queueAssignment" required="">
+<option disabled="" selected="" value="">SELECT OPERATIONAL QUEUE NODE...</option>
+<option value="CALLAO-LATAM-EXP-02">CALLAO-LATAM-EXP-02 (South America West Coast Export)</option>
+<option value="ROTTERDAM-EUR-IMPORT">ROTTERDAM-EUR-IMPORT (Europe Hub Clearance)</option>
+<option value="SINGAPORE-APAC-FEEDER">SINGAPORE-APAC-FEEDER (Southeast Asia Transshipment)</option>
+<option value="SHANGHAI-PAC-DEPARTURE">SHANGHAI-PAC-DEPARTURE (East Asia Main Line)</option>
+<option value="JEBEL-ALI-ME-HUB">JEBEL-ALI-ME-HUB (Middle East Cross-Trade)</option>
+<option value="GLOBAL-ESC-DESK">GLOBAL-ESC-DESK (Level 3 Discrepancy Escalation)</option>
+</select>
+<span class="material-symbols-outlined text-outline text-[16px] absolute right-space-md pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Compliance Checkbox -->
+<div class="pt-space-xs">
+<label class="flex items-start gap-space-md cursor-pointer group select-none">
+<input class="mt-0.5 w-4 h-4 rounded bg-surface-container-low accent-primary text-primary focus:ring-0 cursor-pointer" id="complianceCheck" required="" type="checkbox"/>
+<span class="font-body-sm text-body-sm text-on-surface-variant group-hover:text-on-surface leading-tight transition-colors">
+              I acknowledge the <span class="text-primary font-medium">FED-STD-0027</span> operational security policy and continuous audit logging requirement on all bill of lading interactions.
+            </span>
+</label>
+</div>
+<!-- Submit Button -->
+<div class="pt-space-sm flex flex-col gap-space-md">
+<button class="w-full h-8 bg-primary-container hover:bg-primary text-on-primary font-headline-sm text-headline-sm rounded flex items-center justify-center gap-space-sm transition-colors active:scale-[0.99]" id="submitBtn" type="submit">
+<span class="material-symbols-outlined text-[16px]">app_registration</span>
+<span>Register &amp; Request Access</span>
+<span class="font-mono-data-sm text-[10px] bg-on-primary-container/20 px-1 rounded text-on-primary ml-1">⏎</span>
+</button>
+<div class="flex items-center justify-center gap-space-xs font-body-sm text-body-sm text-on-surface-variant">
+<span>Already have an account?</span>
+<a class="text-primary font-medium hover:underline flex items-center gap-0.5" data-path="login" href="#">
+<span>Sign in to Terminal</span>
+<span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</a>
+</div>
+</div>
+</form>
+<!-- Internal Verification Notice Footer -->
+<div class="mt-space-xl p-space-md bg-surface-container-low rounded flex items-start gap-space-md">
+<span class="material-symbols-outlined text-tertiary text-[18px] shrink-0 mt-0.5">verified_user</span>
+<div class="flex flex-col gap-0.5">
+<span class="font-label-header text-label-header text-on-surface uppercase">Supervised Enrollment</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+            Registrations are subject to supervisor verification by Trade Ops Desk before queue activation. Unassigned credentials expire automatically in 48 hours.
+          </p>
+</div>
+</div>
+</div>
+<!-- Live Terminal Status Sub-footer in Card -->
+<div class="bg-surface-container px-space-xl py-space-sm flex items-center justify-between font-mono-data-sm text-mono-data-sm text-on-surface-variant">
+<div class="flex items-center gap-space-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+<span class="text-outline">AUTH-SRV: ACTIVE</span>
+</div>
+<span class="text-outline uppercase">PROTOCOL: TLS 1.3 / E2EE</span>
+</div>
+</div>
+</div>
+<script>
+  function evaluatePasswordStrength(val) {
+    const m1 = document.getElementById('meter1');
+    const m2 = document.getElementById('meter2');
+    const m3 = document.getElementById('meter3');
+    const m4 = document.getElementById('meter4');
+    const label = document.getElementById('strengthLabel');
+
+    let score = 0;
+    if (val.length >= 8) score++;
+    if (val.length >= 12) score++;
+    if (/[A-Z]/.test(val) && /[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+
+    const offClass = 'bg-surface-container-highest';
+    m1.className = `h-full w-1/4 ${offClass}`;
+    m2.className = `h-full w-1/4 ${offClass}`;
+    m3.className = `h-full w-1/4 ${offClass}`;
+    m4.className = `h-full w-1/4 ${offClass}`;
+
+    if (val.length === 0) {
+      label.textContent = 'STRENGTH: NONE';
+      label.className = 'font-mono-data-sm text-mono-data-sm text-outline';
+      return;
+    }
+
+    if (score === 1) {
+      m1.className = 'h-full w-1/4 bg-error';
+      label.textContent = 'STRENGTH: WEAK';
+      label.className = 'font-mono-data-sm text-mono-data-sm text-error';
+    } else if (score === 2) {
+      m1.className = 'h-full w-1/4 bg-error';
+      m2.className = 'h-full w-1/4 bg-secondary-container';
+      label.textContent = 'STRENGTH: FAIR';
+      label.className = 'font-mono-data-sm text-mono-data-sm text-secondary-container';
+    } else if (score === 3) {
+      m1.className = 'h-full w-1/4 bg-primary-container';
+      m2.className = 'h-full w-1/4 bg-primary-container';
+      m3.className = 'h-full w-1/4 bg-primary-container';
+      label.textContent = 'STRENGTH: GOOD';
+      label.className = 'font-mono-data-sm text-mono-data-sm text-primary';
+    } else if (score >= 4) {
+      m1.className = 'h-full w-1/4 bg-primary';
+      m2.className = 'h-full w-1/4 bg-primary';
+      m3.className = 'h-full w-1/4 bg-primary';
+      m4.className = 'h-full w-1/4 bg-primary';
+      label.textContent = 'STRENGTH: SECURE';
+      label.className = 'font-mono-data-sm text-mono-data-sm text-primary';
+    }
+  }
+
+  function checkPasswordMatch() {
+    const p1 = document.getElementById('password').value;
+    const p2 = document.getElementById('confirmPassword').value;
+    const matchIcon = document.getElementById('matchIcon');
+
+    if (!p2) {
+      matchIcon.textContent = 'lock';
+      matchIcon.className = 'material-symbols-outlined text-outline text-[16px] absolute right-space-md pointer-events-none';
+      return;
+    }
+
+    if (p1 === p2) {
+      matchIcon.textContent = 'check_circle';
+      matchIcon.className = 'material-symbols-outlined text-primary text-[16px] absolute right-space-md pointer-events-none';
+    } else {
+      matchIcon.textContent = 'cancel';
+      matchIcon.className = 'material-symbols-outlined text-error text-[16px] absolute right-space-md pointer-events-none';
+    }
+  }
+
+  function togglePassVisibility(id, btn) {
+    const field = document.getElementById(id);
+    const icon = btn.querySelector('span');
+    if (field.type === 'password') {
+      field.type = 'text';
+      icon.textContent = 'visibility_off';
+    } else {
+      field.type = 'password';
+      icon.textContent = 'visibility';
+    }
+  }
+
+  function handleFormSubmit(e) {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    btn.innerHTML = '<span class="material-symbols-outlined text-[16px] animate-spin">sync</span><span>Transmitting Access Request...</span>';
+    btn.disabled = true;
+    
+    setTimeout(() => {
+      btn.className = 'w-full h-8 bg-surface-container text-on-surface font-headline-sm text-headline-sm rounded flex items-center justify-center gap-space-sm';
+      btn.innerHTML = '<span class="material-symbols-outlined text-primary text-[16px]">task_alt</span><span>Request Dispatched to Ops Desk</span>';
+    }, 1200);
+    return false;
+  }
+</script></main><footer class="w-full bg-surface-container-lowest/80 backdrop-blur-xl shadow-[0_-1px_8px_rgba(0,0,0,0.02)]"><div class="w-full px-margin h-12 flex items-center justify-between"><div class="flex items-center gap-space-xl font-mono-data-sm text-mono-data-sm text-on-surface-variant"><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-[14px] text-outline">verified_user</span><span>RESTRICTED OPERATIONAL ACCESS</span></div><span class="hidden sm:inline text-outline-variant">|</span><span class="hidden sm:inline">FED-STD-0027 LOGISTICAL ENCRYPTION ENABLED</span></div><div class="flex items-center gap-space-lg font-body-sm text-body-sm text-on-surface-variant"><a class="hover:text-primary transition-colors" data-path="security-policy" href="#">Security Policy</a><span class="text-outline-variant">•</span><a class="hover:text-primary transition-colors" data-path="terminal-status" href="#">Node Status</a><span class="text-outline-variant">•</span><span class="font-mono-data-sm text-mono-data-sm">© 2024 SDOC GLOBAL</span></div></div></footer></body></html>

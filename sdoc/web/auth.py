@@ -1,15 +1,12 @@
-"""Accounts and sessions. Who may send mail from this account.
+"""Accounts and sessions. Who gets into the terminal.
 
-Sending is the only thing that needs an identity: it leaves the building
-under the shipping desk's own address. Reading is left open so anyone given
-the link can see the queue without being handed credentials first - set
-SDOC_REQUIRE_LOGIN=1 to close that too.
+An account is needed to reach the queue at all, the way a mail service
+works: the sign-in screen is the front door. SDOC_REQUIRE_LOGIN=0 opens
+reading again for anyone who would rather hand out a link than credentials.
 
-Registration needs a code. This app runs on a public URL, and open signup
-plus the ability to send is an open relay wearing a hat: a stranger signs
-up, then mails the world from this account. The code is typed once, when
-the account is created, and never again - which is the whole point of
-having sessions rather than a passphrase on every send.
+Signup is open: anyone can create their own operator account, the way any
+mail service works. Setting SDOC_SIGNUP_CODE adds a code to the form if a
+deployment wants to close it.
 
 Passwords are stored as scrypt hashes with a per-password salt. stdlib
 only: no dependency worth adding for one call.
@@ -19,7 +16,9 @@ import hashlib
 import json
 import logging
 import os
+import re
 import secrets
+from datetime import datetime, timezone
 from pathlib import Path
 
 from sdoc.config import OUT_DIR
@@ -34,7 +33,17 @@ SESSION_KEY = "user"
 _N, _R, _P, _DKLEN = 2 ** 14, 8, 1, 32
 _MAXMEM = 64 * 1024 * 1024
 
-MIN_PASSWORD = 8
+# The registration screen states this rule, so it is the rule.
+MIN_PASSWORD = 12
+
+# Where an operator's queue is routed. Shown on the registration form.
+DESKS = [
+    "ROTTERDAM-EU04",
+    "SINGAPORE-APAC01",
+    "DUBAI-MEA02",
+    "HOUSTON-AMER03",
+    "SHANGHAI-APAC02",
+]
 
 
 def _dir(out_dir: Path | None) -> Path:
@@ -82,42 +91,78 @@ def signup_code() -> str | None:
     return os.environ.get("SDOC_SIGNUP_CODE") or None
 
 
-def signup_open() -> bool:
-    """No code configured means no new accounts. Closed is the safe default:
-    a public URL where anyone can sign up and then send is an open relay."""
+def code_required() -> bool:
+    """Signup is open unless a deployment sets a code."""
     return bool(signup_code())
 
 
 def code_ok(supplied: str) -> bool:
     expected = signup_code()
     if not expected:
-        return False
+        return True          # no code configured: signup is open
     return secrets.compare_digest(supplied or "", expected)
 
 
+def password_problems(password: str) -> list[str]:
+    """What the password is still missing, in the words the form shows."""
+    password = password or ""
+    problems = []
+    if len(password) < MIN_PASSWORD:
+        problems.append(f"at least {MIN_PASSWORD} characters")
+    if not re.search(r"[A-Z]", password):
+        problems.append("an uppercase letter")
+    if not re.search(r"[0-9]", password):
+        problems.append("a number")
+    if not re.search(r"[^A-Za-z0-9]", password):
+        problems.append("a symbol")
+    return problems
+
+
 def require_login() -> bool:
-    """Whether reading needs an account too. Off by default."""
-    return os.environ.get("SDOC_REQUIRE_LOGIN", "0") == "1"
+    """Everything needs an account. Set SDOC_REQUIRE_LOGIN=0 to open reading.
+
+    Signup being open is what makes this reasonable: nobody is locked out,
+    they just make an account first, the way any mail service works.
+    """
+    return os.environ.get("SDOC_REQUIRE_LOGIN", "1") == "1"
 
 
 def normalise(email: str) -> str:
     return (email or "").strip().lower()
 
 
-def create_user(email: str, password: str, out_dir: Path | None = None) -> dict:
+def create_user(email: str, password: str, out_dir: Path | None = None,
+                name: str = "", desk: str = "", confirm: str | None = None) -> dict:
     """Caller checks the signup code. Raises ValueError with a message meant
-    to be shown to the person."""
+    to be read by the person who typed it."""
     email = normalise(email)
+    if not (name or "").strip():
+        raise ValueError("your name is required")
     if "@" not in email or "." not in email.split("@")[-1]:
         raise ValueError("that does not look like an email address")
-    if len(password or "") < MIN_PASSWORD:
-        raise ValueError(f"password must be at least {MIN_PASSWORD} characters")
+    problems = password_problems(password)
+    if problems:
+        raise ValueError("password needs " + ", ".join(problems))
+    if confirm is not None and password != confirm:
+        raise ValueError("the two passwords do not match")
+    if desk and desk not in DESKS:
+        raise ValueError("pick a desk from the list")
     users = load_users(out_dir)
     if email in users:
         raise ValueError("an account with that email already exists")
-    users[email] = {"email": email, "password": hash_password(password)}
+    users[email] = {
+        "email": email,
+        "name": name.strip(),
+        "desk": desk or "",
+        "password": hash_password(password),
+        "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
     save_users(users, out_dir)
     return users[email]
+
+
+def get_user(email: str, out_dir: Path | None = None) -> dict | None:
+    return load_users(out_dir).get(normalise(email))
 
 
 def authenticate(email: str, password: str, out_dir: Path | None = None) -> str | None:
