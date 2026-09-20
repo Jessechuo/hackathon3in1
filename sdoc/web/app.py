@@ -6,6 +6,7 @@ emails, with the category and verification columns reserved but empty.
 import json
 import os
 from collections import Counter
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
@@ -22,8 +23,24 @@ from sdoc.ingest import ingest, load_mail_results
 from sdoc.inbox import attachment_path, load_all_emails, load_received
 from sdoc.mail.store import save_email
 from sdoc.review import apply_reviews
+from sdoc.web import watcher
 
-app = FastAPI(title="SDOC Inbox")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """One process serves the UI and polls the mailbox.
+
+    Two processes would mean two things to deploy, pay for and restart. The
+    watch runs in a daemon thread and stops itself when the app shuts down;
+    with no mail credentials set it simply never starts.
+    """
+    handle = watcher.start()
+    yield
+    if handle:
+        handle[1].set()
+
+
+app = FastAPI(title="SDOC Inbox", lifespan=lifespan)
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
 KINDS = {
