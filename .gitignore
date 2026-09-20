@@ -29,3 +29,6 @@ shot-*.png
 # Organizer-supplied data — kept out of the public repo
 sdoc-hackathon-bundle/
 Shipping Document Verification Use Case.pdf
+
+# Mail received at runtime - local state, like out/ and .cache/
+/mail/
