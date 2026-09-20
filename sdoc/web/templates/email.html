@@ -89,6 +89,24 @@
   }
   .head .meta b { color:var(--primary); font-weight:500; }
 
+  /* Progress and outcome of a send. */
+  .working {
+    display:flex; align-items:flex-start; gap:var(--md);
+    margin:0 0 var(--lg); padding:var(--md) var(--lg);
+    border:1px solid var(--border); border-left:3px solid var(--primary);
+    border-radius:var(--r-ctl); background:var(--l1);
+    font-size:13px; line-height:18px; color:var(--fg-muted);
+  }
+  .working b { color:var(--fg); font-weight:600; }
+  .working svg { flex:none; margin-top:1px; color:var(--primary); }
+  .working.ok { border-left-color:var(--ok); }
+  .working.ok svg { color:var(--ok); }
+  .working.bad { border-left-color:var(--mismatch); }
+  .working.bad svg { color:var(--mismatch); }
+  .spin { animation:spin 1s linear infinite; transform-origin:50% 50%; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @media (prefers-reduced-motion:reduce) { .spin { animation:none; } }
+
   .body {
     margin-top:var(--lg); padding:var(--xl);
     background:var(--l2); border:1px solid var(--border); border-radius:var(--r-ctl);
@@ -255,6 +273,25 @@
       &middot; {{ position }} of {{ total }}</div>
   </div>
 
+  {% if cat and cat.get('pending') %}
+  <p class="working" role="status">
+    <svg class="ico spin" aria-hidden="true"><use href="#i-spin"/></svg>
+    <span><b>Checking the documents, then sending.</b>
+    Reading both files takes a few seconds; this page refreshes itself when it is done.</span>
+  </p>
+  {% elif cat and cat.get('sent') %}
+  <p class="working ok" role="status">
+    <svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>
+    <span>Checked and sent to <b>{{ email.to }}</b>.</span>
+  </p>
+  {% elif cat and cat.get('send_error') %}
+  <p class="working bad" role="status">
+    <svg class="ico" aria-hidden="true"><use href="#i-alert"/></svg>
+    <span>The documents were checked, but the message could not be sent:
+    <b>{{ cat.send_error }}</b></span>
+  </p>
+  {% endif %}
+
   <pre class="body">{{ email.body }}</pre>
 
   {% if cat and cat.get('category') == 'BL_COMPARISON' and 'fields' in cat %}
@@ -327,6 +364,12 @@
 {% endblock %}
 
 {% block script %}
+{% if cat and cat.get('pending') %}
+<script>
+  // The check and the send run off the request; come back for the result.
+  setTimeout(function () { location.reload(); }, 3000);
+</script>
+{% endif %}
 <script>
 (function () {
   var EID = "{{ email.email_id }}";

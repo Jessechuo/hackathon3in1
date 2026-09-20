@@ -4,7 +4,9 @@ Renders whatever exists: with no categories.json it still shows all 520
 emails, with the category and verification columns reserved but empty.
 """
 import json
+import logging
 import os
+import threading
 from collections import Counter
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -21,7 +23,7 @@ from sdoc.ai.classify import CATEGORIES
 from sdoc.config import MAIL_DIR, OUT_DIR
 from sdoc.core.fields import FIELDS
 from sdoc.extract import read_document
-from sdoc.ingest import ingest, load_mail_results
+from sdoc.ingest import ingest, load_mail_results, mark_pending, update_result
 from sdoc.inbox import attachment_path, load_all_emails, load_received
 from sdoc.mail.send import send as send_mail
 from sdoc.mail.send import valid_address
@@ -75,6 +77,7 @@ app.add_middleware(SessionMiddleware, secret_key=auth.session_secret(),
                    same_site="lax", https_only=False)
 
 
+log = logging.getLogger(__name__)
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
 KINDS = {
@@ -173,6 +176,7 @@ def _shell(results: dict, active: str | None, active_status: str | None = None,
         # Read per request, not at import: the watcher may be started later.
         "mail_address": os.environ.get("SDOC_MAIL_USER") or None,
         "user": user,
+        "user_name": (auth.get_user(user, OUT_DIR) or {}).get("name") if user else None,
         "active": active,
         "active_status": active_status,
         "active_reviewed": active_reviewed,
@@ -454,6 +458,29 @@ def compose_form(request: Request):
     )
 
 
+def _check_then_send(email: dict, to: str, subject: str, body: str,
+                     attachments: list[tuple[str, bytes]]) -> None:
+    """The slow half of sending, off the request.
+
+    Reading two documents with Opus and opening an SMTP connection together
+    take the better part of half a minute. Doing that before responding left
+    a person watching a spinner, so the page comes back immediately and this
+    fills in behind it.
+
+    The check still runs before the send: catching a discrepancy after the
+    draft has gone is worth much less.
+    """
+    ingest(email, out_dir=OUT_DIR)          # never raises; records its own failure
+    try:
+        send_mail(to, subject, body, attachments)
+        update_result(email["email_id"], OUT_DIR, sent=True, send_error=None,
+                      sent_at=datetime.now(timezone.utc).isoformat(timespec="seconds"))
+    except Exception as e:
+        log.warning("could not send %s: %s", email["email_id"], e)
+        update_result(email["email_id"], OUT_DIR, sent=False,
+                      send_error=f"{type(e).__name__}: {e}")
+
+
 @app.post("/compose")
 async def compose_submit(request: Request, to: str = Form(""), subject: str = Form(""),
                          body: str = Form(""),
@@ -496,8 +523,10 @@ async def compose_submit(request: Request, to: str = Form(""), subject: str = Fo
     account = os.environ.get("SDOC_MAIL_USER") or "sdoc@localhost"
     email = save_email(account, subject, body, attachments, root=MAIL_DIR,
                        recipient=to, direction="sent")
-    ingest(email, out_dir=OUT_DIR)
-    send_mail(to, subject, body, attachments)
+    mark_pending(email, out_dir=OUT_DIR)
+    threading.Thread(target=_check_then_send, daemon=True,
+                     args=(email, to, subject, body, attachments),
+                     name=f"send-{email['email_id']}").start()
     return RedirectResponse(f"/email/{email['email_id']}", status_code=303)
 
 

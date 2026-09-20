@@ -1,3 +1,5 @@
+import threading
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -21,8 +23,18 @@ def site(tmp_path, monkeypatch):
     auth.create_user(EMAIL, PASSWORD, out_dir=out, name="Test Clerk")
 
     checked, sent = [], []
+
     # The real ingest calls Claude and the real send opens an SMTP socket.
-    monkeypatch.setattr(web, "ingest", lambda email, out_dir=None: checked.append(email))
+    # The stand-in still writes a finished result, because that is what
+    # clears the pending flag the page is waiting on.
+    def fake_ingest(email, out_dir=None):
+        checked.append(email)
+        from sdoc.ingest import update_result
+        return update_result(email["email_id"], out_dir, pending=False,
+                             category="BL_COMPARISON", status="OK", fields=[],
+                             defect_fields=[], has_defect=False, note=None)
+
+    monkeypatch.setattr(web, "ingest", fake_ingest)
     monkeypatch.setattr(web, "send_mail",
                         lambda to, subject, body, attachments: sent.append(
                             (to, subject, body, attachments)))
@@ -30,6 +42,13 @@ def site(tmp_path, monkeypatch):
     client.post("/login", data={"email": EMAIL, "password": PASSWORD},
                 follow_redirects=False)
     return client, mail, checked, sent
+
+
+def settle(timeout=5):
+    """Wait for the background check-and-send thread to finish."""
+    for thread in threading.enumerate():
+        if thread.name.startswith("send-"):
+            thread.join(timeout=timeout)
 
 
 def post(client, **over):
@@ -64,6 +83,7 @@ def test_sending_checks_the_documents_then_sends_and_opens_the_result(site):
 
     assert r.status_code == 303
     assert r.headers["location"] == "/email/mail_0001"
+    settle()
     # checked before it left
     assert [e["email_id"] for e in checked] == ["mail_0001"]
     assert [s[0] for s in sent] == ["ops@shipper.com"]
@@ -73,6 +93,7 @@ def test_sending_checks_the_documents_then_sends_and_opens_the_result(site):
 def test_a_sent_email_records_its_recipient_and_direction(site):
     client, _, _, _ = site
     post(client)
+    settle()
     stored = inbox.load_received()[0]
     assert stored["to"] == "ops@shipper.com"
     assert stored["direction"] == "sent"
@@ -82,6 +103,7 @@ def test_a_sent_email_records_its_recipient_and_direction(site):
 def test_the_inbox_shows_who_a_sent_email_went_to(site):
     client, _, _, _ = site
     post(client)
+    settle()
     html = client.get("/").text
     assert "ops@shipper.com" in html
     assert ">TO<" in html
@@ -92,6 +114,7 @@ def test_a_signed_out_visitor_cannot_send(site):
     client, _, checked, sent = site
     client.post("/logout", follow_redirects=False)
     r = post(client)
+    settle()
     assert r.status_code == 401
     assert sent == [] and checked == []
     assert inbox.load_received() == []       # and nothing is stored either
@@ -155,3 +178,84 @@ def test_the_rail_links_to_the_form(site):
 def test_the_header_names_the_account_the_queue_is_fed_from(site):
     client, _, _, _ = site
     assert 'class="acct"' in client.get("/").text
+
+
+# --- the slow half runs off the request ----------------------------------
+
+def test_the_page_comes_back_before_the_work_is_done(site, monkeypatch):
+    """Reading two documents and opening SMTP together take ~30s. Doing that
+    before responding left a person watching a spinner."""
+    client, _, _, _ = site
+    started, release = threading.Event(), threading.Event()
+
+    def slow_ingest(email, out_dir=None):
+        started.set()
+        release.wait(timeout=5)
+
+    monkeypatch.setattr(web, "ingest", slow_ingest)
+    r = post(client)                       # returns while slow_ingest is blocked
+    assert r.status_code == 303
+    assert started.wait(timeout=5), "the background work never started"
+    release.set()
+    settle()
+
+
+def test_the_email_has_a_page_to_open_while_the_work_runs(site, monkeypatch):
+    client, out, _, _ = site
+    release = threading.Event()
+    monkeypatch.setattr(web, "ingest",
+                        lambda email, out_dir=None: release.wait(timeout=5))
+    post(client)
+
+    page = client.get("/email/mail_0001").text
+    assert "Checking the documents" in page
+    assert "location.reload" in page        # it comes back for the result
+    release.set()
+    settle()
+
+
+def test_a_successful_send_is_recorded(site):
+    client, _, _, _ = site
+    post(client)
+    settle()
+    from sdoc.ingest import load_mail_results
+    result = load_mail_results(web.OUT_DIR)["mail_0001"]
+    assert result["sent"] is True
+    assert result["pending"] is False
+    assert result["sent_at"]
+    assert "Checked and sent" in client.get("/email/mail_0001").text
+
+
+def test_a_failed_send_is_reported_and_the_check_is_kept(site, monkeypatch):
+    client, _, checked, _ = site
+
+    def refuse(to, subject, body, attachments):
+        raise OSError("smtp is unreachable")
+
+    monkeypatch.setattr(web, "send_mail", refuse)
+    post(client)
+    settle()
+
+    from sdoc.ingest import load_mail_results
+    result = load_mail_results(web.OUT_DIR)["mail_0001"]
+    assert result["sent"] is False
+    assert "smtp is unreachable" in result["send_error"]
+    assert [e["email_id"] for e in checked] == ["mail_0001"]   # the check still ran
+    assert "could not be sent" in client.get("/email/mail_0001").text
+
+
+# --- the header carries an initial, not an address -----------------------
+
+def test_the_header_shows_an_initial_rather_than_the_whole_address(site):
+    client, _, _, _ = site
+    html = client.get("/").text
+    assert 'class="avatar"' in html
+    assert ">T<" in html                    # "Test Clerk"
+    assert 'id="acct-pop"' in html          # the menu behind it
+    assert "Sign out" in html               # inside the menu
+
+
+def test_the_menu_carries_the_name_and_address_it_replaced(site):
+    client, _, _, _ = site
+    html = client.get("/").text
+    assert "Test Clerk" in html and EMAIL in html

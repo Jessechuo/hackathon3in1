@@ -157,17 +157,47 @@ header.app {
 }
 .filters { display:flex; align-items:center; gap:3px; margin-left:auto; flex-wrap:wrap; }
 .head-right { display:flex; align-items:center; gap:var(--xs); }
-/* Who is signed in, and the way out. Text, not a button: it is not the
-   thing anyone came here to press. */
-.who { font-family:var(--mono); font-size:11px; color:var(--fg-muted); padding:0 var(--xs); }
-.inline-form { display:inline-flex; }
+/* Who is signed in: an initial, not an address. The header is the most
+   contested row on the page and an email eats a third of it. */
+.acct-menu { position:relative; display:flex; }
+.avatar {
+  width:28px; height:28px; border-radius:50%; border:0; cursor:pointer;
+  background:var(--primary); color:var(--on-primary);
+  font:inherit; font-size:13px; font-weight:600; line-height:1;
+  display:flex; align-items:center; justify-content:center;
+  transition:filter var(--t), box-shadow var(--t);
+}
+.avatar:hover { filter:brightness(1.1); }
+.avatar[aria-expanded="true"] { box-shadow:0 0 0 3px var(--primary-soft); }
+.avatar.lg { width:40px; height:40px; font-size:17px; cursor:default; }
+
+.acct-pop {
+  position:absolute; top:calc(100% + 8px); right:0; z-index:60;
+  min-width:250px; padding:var(--lg);
+  background:var(--l1); border:1px solid var(--border);
+  border-radius:8px; box-shadow:0 12px 32px rgba(15,23,42,.16);
+}
+.acct-pop[hidden] { display:none; }
+.acct-id { display:flex; align-items:center; gap:var(--lg); padding-bottom:var(--lg); }
+.acct-id b { display:block; font-size:14px; font-weight:600; color:var(--fg); }
+.acct-id span { display:block; font-size:12px; color:var(--fg-muted);
+  overflow-wrap:anywhere; }
+.acct-out {
+  width:100%; height:34px; margin-top:var(--md);
+  border:1px solid var(--border-strong); border-radius:var(--r-ctl);
+  background:transparent; color:var(--fg); cursor:pointer;
+  font:inherit; font-size:13px;
+  display:flex; align-items:center; justify-content:center; gap:var(--md);
+  transition:background var(--t);
+}
+.acct-out:hover { background:var(--l2); }
+
 .linkbtn {
   background:transparent; border:0; padding:0 var(--md); cursor:pointer;
   font:inherit; font-size:12px; color:var(--fg-muted); text-decoration:none;
   transition:color var(--t);
 }
 .linkbtn:hover { color:var(--fg); text-decoration:underline; }
-@media (max-width:900px) { .who { display:none; } }
 
 /* Filter buttons: mono uppercase micro-labels. */
 .fbtn {
@@ -281,6 +311,8 @@ aside.rail {
   <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
   <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
   <symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></symbol>
+  <symbol id="i-signout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></symbol>
+  <symbol id="i-spin" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9" /></symbol>
 </defs></svg>
 
 <header class="app">
@@ -332,10 +364,25 @@ aside.rail {
   <div class="head-right">
     <span class="vr"></span>
     {% if user %}
-      <span class="who" title="Signed in">{{ user }}</span>
-      <form method="post" action="/logout" class="inline-form">
-        <button class="linkbtn" type="submit">Sign out</button>
-      </form>
+      {% set initial = (user_name or user)[0]|upper %}
+      <div class="acct-menu">
+        <button class="avatar" id="acct-btn" aria-haspopup="true" aria-expanded="false"
+                aria-label="Account: {{ user_name or user }}" title="{{ user }}">{{ initial }}</button>
+        <div class="acct-pop" id="acct-pop" role="menu" hidden>
+          <div class="acct-id">
+            <span class="avatar lg" aria-hidden="true">{{ initial }}</span>
+            <div>
+              <b>{{ user_name or user.split('@')[0] }}</b>
+              <span>{{ user }}</span>
+            </div>
+          </div>
+          <form method="post" action="/logout">
+            <button class="acct-out" type="submit" role="menuitem">
+              <svg class="ico ico-sm"><use href="#i-signout"/></svg> Sign out
+            </button>
+          </form>
+        </div>
+      </div>
     {% else %}
       <a class="linkbtn" href="/login?next={{ request.url.path }}">Sign in</a>
     {% endif %}
@@ -410,6 +457,28 @@ aside.rail {
   });
 
   btn.setAttribute("aria-pressed", current() === "dark" ? "true" : "false");
+})();
+
+// Account menu: click the initial to open, click anywhere else or Esc to close.
+(function () {
+  var trigger = document.getElementById("acct-btn"),
+      pop = document.getElementById("acct-pop");
+  if (!trigger || !pop) return;
+
+  function setOpen(open) {
+    pop.hidden = !open;
+    trigger.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
+  trigger.addEventListener("click", function (e) {
+    e.stopPropagation();
+    setOpen(pop.hidden);
+  });
+  pop.addEventListener("click", function (e) { e.stopPropagation(); });
+  document.addEventListener("click", function () { setOpen(false); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !pop.hidden) { setOpen(false); trigger.focus(); }
+  });
 })();
 </script>
 {% block script %}{% endblock %}
