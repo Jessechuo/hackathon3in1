@@ -265,6 +265,7 @@ aside.rail {
   <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></symbol>
   <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
   <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></symbol>
 </defs></svg>
 
 <header class="app">
@@ -323,7 +324,8 @@ aside.rail {
 <aside class="rail">
   <nav aria-label="Sections">
     <a href="/dashboard" aria-current="{{ 'page' if page == 'dashboard' else 'false' }}" title="Overview"><svg class="ico ico-lg"><use href="#i-grid"/></svg><span class="vh">Overview</span></a>
-    <a href="/" aria-current="{{ 'page' if page != 'dashboard' else 'false' }}" title="Triage Queue"><svg class="ico ico-lg"><use href="#i-inbox"/></svg><span class="vh">Triage Queue</span></a>
+    <a href="/" aria-current="{{ 'page' if page == 'inbox' else 'false' }}" title="Triage Queue"><svg class="ico ico-lg"><use href="#i-inbox"/></svg><span class="vh">Triage Queue</span></a>
+    <a href="/compose" aria-current="{{ 'page' if page == 'compose' else 'false' }}" title="New email"><svg class="ico ico-lg"><use href="#i-send"/></svg><span class="vh">New email</span></a>
     <span class="item" title="Bills of Lading — not built yet"><svg class="ico ico-lg"><use href="#i-doc"/></svg></span>
     <span class="item" title="Shipping Instructions — not built yet"><svg class="ico ico-lg"><use href="#i-clip-board"/></svg></span>
     <span class="item" title="Customs &amp; Invoices — not built yet"><svg class="ico ico-lg"><use href="#i-receipt"/></svg></span>

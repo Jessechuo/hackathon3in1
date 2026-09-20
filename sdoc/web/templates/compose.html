@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}New email — SDOC Inbox{% endblock %}
+{% block count %}New email{% endblock %}
+
+{% block content %}
+<style>
+  .compose { max-width:680px; padding:var(--xl) var(--xl) 48px; }
+  .compose h1 { margin:0 0 var(--md); }
+  .lede { color:var(--fg-muted); margin:0 0 var(--md); max-width:62ch; line-height:1.6; }
+  .lede:last-of-type { margin-bottom:var(--xl); }
+  .field { display:block; margin-bottom:var(--xl); }
+  .field > .lbl {
+    display:block; font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--fg-subtle); font-weight:600; margin-bottom:6px; }
+  .field input[type=text], .field textarea {
+    width:100%; box-sizing:border-box; padding:9px 11px;
+    border:1px solid var(--border); border-radius:var(--r-ctl);
+    background:var(--l1); color:var(--fg); font:inherit; font-size:13px; }
+  .field textarea { min-height:190px; resize:vertical; line-height:1.65; }
+  .field input[type=file] {
+    width:100%; box-sizing:border-box; font:inherit; font-size:12px;
+    color:var(--fg-muted); padding:8px 0; }
+  .field input:focus-visible, .field textarea:focus-visible {
+    outline:2px solid var(--primary); outline-offset:-1px; border-color:var(--primary); }
+  .hint { color:var(--fg-subtle); font-size:12px; margin:6px 0 0; line-height:1.55; }
+  .hint code { font-family:var(--mono); font-size:11px;
+    background:var(--l2); padding:1px 4px; border-radius:var(--r-badge); }
+  .send {
+    display:inline-flex; align-items:center; gap:var(--md);
+    height:32px; padding:0 var(--xl); border:0; border-radius:var(--r-ctl);
+    background:var(--primary); color:var(--on-primary);
+    font:inherit; font-size:13px; font-weight:600; cursor:pointer; }
+  .send:hover { filter:brightness(1.08); }
+  .send svg { color:currentColor; }
+</style>
+
+<div class="compose">
+  <h1 class="t-headline-sm">New email</h1>
+
+  <p class="lede">Sends this through the same classifier and the same comparison the
+  graded run uses. Nothing here is looked up: whatever you type is read by Claude
+  for the first time.</p>
+
+  {% if mail_address %}
+  <p class="lede">Or send a real email to <strong>{{ mail_address }}</strong> —
+  the watcher picks it up within 20 seconds.</p>
+  {% else %}
+  <p class="lede">To accept real email as well, set <code>SDOC_MAIL_USER</code> and
+  <code>SDOC_MAIL_PASSWORD</code>, then run <code>python -m sdoc.run_watch</code>.</p>
+  {% endif %}
+
+  <form method="post" action="/compose" enctype="multipart/form-data">
+    <label class="field">
+      <span class="lbl">From</span>
+      <input type="text" name="sender" required placeholder="ops@shipper.com">
+    </label>
+
+    <label class="field">
+      <span class="lbl">Subject</span>
+      <input type="text" name="subject" required
+             placeholder="Please check draft BL against SI - PO 26067">
+    </label>
+
+    <label class="field">
+      <span class="lbl">Body</span>
+      <textarea name="body" placeholder="Hi,&#10;&#10;Attached are the SI and draft BL. Please check the details and confirm.&#10;&#10;Thanks"></textarea>
+    </label>
+
+    <label class="field">
+      <span class="lbl">Attachments</span>
+      <input type="file" name="files" multiple>
+      <p class="hint">Up to {{ max_attachments }} files, {{ max_mb }} MB each. Name them
+      so the SI and the BL are tellable apart — <code>SI.txt</code> and
+      <code>BL.txt</code> is enough. txt, pdf, docx and xlsx can be read.</p>
+    </label>
+
+    <button class="send" type="submit">
+      <svg class="ico ico-sm"><use href="#i-send"/></svg> Send to inbox
+    </button>
+    <p class="hint">Classification and comparison run now, so a document check
+    costs about 2 cents of API credit.</p>
+  </form>
+</div>
+{% endblock %}

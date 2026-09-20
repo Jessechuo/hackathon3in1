@@ -9,16 +9,17 @@ from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from sdoc.ai.classify import CATEGORIES
 from sdoc.config import MAIL_DIR, OUT_DIR
 from sdoc.core.fields import FIELDS
 from sdoc.extract import read_document
-from sdoc.ingest import load_mail_results
+from sdoc.ingest import ingest, load_mail_results
 from sdoc.inbox import attachment_path, load_all_emails, load_received
+from sdoc.mail.store import save_email
 from sdoc.review import apply_reviews
 
 app = FastAPI(title="SDOC Inbox")
@@ -30,6 +31,11 @@ KINDS = {
     ".docx": "Word document",
     ".xlsx": "Excel workbook",
 }
+
+# A person typing a demo email, not a mail server: small, sane caps so a
+# misdropped file cannot fill the disk or run up an extraction bill.
+MAX_ATTACHMENTS = 5
+MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024
 
 
 def load_results() -> dict:
@@ -291,6 +297,53 @@ async def record_review(email_id: str, request: Request):
         state[email_id] = current
     save_review(state)
     return JSONResponse({"email_id": email_id, "review": current})
+
+
+@app.get("/compose", response_class=HTMLResponse)
+def compose_form(request: Request):
+    results = load_view()
+    return templates.TemplateResponse(
+        request=request,
+        name="compose.html",
+        context={"page": "compose", "total": len(load_all_emails()),
+                 "max_attachments": MAX_ATTACHMENTS,
+                 "max_mb": MAX_ATTACHMENT_BYTES // 1024 // 1024,
+                 **_shell(results, None)},
+    )
+
+
+@app.post("/compose")
+async def compose_submit(sender: str = Form(""), subject: str = Form(""),
+                         body: str = Form(""), files: list[UploadFile] = File(default=[])):
+    """Take a typed email exactly as if it had arrived, then run it through
+    the same classify-and-compare the batch runner uses.
+
+    sender and subject are declared optional and checked here on purpose. A
+    required Form field that arrives empty is dropped by the encoder and
+    reported as missing, which is a 422 full of schema noise; this way blank
+    and whitespace-only both give the same readable 400.
+    """
+    if not sender.strip() or not subject.strip():
+        raise HTTPException(status_code=400, detail="sender and subject are required")
+
+    uploads = [f for f in files if f.filename]
+    if len(uploads) > MAX_ATTACHMENTS:
+        raise HTTPException(status_code=400,
+                            detail=f"at most {MAX_ATTACHMENTS} attachments")
+
+    attachments = []
+    for f in uploads:
+        data = await f.read()
+        if len(data) > MAX_ATTACHMENT_BYTES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"{f.filename} is too large (limit "
+                       f"{MAX_ATTACHMENT_BYTES // 1024 // 1024} MB)")
+        attachments.append((f.filename, data))
+
+    email = save_email(sender.strip(), subject.strip(), body, attachments, root=MAIL_DIR)
+    ingest(email, out_dir=OUT_DIR)
+    return RedirectResponse(f"/email/{email['email_id']}", status_code=303)
 
 
 @app.get("/attachment/{path:path}", response_class=HTMLResponse)
