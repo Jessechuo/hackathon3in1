@@ -1,5 +1,8 @@
 # SDOC — Shipping Document Verification
 
+**Live: [hackathon3in1.up.railway.app](https://hackathon3in1.up.railway.app)** ·
+send it a real email at **hackathon3in1@gmail.com** and watch it get triaged
+
 Reads a shipping operations inbox, classifies each email, and for document-check
 requests compares the Shipping Instruction (SI) against the draft Bill of Lading
 (BL) to report any discrepancy — escalating to a human when it cannot decide.
