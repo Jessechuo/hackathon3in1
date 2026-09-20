@@ -259,3 +259,40 @@ def test_the_menu_carries_the_name_and_address_it_replaced(site):
     client, _, _, _ = site
     html = client.get("/").text
     assert "Test Clerk" in html and EMAIL in html
+
+
+# --- attaching more than one file ----------------------------------------
+
+def test_the_file_input_accepts_several_files(site):
+    client, _, _, _ = site
+    html = client.get("/compose").text
+    assert 'id="files"' in html and "multiple" in html
+
+
+def test_files_accumulate_across_picks_rather_than_replacing(site):
+    """A plain file input replaces its whole selection every time it is used,
+    which reads as 'I can only attach one file'."""
+    client, _, _, _ = site
+    html = client.get("/compose").text
+    assert "DataTransfer" in html          # the basket that makes them add up
+    assert 'id="file-list"' in html        # and it is shown back to the person
+
+
+def test_two_attachments_both_reach_the_pipeline(site):
+    client, mail, checked, _ = site
+    client.post("/compose",
+                data={"to": "ops@shipper.com", "subject": "Draft BL", "body": "b"},
+                files=[("files", ("SI.txt", b"SHIPPER: ACME", "text/plain")),
+                       ("files", ("BL.txt", b"SHIPPER: ACME CORP", "text/plain"))],
+                follow_redirects=False)
+    settle()
+    assert checked[0]["attachments"] == ["mail/attachments/mail_0001__SI.txt",
+                                         "mail/attachments/mail_0001__BL.txt"]
+    assert (mail / "attachments" / "mail_0001__BL.txt").exists()
+
+
+def test_the_limits_shown_match_the_ones_enforced(site):
+    client, _, _, _ = site
+    html = client.get("/compose").text
+    assert f"MAX_FILES = {web.MAX_ATTACHMENTS}" in html
+    assert f"{web.MAX_ATTACHMENT_BYTES // 1024 // 1024} * 1024 * 1024" in html

@@ -24,6 +24,48 @@
   .field input:focus-visible, .field textarea:focus-visible {
     outline:2px solid var(--primary); outline-offset:-1px; border-color:var(--primary); }
   .hint { color:var(--fg-subtle); font-size:12px; margin:6px 0 0; line-height:1.55; }
+  .hint.bad { color:var(--mismatch); }
+
+  /* Attachments. A plain file input replaces its selection every time you
+     use it, which reads as "I can only attach one file". These accumulate. */
+  .drop {
+    display:flex; align-items:center; gap:var(--lg);
+    padding:var(--lg); border:1px dashed var(--border-strong);
+    border-radius:var(--r-ctl); background:var(--l1);
+    transition:border-color var(--t), background var(--t);
+  }
+  .drop.over { border-color:var(--primary); background:var(--primary-soft); }
+  .drop-hint { color:var(--fg-subtle); font-size:12px; }
+  .attach {
+    display:inline-flex; align-items:center; gap:var(--md);
+    height:30px; padding:0 var(--lg); border-radius:var(--r-ctl);
+    border:1px solid var(--border-strong); background:transparent; color:var(--fg);
+    font:inherit; font-size:13px; cursor:pointer; transition:background var(--t);
+  }
+  .attach:hover { background:var(--l2); }
+  .attach[disabled] { opacity:.45; cursor:not-allowed; }
+
+  .files { list-style:none; margin:var(--md) 0 0; padding:0;
+           display:flex; flex-direction:column; gap:var(--xs); }
+  .files li {
+    display:flex; align-items:center; gap:var(--md);
+    padding:6px var(--md); border:1px solid var(--border);
+    border-radius:var(--r-ctl); background:var(--l1);
+  }
+  .files .nm { font-family:var(--mono); font-size:12px; color:var(--fg);
+               overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+  .files .sz { font-family:var(--mono); font-size:11px; color:var(--fg-subtle); }
+  .files .kind {
+    font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.04em;
+    padding:1px 4px; border-radius:var(--r-badge);
+    background:var(--primary-soft); color:var(--primary);
+  }
+  .files .x {
+    width:22px; height:22px; flex:none; border:0; border-radius:var(--r-ctl);
+    background:transparent; color:var(--fg-subtle); cursor:pointer;
+    font-size:15px; line-height:1; transition:background var(--t), color var(--t);
+  }
+  .files .x:hover { background:var(--l2); color:var(--mismatch); }
   .hint code { font-family:var(--mono); font-size:11px;
     background:var(--l2); padding:1px 4px; border-radius:var(--r-badge); }
   .from-line {
@@ -84,13 +126,27 @@
         placeholder="Dear Sir/Madam,&#10;&#10;Please find attached the SI and the draft BL for your confirmation.&#10;&#10;Regards"></textarea>
     </label>
 
-    <label class="field">
+    <div class="field">
       <span class="lbl">Attachments</span>
-      <input type="file" name="files" multiple {% if not can_send %}disabled{% endif %}>
-      <p class="hint">Up to {{ max_attachments }} files, {{ max_mb }} MB each. Name them
-      so the SI and the BL are tellable apart — <code>SI.txt</code> and
-      <code>BL.txt</code> is enough. txt, pdf, docx and xlsx can be read and compared.</p>
-    </label>
+
+      <div class="drop" id="drop">
+        <input type="file" name="files" id="files" multiple hidden
+               {% if not can_send %}disabled{% endif %}>
+        <button type="button" class="attach" id="pick"
+                {% if not can_send %}disabled{% endif %}>
+          <svg class="ico ico-sm"><use href="#i-clip"/></svg> Add files
+        </button>
+        <span class="drop-hint">or drop them here</span>
+      </div>
+
+      <ul class="files" id="file-list"></ul>
+      <p class="hint" id="file-error" hidden></p>
+
+      <p class="hint">Up to {{ max_attachments }} files, {{ max_mb }} MB each. Pick them
+      one at a time or several at once — they add up. Name them so the SI and the BL
+      are tellable apart: <code>SI.txt</code> and <code>BL.txt</code> is enough.
+      txt, pdf, docx and xlsx can be read and compared.</p>
+    </div>
 
 
     <button class="send" type="submit" {% if not can_send %}disabled{% endif %}>
@@ -99,4 +155,129 @@
     <p class="hint">Checking the documents costs about 2 cents of API credit.</p>
   </form>
 </div>
+
+<script>
+(function () {
+  var input = document.getElementById("files"),
+      pick = document.getElementById("pick"),
+      drop = document.getElementById("drop"),
+      list = document.getElementById("file-list"),
+      error = document.getElementById("file-error"),
+      MAX_FILES = {{ max_attachments }},
+      MAX_BYTES = {{ max_mb }} * 1024 * 1024;
+
+  if (!input || !pick) return;
+
+  // A file input replaces its whole selection on every pick. Keeping our own
+  // basket and writing it back is what lets files add up instead.
+  var basket = new DataTransfer();
+
+  function size(n) {
+    return n >= 1024 * 1024 ? (n / 1048576).toFixed(1) + " MB"
+         : n >= 1024        ? Math.round(n / 1024) + " KB"
+                            : n + " B";
+  }
+
+  function role(name) {
+    var u = name.toUpperCase();
+    if (/(^|[^A-Z])SI([^A-Z]|$)/.test(u)) return "SI";
+    if (/(^|[^A-Z])BL([^A-Z]|$)/.test(u)) return "BL";
+    return "";
+  }
+
+  function say(message) {
+    error.textContent = message || "";
+    error.hidden = !message;
+    error.className = message ? "hint bad" : "hint";
+  }
+
+  function render() {
+    input.files = basket.files;
+    list.textContent = "";
+    Array.prototype.forEach.call(basket.files, function (f, i) {
+      var li = document.createElement("li");
+
+      var nm = document.createElement("span");
+      nm.className = "nm";
+      nm.textContent = f.name;
+      li.appendChild(nm);
+
+      var r = role(f.name);
+      if (r) {
+        var tag = document.createElement("span");
+        tag.className = "kind";
+        tag.textContent = r;
+        li.appendChild(tag);
+      }
+
+      var sz = document.createElement("span");
+      sz.className = "sz";
+      sz.textContent = size(f.size);
+      li.appendChild(sz);
+
+      var x = document.createElement("button");
+      x.type = "button";
+      x.className = "x";
+      x.textContent = "×";
+      x.setAttribute("aria-label", "Remove " + f.name);
+      x.addEventListener("click", function () { removeAt(i); });
+      li.appendChild(x);
+
+      list.appendChild(li);
+    });
+  }
+
+  function removeAt(index) {
+    var keep = new DataTransfer();
+    Array.prototype.forEach.call(basket.files, function (f, i) {
+      if (i !== index) keep.items.add(f);
+    });
+    basket = keep;
+    say("");
+    render();
+  }
+
+  function add(files) {
+    var rejected = [];
+    Array.prototype.forEach.call(files, function (f) {
+      var already = Array.prototype.some.call(basket.files, function (g) {
+        return g.name === f.name && g.size === f.size;
+      });
+      if (already) return;
+      if (f.size > MAX_BYTES) { rejected.push(f.name + " is over {{ max_mb }} MB"); return; }
+      if (basket.files.length >= MAX_FILES) {
+        rejected.push("only " + MAX_FILES + " files can be attached");
+        return;
+      }
+      basket.items.add(f);
+    });
+    say(rejected.length ? rejected[0] : "");
+    render();
+  }
+
+  pick.addEventListener("click", function () { input.click(); });
+  input.addEventListener("change", function () {
+    // Copy what was picked, then hand the basket back to the input.
+    var picked = Array.prototype.slice.call(input.files);
+    input.value = "";
+    add(picked);
+  });
+
+  ["dragenter", "dragover"].forEach(function (e) {
+    drop.addEventListener(e, function (ev) {
+      ev.preventDefault();
+      drop.classList.add("over");
+    });
+  });
+  ["dragleave", "drop"].forEach(function (e) {
+    drop.addEventListener(e, function (ev) {
+      ev.preventDefault();
+      drop.classList.remove("over");
+    });
+  });
+  drop.addEventListener("drop", function (ev) {
+    if (ev.dataTransfer && ev.dataTransfer.files) add(ev.dataTransfer.files);
+  });
+})();
+</script>
 {% endblock %}
