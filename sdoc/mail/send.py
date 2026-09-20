@@ -7,6 +7,7 @@ Sending is OFF unless SDOC_SEND_TOKEN is set. The app is on a public URL,
 and a send form with no lock on it is an open relay - strangers would be
 mailing the world from this account until Google suspended it.
 """
+import logging
 import mimetypes
 import os
 import re
@@ -16,8 +17,18 @@ from email.message import EmailMessage
 
 import sdoc.config  # noqa: F401  - importing loads .env / .env.txt
 
-HOST = "smtp.gmail.com"
-PORT = 465
+log = logging.getLogger(__name__)
+
+HOST = os.environ.get("SDOC_SMTP_HOST", "smtp.gmail.com")
+
+# Gmail listens on both. Tried in order because some hosts block one and not
+# the other, and many cloud providers block outbound SMTP entirely to stop
+# being used for spam - Railway answers [Errno 101] Network is unreachable.
+PORTS = (465, 587)
+
+# Without this smtplib waits forever on a blocked route, which reads as the
+# app hanging rather than as a send that cannot work.
+TIMEOUT = float(os.environ.get("SDOC_SMTP_TIMEOUT", "15"))
 
 # Deliberately loose. Real address validity is decided by the mail server
 # rejecting it, not by a regex; this only catches obvious typing mistakes.
@@ -72,7 +83,32 @@ def send(to: str, subject: str, body: str, attachments: list[tuple[str, bytes]],
     if transport is not None:
         transport(msg)
         return msg
-    with smtplib.SMTP_SSL(HOST, PORT) as server:
-        server.login(user, password)
-        server.send_message(msg)
+    deliver(msg, user, password)
     return msg
+
+
+def deliver(msg, user: str, password: str) -> int:
+    """Hand the message to Gmail. Returns the port that worked.
+
+    Raises the last error if no port does, naming every one tried - a host
+    that blocks outbound SMTP is the likeliest cause and worth saying so.
+    """
+    last = None
+    for port in PORTS:
+        try:
+            if port == 465:
+                server = smtplib.SMTP_SSL(HOST, port, timeout=TIMEOUT)
+            else:
+                server = smtplib.SMTP(HOST, port, timeout=TIMEOUT)
+                server.starttls()
+            with server:
+                server.login(user, password)
+                server.send_message(msg)
+            return port
+        except (OSError, smtplib.SMTPException) as e:
+            log.warning("smtp %s:%s failed - %s", HOST, port, e)
+            last = e
+    raise RuntimeError(
+        f"could not reach {HOST} on any of {', '.join(map(str, PORTS))} "
+        f"({type(last).__name__}: {last}). Many hosts block outbound SMTP."
+    ) from last

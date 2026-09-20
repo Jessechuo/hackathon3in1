@@ -61,3 +61,52 @@ def test_missing_credentials_are_reported_not_swallowed(monkeypatch):
     with pytest.raises(RuntimeError) as e:
         snd.send("a@b.com", "s", "b", [], transport=lambda m: None)
     assert "SDOC_MAIL_USER" in str(e.value)
+
+
+# --- reaching the mail server --------------------------------------------
+
+def test_both_gmail_ports_are_tried_before_giving_up(monkeypatch):
+    """Some hosts block one port and not the other."""
+    tried = []
+
+    class Refuse:
+        def __init__(self, host, port, timeout=None):
+            tried.append(port)
+            raise OSError(101, "Network is unreachable")
+
+    monkeypatch.setattr(snd.smtplib, "SMTP_SSL", Refuse)
+    monkeypatch.setattr(snd.smtplib, "SMTP", Refuse)
+    with pytest.raises(RuntimeError) as e:
+        snd.deliver(snd.build_message("a@b.com", "c@d.com", "s", "b", []),
+                    "a@b.com", "pw")
+    assert tried == [465, 587]
+    assert "block outbound SMTP" in str(e.value)
+    assert "Network is unreachable" in str(e.value)
+
+
+def test_the_second_port_is_used_when_the_first_is_blocked(monkeypatch):
+    used = []
+
+    class Blocked:
+        def __init__(self, host, port, timeout=None):
+            raise OSError(101, "Network is unreachable")
+
+    class Works:
+        def __init__(self, host, port, timeout=None):
+            used.append(port)
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def starttls(self): pass
+        def login(self, u, p): pass
+        def send_message(self, m): used.append("sent")
+
+    monkeypatch.setattr(snd.smtplib, "SMTP_SSL", Blocked)
+    monkeypatch.setattr(snd.smtplib, "SMTP", Works)
+    assert snd.deliver(snd.build_message("a@b.com", "c@d.com", "s", "b", []),
+                       "a@b.com", "pw") == 587
+    assert used == [587, "sent"]
+
+
+def test_a_blocked_route_fails_fast_rather_than_hanging():
+    """No timeout means smtplib waits forever, which reads as the app hanging."""
+    assert snd.TIMEOUT > 0
