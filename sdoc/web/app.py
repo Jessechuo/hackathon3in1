@@ -26,7 +26,8 @@ from sdoc.extract import read_document
 from sdoc.ingest import ingest, load_mail_results, mark_pending, update_result
 from sdoc.inbox import attachment_path, load_all_emails, load_received
 from sdoc.mail.send import send as send_mail
-from sdoc.mail.send import valid_address
+from sdoc.mail.send import note_unreachable, reachable, valid_address
+from sdoc.mail.send import probe as probe_smtp
 from sdoc.mail.store import save_email
 from sdoc.review import apply_reviews
 from sdoc.web import auth, watcher
@@ -41,6 +42,9 @@ async def lifespan(app: FastAPI):
     with no mail credentials set it simply never starts.
     """
     watcher.seed_output()       # a mounted volume starts empty
+    # Whether mail can leave this host at all. Off the startup path so a
+    # blocked route delays nothing; the compose page reads the answer.
+    threading.Thread(target=probe_smtp, daemon=True, name="smtp-probe").start()
     handle = watcher.start()
     yield
     if handle:
@@ -454,6 +458,7 @@ def compose_form(request: Request):
                  "max_attachments": MAX_ATTACHMENTS,
                  "max_mb": MAX_ATTACHMENT_BYTES // 1024 // 1024,
                  "can_send": bool(auth.current_user(request)),
+                 "smtp_reachable": reachable(),
                  **_shell(results, None, user=auth.current_user(request))},
     )
 
@@ -477,6 +482,8 @@ def _check_then_send(email: dict, to: str, subject: str, body: str,
                       sent_at=datetime.now(timezone.utc).isoformat(timespec="seconds"))
     except Exception as e:
         log.warning("could not send %s: %s", email["email_id"], e)
+        if "unreachable" in str(e).lower() or "outbound SMTP" in str(e):
+            note_unreachable()      # stop offering what cannot work
         update_result(email["email_id"], OUT_DIR, sent=False,
                       send_error=f"{type(e).__name__}: {e}")
 

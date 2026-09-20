@@ -296,3 +296,47 @@ def test_the_limits_shown_match_the_ones_enforced(site):
     html = client.get("/compose").text
     assert f"MAX_FILES = {web.MAX_ATTACHMENTS}" in html
     assert f"{web.MAX_ATTACHMENT_BYTES // 1024 // 1024} * 1024 * 1024" in html
+
+
+# --- when the host will not let mail out ---------------------------------
+
+def test_the_form_says_so_when_the_host_blocks_outbound_mail(site, monkeypatch):
+    """Most cloud hosts block SMTP. A judge pressing Send and getting a socket
+    error reads as broken; saying so up front reads as understood."""
+    from sdoc.mail import send as snd
+    client, _, _, _ = site
+    monkeypatch.setattr(snd, "_REACHABLE", False)
+
+    html = client.get("/compose").text
+    # The template wraps its prose, so compare against collapsed whitespace
+    # rather than shaping the sentences around the test.
+    flat = " ".join(html.split())
+    assert "Sending is unavailable on this host" in flat
+    assert "blocks outbound SMTP" in flat
+    assert "Receiving is unaffected" in flat     # the part that still works
+    assert html.count("disabled") >= 4           # and nothing invites a try
+
+
+def test_the_form_is_offered_normally_when_mail_can_leave(site, monkeypatch):
+    from sdoc.mail import send as snd
+    client, _, _, _ = site
+    monkeypatch.setattr(snd, "_REACHABLE", True)
+    html = client.get("/compose").text
+    assert "Sending is unavailable" not in html
+    assert "Check and send" in html
+
+
+def test_a_network_failure_turns_the_form_off_by_itself(site, monkeypatch):
+    """The probe runs at startup, but a route can also fail later."""
+    from sdoc.mail import send as snd
+    client, _, _, _ = site
+    monkeypatch.setattr(snd, "_REACHABLE", True)
+
+    def unreachable(to, subject, body, attachments):
+        raise RuntimeError("could not reach smtp.gmail.com ... Network is unreachable")
+
+    monkeypatch.setattr(web, "send_mail", unreachable)
+    post(client)
+    settle()
+    assert snd.reachable() is False
+    assert "Sending is unavailable on this host" in client.get("/compose").text

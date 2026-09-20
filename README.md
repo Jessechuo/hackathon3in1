@@ -267,6 +267,14 @@ category and verdict, marked `TO` in the queue.
 
 **Sending needs an account**, like everything else behind the sign-in.
 
+> **Most cloud hosts block outbound SMTP**, so their addresses are not used for
+> spam — Railway answers `[Errno 101] Network is unreachable`. The app checks at
+> startup and, where mail cannot leave, the compose form says so instead of
+> offering a button that fails. **Receiving is unaffected**: IMAP is not blocked,
+> and the watcher picks mail up within twenty seconds. Run the app locally and
+> sending works. To send from a host that blocks SMTP you would need an email
+> API over HTTPS rather than SMTP.
+
 ```
 SDOC_SECRET_KEY=a-long-random-string      # or sign-ins reset on every deploy
 ```
@@ -323,7 +331,7 @@ ground truth.
 python -m pytest -v
 ```
 
-243 tests, no API key required, no network. Every LLM call is replaced by a test
+246 tests, no API key required, no network. Every LLM call is replaced by a test
 double, so the entire pipeline is verifiable offline.
 
 ---
@@ -396,7 +404,7 @@ sdoc/
 tools/
 ├── make_submission.py categories.json -> submission.json
 └── diff_errors.py     which emails did we get wrong? (dev tool)
-tests/                 mirrors the sdoc/ layout — 243 tests, no API key needed
+tests/                 mirrors the sdoc/ layout — 246 tests, no API key needed
 docs/superpowers/      design spec and implementation plan
 design/                UI design system and mockups
 ```

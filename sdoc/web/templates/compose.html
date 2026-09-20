@@ -94,7 +94,13 @@
   A discrepancy is worth catching before a draft leaves, not after the customer
   finds it.</p>
 
-  {% if not can_send %}
+  {% if smtp_reachable is false %}
+  <p class="locked"><b>Sending is unavailable on this host.</b>
+  This deployment cannot reach a mail server — the hosting provider blocks
+  outbound SMTP, as most do so their addresses are not used for spam. Receiving
+  is unaffected: mail to <b>{{ mail_address }}</b> is still picked up and checked
+  within twenty seconds. Run the app locally and this form works.</p>
+  {% elif not can_send %}
   <p class="locked"><b><a href="/login?next=/compose">Sign in</a> to send.</b>
   Reading the queue needs no account; sending does, because the message leaves
   under this address. This app is on a public URL, and an unlocked send form
@@ -110,19 +116,19 @@
     <label class="field">
       <span class="lbl">To</span>
       <input type="email" name="to" required placeholder="ops@shipper.com"
-             {% if not can_send %}disabled{% endif %}>
+             {% if not can_send or smtp_reachable is false %}disabled{% endif %}>
     </label>
 
     <label class="field">
       <span class="lbl">Subject</span>
       <input type="text" name="subject" required
              placeholder="Draft BL for confirmation - PO 26067"
-             {% if not can_send %}disabled{% endif %}>
+             {% if not can_send or smtp_reachable is false %}disabled{% endif %}>
     </label>
 
     <label class="field">
       <span class="lbl">Body</span>
-      <textarea name="body" {% if not can_send %}disabled{% endif %}
+      <textarea name="body" {% if not can_send or smtp_reachable is false %}disabled{% endif %}
         placeholder="Dear Sir/Madam,&#10;&#10;Please find attached the SI and the draft BL for your confirmation.&#10;&#10;Regards"></textarea>
     </label>
 
@@ -131,9 +137,9 @@
 
       <div class="drop" id="drop">
         <input type="file" name="files" id="files" multiple hidden
-               {% if not can_send %}disabled{% endif %}>
+               {% if not can_send or smtp_reachable is false %}disabled{% endif %}>
         <button type="button" class="attach" id="pick"
-                {% if not can_send %}disabled{% endif %}>
+                {% if not can_send or smtp_reachable is false %}disabled{% endif %}>
           <svg class="ico ico-sm"><use href="#i-clip"/></svg> Add files
         </button>
         <span class="drop-hint">or drop them here</span>
@@ -149,7 +155,7 @@
     </div>
 
 
-    <button class="send" type="submit" {% if not can_send %}disabled{% endif %}>
+    <button class="send" type="submit" {% if not can_send or smtp_reachable is false %}disabled{% endif %}>
       <svg class="ico ico-sm"><use href="#i-send"/></svg> Check and send
     </button>
     <p class="hint">Checking the documents costs about 2 cents of API credit.</p>

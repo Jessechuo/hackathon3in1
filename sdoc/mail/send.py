@@ -13,6 +13,7 @@ import os
 import re
 import secrets
 import smtplib
+import socket
 from email.message import EmailMessage
 
 import sdoc.config  # noqa: F401  - importing loads .env / .env.txt
@@ -33,6 +34,43 @@ TIMEOUT = float(os.environ.get("SDOC_SMTP_TIMEOUT", "15"))
 # Deliberately loose. Real address validity is decided by the mail server
 # rejecting it, not by a regex; this only catches obvious typing mistakes.
 ADDRESS = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+# Whether this machine can reach the mail server at all. None until probed.
+# Not a setting: it is a fact about where the app happens to be running, and
+# asking beats making someone remember an environment variable per host.
+_REACHABLE: bool | None = None
+
+
+def reachable() -> bool | None:
+    return _REACHABLE
+
+
+def probe(timeout: float = 5.0) -> bool:
+    """Can a TCP connection to the mail server be opened from here?
+
+    Cloud hosts commonly block outbound SMTP so their addresses do not end
+    up on spam blacklists; Railway answers [Errno 101]. Knowing before
+    anyone presses Send is the difference between an explanation and a
+    mystery.
+    """
+    global _REACHABLE
+    for port in PORTS:
+        try:
+            with socket.create_connection((HOST, port), timeout=timeout):
+                _REACHABLE = True
+                return True
+        except OSError as e:
+            log.info("smtp %s:%s unreachable - %s", HOST, port, e)
+    _REACHABLE = False
+    return False
+
+
+def note_unreachable() -> None:
+    """Called when a real send fails on the network, so the page stops
+    offering something that cannot work."""
+    global _REACHABLE
+    _REACHABLE = False
 
 
 def send_token() -> str | None:
