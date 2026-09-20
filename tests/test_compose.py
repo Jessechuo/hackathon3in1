@@ -81,3 +81,19 @@ def test_an_oversized_attachment_is_refused(site):
 def test_the_rail_links_to_the_form(site):
     client, _, _ = site
     assert 'href="/compose"' in client.get("/").text
+
+
+def test_the_address_is_shown_when_one_is_configured(site, monkeypatch):
+    client, _, _ = site
+    # Deliberately not the real address: .env.txt already sets that one, so
+    # the test would pass even if the template had it hard-coded.
+    monkeypatch.setenv("SDOC_MAIL_USER", "someone-else@example.org")
+    assert "someone-else@example.org" in client.get("/compose").text
+
+
+def test_no_address_configured_says_so_instead(site, monkeypatch):
+    client, _, _ = site
+    monkeypatch.delenv("SDOC_MAIL_USER", raising=False)
+    html = client.get("/compose").text
+    assert "@gmail.com" not in html and "@example.org" not in html
+    assert "python -m sdoc.run_watch" in html

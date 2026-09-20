@@ -37,6 +37,7 @@ telling a real discrepancy apart from a formatting difference.
 | ✅ Field comparison + escalation | Claude reads both documents, Python decides; the four review reasons |
 | ✅ Comparison report in the UI | SI and BL side by side, status filter, overview dashboard |
 | ✅ Human review loop | A reviewer's Mark Verified / Flag Mismatch becomes the final answer in the app: the email leaves the review queue, the report says what the system had said, and `submission.json` stays the system's own answers |
+| ✅ New mail, triaged on arrival | Compose one in the app, or send a real email to the watched Gmail address; it is classified and compared on arrival |
 | 🚧 Vision for scanned PDFs | Deferred — those emails escalate to a human either way |
 
 Scanned PDFs are not OCR'd yet: they go straight to human review as
@@ -109,6 +110,8 @@ Open **http://localhost:8000**
 - **Mark Verified / Flag Mismatch** (document-check emails only) — record a
   person's decision; Flag Mismatch asks which of the seven fields are wrong.
   Decided emails leave the Review queue and appear under **Reviewed**
+- **New email** (`/compose`, paper-plane icon) — send the system an email and
+  watch it get classified and compared. See [Send it a new email](#send-it-a-new-email)
 - `/` search · `J`/`K` navigate · `Enter` open · `Esc` back · theme toggle top-right
 
 Category and verification columns stay empty until the classifier has run; a
@@ -123,6 +126,15 @@ notice bar in the UI says so.
 Needs an API key. Get one at [console.anthropic.com](https://console.anthropic.com)
 and add credit. Classification runs on Claude Haiku, so a full run over 520
 emails costs roughly **$0.70**.
+
+Put it in a `.env` file next to the code — gitignored, loaded automatically,
+and you never have to export anything again:
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Or export it for the current shell only:
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...          # macOS / Linux / Git Bash
@@ -179,6 +191,58 @@ its error is stored in `results.json`. Retry just that email with
 `python -m sdoc.run_pipeline --only email_123` — the rest of the results
 are kept.
 
+## Send it a new email
+
+Two ways in, both ending in the same classify-and-compare the graded run uses.
+
+**In the app** — open **New email** in the left rail (`/compose`), type a From,
+Subject and Body, attach an SI and a BL, and send. The email appears in the
+inbox with its category and verdict. Nothing is looked up: Claude reads what
+you typed for the first time, which is the point of demoing it this way. Costs
+about 2 cents per document check.
+
+> Keep attachment contents above ~50 characters. Below that the reader
+> correctly reports "almost no readable text" — the same gate that catches
+> scanned PDFs — and the email escalates instead of being compared.
+
+**From a real mailbox** — the watcher polls a Gmail inbox over IMAP:
+
+```bash
+python -m sdoc.run_watch                   # poll every 20 seconds
+python -m sdoc.run_watch --once            # one pass, then stop
+python -m sdoc.run_watch --interval 60     # poll once a minute
+```
+
+It needs two variables, which live in `.env` or `.env.txt` (both gitignored,
+both loaded automatically):
+
+```
+SDOC_MAIL_USER=hackathon3in1@gmail.com
+SDOC_MAIL_PASSWORD=abcdefghijklmnop
+```
+
+Gmail needs an **App Password**, not the account password: turn on 2-Step
+Verification, then create one at
+[myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+and strip the spaces Google displays.
+
+Messages are marked read as they are taken, so nothing is processed — or
+billed — twice. IMAP is an outbound connection only, so this needs no domain,
+no public URL and no DNS records, and behaves the same on a laptop as on a
+server.
+
+Received mail is kept apart from the organizers' data on purpose:
+
+| | |
+|---|---|
+| `mail/inbox/mail_NNNN.json` | the received emails |
+| `mail/attachments/` | their files |
+| `out/mail_results.json` | their verdicts |
+
+`sdoc-hackathon-bundle/` is never written to, and `out/submission.json` keeps
+exactly the 520 graded ids — a stray id there would invalidate the submission.
+`mail/` is gitignored; it is local state, like `out/` and `.cache/`.
+
 ## Score a submission
 
 `run_pipeline` already writes `out/submission.json`. To score classification
@@ -213,7 +277,7 @@ ground truth.
 python -m pytest -v
 ```
 
-121 tests, no API key required, no network. Every LLM call is replaced by a test
+169 tests, no API key required, no network. Every LLM call is replaced by a test
 double, so the entire pipeline is verifiable offline.
 
 ---
@@ -228,7 +292,15 @@ or path written anywhere else.
 | `SDOC_BUNDLE` | `./sdoc-hackathon-bundle` | Where the dataset lives |
 | `SDOC_OUT` | `./out` | Where results are written |
 | `SDOC_CACHE` | `./.cache` | Where LLM responses are cached |
+| `SDOC_MAIL` | `./mail` | Where received mail is stored |
 | `ANTHROPIC_API_KEY` | — | Required to run the classifier and the comparison |
+| `SDOC_MAIL_USER` | — | Gmail address the watcher polls |
+| `SDOC_MAIL_PASSWORD` | — | Gmail App Password for that address |
+
+The last three are read from `.env` or `.env.txt` if present — both are
+gitignored, and `sdoc/config.py` loads them before anything reads the
+environment, so nothing has to be exported by hand. A real environment
+variable always wins over the file, which is what a deploy needs.
 
 Models are chosen per task in `sdoc/config.py`:
 
@@ -258,14 +330,20 @@ sdoc/
 │   ├── client.py      the only file that imports `anthropic`; counts cost
 │   ├── classify.py    email -> category, owns the prompt
 │   └── extract_pair.py SI + BL -> document types and raw field values
+├── mail/
+│   ├── store.py       writing a received email to disk
+│   ├── parse.py       RFC 822 bytes -> sender, subject, body, files
+│   └── gmail.py       IMAP; the only file that talks to a mail server
 ├── pipeline.py        the checks, in order -> one decision per email
+├── ingest.py          one received email -> classified, compared, saved
 ├── run_classify.py    CLI: classify the inbox
 ├── run_pipeline.py    CLI: check the documents
+├── run_watch.py       CLI: watch a mailbox
 └── web/               FastAPI + Jinja templates
 tools/
 ├── make_submission.py categories.json -> submission.json
 └── diff_errors.py     which emails did we get wrong? (dev tool)
-tests/                 mirrors the sdoc/ layout — 121 tests, no API key needed
+tests/                 mirrors the sdoc/ layout — 169 tests, no API key needed
 docs/superpowers/      design spec and implementation plan
 design/                UI design system and mockups
 ```

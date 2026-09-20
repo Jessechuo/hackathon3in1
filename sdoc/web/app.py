@@ -4,6 +4,7 @@ Renders whatever exists: with no categories.json it still shows all 520
 emails, with the category and verification columns reserved but empty.
 """
 import json
+import os
 from collections import Counter
 from datetime import datetime, timezone
 from html import escape
@@ -118,6 +119,8 @@ def _shell(results: dict, active: str | None, active_status: str | None = None,
         # Counted from the mail folder, not from results: an email that has
         # just arrived should show in the header before it has been processed.
         "n_received": len(load_received()),
+        # Read per request, not at import: the watcher may be started later.
+        "mail_address": os.environ.get("SDOC_MAIL_USER") or None,
         "active": active,
         "active_status": active_status,
         "active_reviewed": active_reviewed,
