@@ -1,4 +1,4 @@
-# Secrets — API keys must never reach this public repo.
+# Secrets — API keys and mail passwords must NEVER reach this repo.
 .env
 .env.*
 *.env
@@ -10,14 +10,19 @@ __pycache__/
 .venv/
 .pytest_cache/
 
-# Pipeline artifacts
+# LLM response cache — local state, and large. Re-runs rebuild it.
 .cache/
-out/
+
+# Verdicts for mail received at runtime; pairs with mail/ below, which is
+# not committed either. Committing it would put results in the dashboard
+# for emails that do not exist on the server.
+out/mail_results.json
 
 # Organizer material — NEVER commit.
 # sdoc-hackathon-docker/ contains ground_truth.json (the answer key).
 sdoc-hackathon-docker/
 zip/
+Shipping Document Verification Use Case.pdf
 
 # Vendored third-party skill data (regenerate: uipro init --ai claude)
 .claude/
@@ -26,9 +31,5 @@ zip/
 .playwright-mcp/
 shot-*.png
 
-# Organizer-supplied data — kept out of the public repo
-sdoc-hackathon-bundle/
-Shipping Document Verification Use Case.pdf
-
-# Mail received at runtime - local state, like out/ and .cache/
+# Mail received at runtime - local state
 /mail/
