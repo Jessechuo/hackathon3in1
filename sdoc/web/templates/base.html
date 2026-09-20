@@ -138,7 +138,10 @@ button { font:inherit; cursor:pointer; }
 
 /* ── App shell ──────────────────────────────────────────────────────── */
 header.app {
-  position:fixed; inset:0 0 auto 0; z-index:50; height:var(--head);
+  /* min-height, not height: the filter pills wrap on a narrow window and a
+     fixed height would crop them. The rail and the content below read
+     --head, which a script keeps equal to what this actually measures. */
+  position:fixed; inset:0 0 auto 0; z-index:50; min-height:var(--head);
   background:var(--l1); border-bottom:1px solid var(--border);
   display:flex; align-items:center; gap:var(--lg);
   padding:0 var(--lg);
@@ -457,6 +460,25 @@ aside.rail {
   });
 
   btn.setAttribute("aria-pressed", current() === "dark" ? "true" : "false");
+})();
+
+// The header is fixed, so the rail and the content have to be pushed down by
+// exactly its height. That is not a constant: the filter pills wrap on a
+// narrow window, and a stale 48px hid whatever sat at the top of the page.
+(function () {
+  var header = document.querySelector("header.app");
+  if (!header) return;
+
+  function sync() {
+    var h = Math.round(header.getBoundingClientRect().height);
+    if (h) document.documentElement.style.setProperty("--head", h + "px");
+  }
+
+  sync();
+  if (window.ResizeObserver) new ResizeObserver(sync).observe(header);
+  else window.addEventListener("resize", sync);
+  // Web fonts land after first paint and can change the height by a pixel.
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(sync);
 })();
 
 // Account menu: click the initial to open, click anywhere else or Esc to close.

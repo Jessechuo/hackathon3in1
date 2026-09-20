@@ -42,3 +42,13 @@ def test_status_filter_shows_only_that_status(site):
            "email_004": {"category": "BL_COMPARISON", "status": "MISMATCH"}})
     html = client.get("/?status=MISMATCH").text
     assert 'data-id="email_004"' in html and 'data-id="email_001"' not in html
+
+
+def test_the_content_is_pushed_down_by_the_headers_real_height(site):
+    """The filter pills wrap on a narrow window, so the header is taller than
+    48px there. A constant offset hid whatever sat at the top of the page."""
+    client, _ = site
+    html = client.get("/").text
+    assert "min-height:var(--head)" in html      # the header may grow
+    assert 'setProperty("--head"' in html        # and the offset follows it
+    assert "ResizeObserver" in html
