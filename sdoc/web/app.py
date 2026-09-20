@@ -21,6 +21,8 @@ from sdoc.core.fields import FIELDS
 from sdoc.extract import read_document
 from sdoc.ingest import ingest, load_mail_results
 from sdoc.inbox import attachment_path, load_all_emails, load_received
+from sdoc.mail.send import send as send_mail
+from sdoc.mail.send import sending_enabled, token_ok, valid_address
 from sdoc.mail.store import save_email
 from sdoc.review import apply_reviews
 from sdoc.web import watcher
@@ -329,23 +331,38 @@ def compose_form(request: Request):
         context={"page": "compose", "total": len(load_all_emails()),
                  "max_attachments": MAX_ATTACHMENTS,
                  "max_mb": MAX_ATTACHMENT_BYTES // 1024 // 1024,
+                 "can_send": sending_enabled(),
                  **_shell(results, None)},
     )
 
 
 @app.post("/compose")
-async def compose_submit(sender: str = Form(""), subject: str = Form(""),
-                         body: str = Form(""), files: list[UploadFile] = File(default=[])):
-    """Take a typed email exactly as if it had arrived, then run it through
-    the same classify-and-compare the batch runner uses.
+async def compose_submit(to: str = Form(""), subject: str = Form(""),
+                         body: str = Form(""), token: str = Form(""),
+                         files: list[UploadFile] = File(default=[])):
+    """Check the attached documents, then send the email.
 
-    sender and subject are declared optional and checked here on purpose. A
-    required Form field that arrives empty is dropped by the encoder and
-    reported as missing, which is a 422 full of schema noise; this way blank
-    and whitespace-only both give the same readable 400.
+    The check runs first on purpose: a discrepancy is worth catching before
+    a draft leaves rather than after the customer finds it. The verdict is
+    recorded either way and shown on the email's page.
+
+    Fields are declared optional and checked here. A required Form field
+    that arrives empty is dropped by the encoder and reported as missing,
+    which is a 422 full of schema noise; this way blank and whitespace-only
+    both give the same readable 400.
     """
-    if not sender.strip() or not subject.strip():
-        raise HTTPException(status_code=400, detail="sender and subject are required")
+    if not sending_enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="sending is turned off: set SDOC_SEND_TOKEN to enable it")
+    if not token_ok(token):
+        raise HTTPException(status_code=403, detail="wrong passphrase")
+
+    to, subject = to.strip(), subject.strip()
+    if not valid_address(to):
+        raise HTTPException(status_code=400, detail=f"not an email address: {to!r}")
+    if not subject:
+        raise HTTPException(status_code=400, detail="subject is required")
 
     uploads = [f for f in files if f.filename]
     if len(uploads) > MAX_ATTACHMENTS:
@@ -362,8 +379,11 @@ async def compose_submit(sender: str = Form(""), subject: str = Form(""),
                        f"{MAX_ATTACHMENT_BYTES // 1024 // 1024} MB)")
         attachments.append((f.filename, data))
 
-    email = save_email(sender.strip(), subject.strip(), body, attachments, root=MAIL_DIR)
+    account = os.environ.get("SDOC_MAIL_USER") or "sdoc@localhost"
+    email = save_email(account, subject, body, attachments, root=MAIL_DIR,
+                       recipient=to, direction="sent")
     ingest(email, out_dir=OUT_DIR)
+    send_mail(to, subject, body, attachments)
     return RedirectResponse(f"/email/{email['email_id']}", status_code=303)
 
 

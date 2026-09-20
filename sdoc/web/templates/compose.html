@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}New email — SDOC Inbox{% endblock %}
-{% block count %}New email{% endblock %}
+{% block title %}Send an email — SDOC Inbox{% endblock %}
+{% block count %}Send an email{% endblock %}
 
 {% block content %}
 <style>
@@ -12,7 +12,8 @@
   .field > .lbl {
     display:block; font-size:11px; letter-spacing:.06em; text-transform:uppercase;
     color:var(--fg-subtle); font-weight:600; margin-bottom:6px; }
-  .field input[type=text], .field textarea {
+  .field input[type=text], .field input[type=email], .field input[type=password],
+  .field textarea {
     width:100%; box-sizing:border-box; padding:9px 11px;
     border:1px solid var(--border); border-radius:var(--r-ctl);
     background:var(--l1); color:var(--fg); font:inherit; font-size:13px; }
@@ -25,60 +26,83 @@
   .hint { color:var(--fg-subtle); font-size:12px; margin:6px 0 0; line-height:1.55; }
   .hint code { font-family:var(--mono); font-size:11px;
     background:var(--l2); padding:1px 4px; border-radius:var(--r-badge); }
+  .from-line {
+    display:flex; align-items:center; gap:var(--md); margin-bottom:var(--xl);
+    padding:9px 11px; border:1px dashed var(--border); border-radius:var(--r-ctl);
+    color:var(--fg-muted); font-size:13px; }
+  .from-line b { color:var(--fg); font-weight:600; }
   .send {
     display:inline-flex; align-items:center; gap:var(--md);
     height:32px; padding:0 var(--xl); border:0; border-radius:var(--r-ctl);
     background:var(--primary); color:var(--on-primary);
     font:inherit; font-size:13px; font-weight:600; cursor:pointer; }
   .send:hover { filter:brightness(1.08); }
-  .send svg { color:currentColor; }
+  .send[disabled] { opacity:.45; cursor:not-allowed; }
+  .locked {
+    padding:var(--lg); border:1px solid var(--border); border-left:3px solid var(--review);
+    border-radius:var(--r-ctl); background:var(--l1); color:var(--fg-muted);
+    font-size:13px; line-height:1.6; margin-bottom:var(--xl); }
 </style>
 
 <div class="compose">
-  <h1 class="t-headline-sm">New email</h1>
+  <h1 class="t-headline-sm">Send an email</h1>
 
-  <p class="lede">Sends this through the same classifier and the same comparison the
-  graded run uses. Nothing here is looked up: whatever you type is read by Claude
-  for the first time.</p>
+  <p class="lede">The attached documents are checked before the message goes out —
+  same classifier and same SI-against-BL comparison the rest of the queue uses.
+  A discrepancy is worth catching before a draft leaves, not after the customer
+  finds it.</p>
 
-  {% if mail_address %}
-  <p class="lede">Or send a real email to <strong>{{ mail_address }}</strong> —
-  the watcher picks it up within 20 seconds.</p>
-  {% else %}
-  <p class="lede">To accept real email as well, set <code>SDOC_MAIL_USER</code> and
-  <code>SDOC_MAIL_PASSWORD</code>, then run <code>python -m sdoc.run_watch</code>.</p>
+  {% if not can_send %}
+  <p class="locked"><b>Sending is turned off.</b> Set <code>SDOC_SEND_TOKEN</code>
+  to a passphrase to enable it. It is off by default because this app is on a
+  public URL, and an unlocked send form would let strangers mail the world from
+  this account.</p>
   {% endif %}
 
   <form method="post" action="/compose" enctype="multipart/form-data">
+    <div class="from-line">
+      <svg class="ico ico-sm"><use href="#i-send"/></svg>
+      <span>From <b>{{ mail_address or 'this account' }}</b></span>
+    </div>
+
     <label class="field">
-      <span class="lbl">From</span>
-      <input type="text" name="sender" required placeholder="ops@shipper.com">
+      <span class="lbl">To</span>
+      <input type="email" name="to" required placeholder="ops@shipper.com"
+             {% if not can_send %}disabled{% endif %}>
     </label>
 
     <label class="field">
       <span class="lbl">Subject</span>
       <input type="text" name="subject" required
-             placeholder="Please check draft BL against SI - PO 26067">
+             placeholder="Draft BL for confirmation - PO 26067"
+             {% if not can_send %}disabled{% endif %}>
     </label>
 
     <label class="field">
       <span class="lbl">Body</span>
-      <textarea name="body" placeholder="Hi,&#10;&#10;Attached are the SI and draft BL. Please check the details and confirm.&#10;&#10;Thanks"></textarea>
+      <textarea name="body" {% if not can_send %}disabled{% endif %}
+        placeholder="Dear Sir/Madam,&#10;&#10;Please find attached the SI and the draft BL for your confirmation.&#10;&#10;Regards"></textarea>
     </label>
 
     <label class="field">
       <span class="lbl">Attachments</span>
-      <input type="file" name="files" multiple>
+      <input type="file" name="files" multiple {% if not can_send %}disabled{% endif %}>
       <p class="hint">Up to {{ max_attachments }} files, {{ max_mb }} MB each. Name them
       so the SI and the BL are tellable apart — <code>SI.txt</code> and
-      <code>BL.txt</code> is enough. txt, pdf, docx and xlsx can be read.</p>
+      <code>BL.txt</code> is enough. txt, pdf, docx and xlsx can be read and compared.</p>
     </label>
 
-    <button class="send" type="submit">
-      <svg class="ico ico-sm"><use href="#i-send"/></svg> Send to inbox
+    <label class="field">
+      <span class="lbl">Passphrase</span>
+      <input type="password" name="token" required autocomplete="off"
+             placeholder="required to send" {% if not can_send %}disabled{% endif %}>
+      <p class="hint">Stops anyone who finds this page from sending mail as this account.</p>
+    </label>
+
+    <button class="send" type="submit" {% if not can_send %}disabled{% endif %}>
+      <svg class="ico ico-sm"><use href="#i-send"/></svg> Check and send
     </button>
-    <p class="hint">Classification and comparison run now, so a document check
-    costs about 2 cents of API credit.</p>
+    <p class="hint">Checking the documents costs about 2 cents of API credit.</p>
   </form>
 </div>
 {% endblock %}

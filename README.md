@@ -40,7 +40,9 @@ telling a real discrepancy apart from a formatting difference.
 | ✅ Field comparison + escalation | Claude reads both documents, Python decides; the four review reasons |
 | ✅ Comparison report in the UI | SI and BL side by side, status filter, overview dashboard |
 | ✅ Human review loop | A reviewer's Mark Verified / Flag Mismatch becomes the final answer in the app: the email leaves the review queue, the report says what the system had said, and `submission.json` stays the system's own answers |
-| ✅ New mail, triaged on arrival | Compose one in the app, or send a real email to the watched Gmail address; it is classified and compared on arrival |
+| ✅ Live mailbox | Email `hackathon3in1@gmail.com` and it is classified and compared within 20 seconds |
+| ✅ Sending, with the documents checked first | Send from the app and the attachments are compared before the message leaves |
+| ✅ Deployed | One process serves the UI and polls the mailbox |
 | 🚧 Vision for scanned PDFs | Deferred — those emails escalate to a human either way |
 
 Scanned PDFs are not OCR'd yet: they go straight to human review as
@@ -52,9 +54,10 @@ be read dependably.
 ## Requirements
 
 - **Python 3.11+** (developed on 3.13)
-- **The dataset** — see below. Not included in this repo.
-- **An Anthropic API key** — needed to run the classifier and the comparison.
-  The web UI and the whole test suite run without one.
+- **An Anthropic API key** — needed to classify and compare. The web UI and the
+  whole test suite run without one.
+
+The dataset is included, so the UI has something to show the moment you start it.
 
 ## Install
 
@@ -64,25 +67,17 @@ cd hackathon3in1
 python -m pip install -r requirements.txt
 ```
 
-## Get the dataset
+## The dataset
 
-The organizers' data is **not** in this repo. Unzip the participant bundle so it
-sits next to the code:
+The organizers' bundle ships with the repo, so a fresh clone has data:
 
 ```
 hackathon3in1/
 ├── sdoc/
 ├── tests/
-└── sdoc-hackathon-bundle/     ← put it here
+└── sdoc-hackathon-bundle/
     ├── inbox/                 520 email_XXX.json files
     └── attachments/           250 SI/BL files
-```
-
-Somewhere else? Point at it instead:
-
-```bash
-export SDOC_BUNDLE=/path/to/sdoc-hackathon-bundle     # macOS / Linux / Git Bash
-$env:SDOC_BUNDLE="C:\path\to\sdoc-hackathon-bundle"   # PowerShell
 ```
 
 Check it resolved:
@@ -91,6 +86,16 @@ Check it resolved:
 python -c "from sdoc.inbox import load_emails; print(len(load_emails()), 'emails')"
 # 520 emails
 ```
+
+Keeping it elsewhere? Point at it instead:
+
+```bash
+export SDOC_BUNDLE=/path/to/sdoc-hackathon-bundle     # macOS / Linux / Git Bash
+$env:SDOC_BUNDLE="C:\path\to\sdoc-hackathon-bundle"   # PowerShell
+```
+
+The answer key is **not** here and never will be. `sdoc-hackathon-docker/`
+holds `ground_truth.json` and is gitignored; nothing under `sdoc/` reads it.
 
 ---
 
@@ -113,8 +118,8 @@ Open **http://localhost:8000**
 - **Mark Verified / Flag Mismatch** (document-check emails only) — record a
   person's decision; Flag Mismatch asks which of the seven fields are wrong.
   Decided emails leave the Review queue and appear under **Reviewed**
-- **New email** (`/compose`, paper-plane icon) — send the system an email and
-  watch it get classified and compared. See [Send it a new email](#send-it-a-new-email)
+- **Send an email** (`/compose`, paper-plane icon) — send a real message from the
+  watched account, with its attachments checked first. See [Mail in and out](#mail-in-and-out)
 - `/` search · `J`/`K` navigate · `Enter` open · `Esc` back · theme toggle top-right
 
 Category and verification columns stay empty until the classifier has run; a
@@ -194,21 +199,14 @@ its error is stored in `results.json`. Retry just that email with
 `python -m sdoc.run_pipeline --only email_123` — the rest of the results
 are kept.
 
-## Send it a new email
+## Mail in and out
 
-Two ways in, both ending in the same classify-and-compare the graded run uses.
+Everything that moves through the app — arriving or leaving — goes through the
+same classify-and-compare the graded run uses. There is no second code path.
 
-**In the app** — open **New email** in the left rail (`/compose`), type a From,
-Subject and Body, attach an SI and a BL, and send. The email appears in the
-inbox with its category and verdict. Nothing is looked up: Claude reads what
-you typed for the first time, which is the point of demoing it this way. Costs
-about 2 cents per document check.
+### Mail arriving
 
-> Keep attachment contents above ~50 characters. Below that the reader
-> correctly reports "almost no readable text" — the same gate that catches
-> scanned PDFs — and the email escalates instead of being compared.
-
-**From a real mailbox** — the watcher polls a Gmail inbox over IMAP:
+The watcher polls a Gmail inbox over IMAP:
 
 ```bash
 python -m sdoc.run_watch                   # poll every 20 seconds
@@ -234,13 +232,38 @@ billed — twice. IMAP is an outbound connection only, so this needs no domain,
 no public URL and no DNS records, and behaves the same on a laptop as on a
 server.
 
-Received mail is kept apart from the organizers' data on purpose:
+### Mail leaving
+
+**Send an email** in the left rail (`/compose`) sends a real message from the
+watched account. The attached documents are **checked before it goes out** — a
+discrepancy is worth catching before a draft leaves, not after the customer
+finds it. The sent message is stored alongside received mail with its own
+category and verdict, marked `TO` in the queue.
+
+Sending is **off** unless a passphrase is configured:
+
+```
+SDOC_SEND_TOKEN=some-passphrase-you-choose
+```
+
+That is not optional hardening. This app runs on a public URL, and a send form
+with no lock on it is an open relay — strangers would be mailing the world from
+your account until Google suspended it. With no token set the form renders
+disabled and the endpoint returns 503.
+
+> Keep attachment contents above ~50 characters. Below that the reader
+> correctly reports "almost no readable text" — the same gate that catches
+> scanned PDFs — and the email escalates instead of being compared.
+
+### Where it all lives
+
+Received and sent mail are kept apart from the organizers' data on purpose:
 
 | | |
 |---|---|
-| `mail/inbox/mail_NNNN.json` | the received emails |
+| `mail/inbox/mail_NNNN.json` | mail received and sent |
 | `mail/attachments/` | their files |
-| `out/mail_results.json` | their verdicts |
+| `out/mail_results.json` | their categories and verdicts |
 
 `sdoc-hackathon-bundle/` is never written to, and `out/submission.json` keeps
 exactly the 520 graded ids — a stray id there would invalidate the submission.
@@ -280,7 +303,7 @@ ground truth.
 python -m pytest -v
 ```
 
-169 tests, no API key required, no network. Every LLM call is replaced by a test
+188 tests, no API key required, no network. Every LLM call is replaced by a test
 double, so the entire pipeline is verifiable offline.
 
 ---
@@ -299,6 +322,8 @@ or path written anywhere else.
 | `ANTHROPIC_API_KEY` | — | Required to run the classifier and the comparison |
 | `SDOC_MAIL_USER` | — | Gmail address the watcher polls |
 | `SDOC_MAIL_PASSWORD` | — | Gmail App Password for that address |
+| `SDOC_SEND_TOKEN` | — | Passphrase required to send mail; unset means sending is off |
+| `SDOC_WATCH` | `1` | Set to `0` to stop the app polling the mailbox |
 
 The last three are read from `.env` or `.env.txt` if present — both are
 gitignored, and `sdoc/config.py` loads them before anything reads the
@@ -336,17 +361,18 @@ sdoc/
 ├── mail/
 │   ├── store.py       writing a received email to disk
 │   ├── parse.py       RFC 822 bytes -> sender, subject, body, files
+│   ├── send.py        SMTP out, behind a passphrase
 │   └── gmail.py       IMAP; the only file that talks to a mail server
 ├── pipeline.py        the checks, in order -> one decision per email
 ├── ingest.py          one received email -> classified, compared, saved
 ├── run_classify.py    CLI: classify the inbox
 ├── run_pipeline.py    CLI: check the documents
 ├── run_watch.py       CLI: watch a mailbox
-└── web/               FastAPI + Jinja templates
+└── web/               FastAPI + Jinja templates; watcher.py runs the poll in-process
 tools/
 ├── make_submission.py categories.json -> submission.json
 └── diff_errors.py     which emails did we get wrong? (dev tool)
-tests/                 mirrors the sdoc/ layout — 169 tests, no API key needed
+tests/                 mirrors the sdoc/ layout — 188 tests, no API key needed
 docs/superpowers/      design spec and implementation plan
 design/                UI design system and mockups
 ```

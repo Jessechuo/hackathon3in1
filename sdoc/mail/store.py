@@ -45,9 +45,16 @@ def safe_name(email_id: str, filename: str) -> str:
 
 def save_email(sender: str, subject: str, body: str,
                attachments: list[tuple[str, bytes]],
-               root: Path | None = None, email_id: str | None = None) -> dict:
-    """Write one received email and its files. Returns the email dict, in
-    exactly the shape load_emails() yields for a bundle email."""
+               root: Path | None = None, email_id: str | None = None,
+               recipient: str | None = None, direction: str = "received") -> dict:
+    """Write one email and its files. Returns the email dict, in exactly the
+    shape load_emails() yields for a bundle email.
+
+    Mail sent from the app is stored the same way, with direction="sent" and
+    the recipient recorded. Keeping both in one place means outgoing
+    documents go through the same classify-and-compare as incoming ones -
+    the checks are worth more before a document leaves than after.
+    """
     base = _root(root)
     eid = email_id or next_id(base)
     (base / "inbox").mkdir(parents=True, exist_ok=True)
@@ -65,8 +72,10 @@ def save_email(sender: str, subject: str, body: str,
         "subject": subject,
         "body": body,
         "attachments": rels,
-        # Extra key; the bundle has no equivalent. Consumers ignore unknown
-        # keys, and the UI uses it to show when something arrived.
+        # Extra keys; the bundle has none of these. Consumers ignore unknown
+        # keys, and the UI uses them to show which way a message went.
+        "to": recipient,
+        "direction": direction,
         "received_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
     (base / "inbox" / f"{eid}.json").write_text(json.dumps(email, indent=2), encoding="utf-8")

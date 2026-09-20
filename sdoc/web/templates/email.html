@@ -249,7 +249,9 @@
       <svg class="ico ico-sm"><use href="#i-copy"/></svg>
     </button>
     <h1>{{ email.subject }}</h1>
-    <div class="meta"><b>{{ email.email_id }}</b> &middot; from {{ email['from'] }}
+    <div class="meta"><b>{{ email.email_id }}</b> &middot;
+      {% if email.get('direction') == 'sent' %}sent to {{ email.to }}
+      {% else %}from {{ email['from'] }}{% endif %}
       &middot; {{ position }} of {{ total }}</div>
   </div>
 

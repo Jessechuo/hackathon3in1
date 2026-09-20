@@ -145,6 +145,10 @@ header.app {
 }
 .brand { display:flex; align-items:center; gap:var(--sm); color:var(--fg); }
 .brand svg { color:var(--primary); }
+/* The mailbox this queue is fed from. Quiet: it is context, not a heading. */
+.acct { font-family:var(--mono); font-size:11px; color:var(--fg-subtle);
+  padding-left:var(--sm); border-left:1px solid var(--border); margin-left:var(--xs); }
+@media (max-width:900px) { .acct { display:none; } }
 .vr { width:1px; height:16px; background:var(--border-strong); flex:none; }
 .chip-count {
   font-family:var(--mono); font-size:11px; line-height:14px;
@@ -272,6 +276,7 @@ aside.rail {
   <a class="brand" href="/">
     <svg class="ico ico-lg"><use href="#i-anchor"/></svg>
     <span class="t-headline-sm">SDOC Inbox</span>
+    {% if mail_address %}<span class="acct" title="The mailbox this queue is fed from">{{ mail_address }}</span>{% endif %}
   </a>
   <span class="vr"></span>
   <span class="chip-count">{% block count %}{{ total }} emails{% endblock %}</span>
