@@ -274,6 +274,7 @@ aside.rail {
   </a>
   <span class="vr"></span>
   <span class="chip-count">{% block count %}{{ total }} emails{% endblock %}</span>
+  {% if n_received %}<span class="chip-count">{{ n_received }} received</span>{% endif %}
 
   <div class="filters">
     {% if has_categories %}

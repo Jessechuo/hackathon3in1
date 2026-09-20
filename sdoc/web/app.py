@@ -14,10 +14,11 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from sdoc.ai.classify import CATEGORIES
-from sdoc.config import BUNDLE_DIR, OUT_DIR
+from sdoc.config import MAIL_DIR, OUT_DIR
 from sdoc.core.fields import FIELDS
 from sdoc.extract import read_document
-from sdoc.inbox import load_emails
+from sdoc.ingest import load_mail_results
+from sdoc.inbox import attachment_path, load_all_emails, load_received
 from sdoc.review import apply_reviews
 
 app = FastAPI(title="SDOC Inbox")
@@ -35,14 +36,18 @@ def load_results() -> dict:
     """Pipeline output, or {} before it has run.
 
     Prefers results.json (Day 2: category + verification status) and falls
-    back to categories.json (Day 1: category only).
+    back to categories.json (Day 1: category only). Anything received since
+    the bundle is merged on top - it is kept in a file of its own because a
+    full run_pipeline rewrites results.json from the 520 bundle ids.
     """
     out = Path(OUT_DIR)
+    results = {}
     for name in ("results.json", "categories.json"):
         path = out / name
         if path.exists():
-            return json.loads(path.read_text(encoding="utf-8"))
-    return {}
+            results = json.loads(path.read_text(encoding="utf-8"))
+            break
+    return {**results, **load_mail_results(OUT_DIR)}
 
 
 STATUSES = ["OK", "MISMATCH", "NEEDS_REVIEW"]
@@ -77,7 +82,7 @@ def _human_size(n: int) -> str:
 def _attachment_meta(paths: list[str]) -> list[dict]:
     meta = []
     for rel in paths:
-        p = Path(BUNDLE_DIR) / rel
+        p = attachment_path(rel)
         suffix = p.suffix.lower()
         meta.append({
             "path": rel,
@@ -104,6 +109,9 @@ def _shell(results: dict, active: str | None, active_status: str | None = None,
         "n_mismatch": statuses.count("MISMATCH"),
         "n_review": statuses.count("NEEDS_REVIEW"),
         "n_reviewed": sum(1 for r in results.values() if r.get("reviewed")),
+        # Counted from the mail folder, not from results: an email that has
+        # just arrived should show in the header before it has been processed.
+        "n_received": len(load_received()),
         "active": active,
         "active_status": active_status,
         "active_reviewed": active_reviewed,
@@ -170,7 +178,7 @@ def dashboard(request: Request):
         name="dashboard.html",
         context={
             "page": "dashboard",
-            "total": len(load_emails()),
+            "total": len(load_all_emails()),
             "stats": dashboard_stats(results, decisions),
             "last_run": _last_run(),
             **_shell(apply_reviews(results, decisions), None),
@@ -181,7 +189,7 @@ def dashboard(request: Request):
 @app.get("/", response_class=HTMLResponse)
 def inbox(request: Request, category: str | None = None, status: str | None = None,
           reviewed: bool = False):
-    all_emails = load_emails()
+    all_emails = load_all_emails()
     results = load_view()
 
     emails = all_emails
@@ -209,7 +217,7 @@ def inbox(request: Request, category: str | None = None, status: str | None = No
 
 @app.get("/email/{email_id}", response_class=HTMLResponse)
 def email_detail(request: Request, email_id: str):
-    ordered = load_emails()
+    ordered = load_all_emails()
     index = {e["email_id"]: i for i, e in enumerate(ordered)}
     if email_id not in index:
         raise HTTPException(status_code=404, detail=f"no such email: {email_id}")
@@ -252,7 +260,7 @@ async def record_review(email_id: str, request: Request):
     {"decision": "mismatch", "fields": [...]}       these fields differ
     {"decision": null}                              clear; the system's answer stands
     """
-    if not any(e["email_id"] == email_id for e in load_emails()):
+    if not any(e["email_id"] == email_id for e in load_all_emails()):
         raise HTTPException(status_code=404, detail=f"no such email: {email_id}")
     if load_results().get(email_id, {}).get("category") != "BL_COMPARISON":
         raise HTTPException(status_code=400,
@@ -287,8 +295,10 @@ async def record_review(email_id: str, request: Request):
 
 @app.get("/attachment/{path:path}", response_class=HTMLResponse)
 def attachment(path: str):
-    # Path traversal guard: only serve files inside the bundle's attachments/.
-    if not path.startswith("attachments/") or ".." in path:
+    # Path traversal guard: only ever serve files from the two attachment
+    # folders - the bundle's and the received-mail one. Nothing else under
+    # either directory, and no traversal out of them.
+    if ".." in path or not path.startswith(("attachments/", "mail/attachments/")):
         raise HTTPException(status_code=400, detail="bad attachment path")
 
     doc = read_document(path)
