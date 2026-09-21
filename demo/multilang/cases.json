@@ -16,5 +16,8 @@
    "expect": {"category": "INVOICE_QUERY", "status": "OK"}},
   {"id": "zh_spam", "from": "prize@lucky-draw.top", "subject": "恭喜您中奖了！",
    "body": "zh_spam.txt", "attachments": [],
-   "expect": {"category": "SPAM", "status": "OK"}}
+   "expect": {"category": "SPAM", "status": "OK"}},
+  {"id": "zh_all_chinese", "from": "docs@hongtupaper.com.my", "subject": "请核对提单草稿 - 订单 7788",
+   "body": "../chinese/email.txt", "attachments": ["../chinese/SI.txt", "../chinese/BL.txt"],
+   "expect": {"category": "BL_COMPARISON", "status": "MISMATCH", "defect_fields": ["container_count"]}}
 ]

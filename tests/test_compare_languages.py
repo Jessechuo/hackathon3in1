@@ -40,6 +40,17 @@ def test_blank_is_decided_on_the_original():
     assert result.missing == ["gross_weight_kg"]
 
 
+def test_a_chinese_count_difference_is_caught_even_when_both_documents_are_chinese():
+    """Both read "40" - the container size - before counts were parsed, so
+    a match of the originals hid the defect the English forms showed."""
+    si = fields(container_count="三个40尺高柜")
+    bl = fields(container_count="五个40尺高柜")
+    result = compare(si, bl, si_en=fields(container_count="3 x 40'HC"),
+                     bl_en=fields(container_count="5 x 40'HC"))
+    assert result.defects == ["container_count"]
+    assert compare(si, bl).defects == ["container_count"]          # and without them
+
+
 def test_two_chinese_documents_compare_as_written():
     si = fields(shipper="马来西亚纸业有限公司")
     bl = fields(shipper="马来西亚纸业有限公司")

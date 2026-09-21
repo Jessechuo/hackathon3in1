@@ -1,10 +1,12 @@
 """Run the Malay and Chinese demo emails through the real pipeline - the
 same ingest() the mailbox watcher uses - and say whether each came out as
-expected. Costs about 10 cents of API credit. Uses throwaway folders, so
-nothing lands in the real mail/ or out/, and a fresh cache, so every
-answer is a real call rather than a remembered one.
+expected. Costs about 12 cents of API credit for all seven, a few cents
+for one. Uses throwaway folders, so nothing lands in the real mail/ or out/,
+and a fresh cache, so every answer is a real call rather than a remembered
+one.
 
-    python tools/multilang_check.py
+    python tools/multilang_check.py                   # every case
+    python tools/multilang_check.py zh_all_chinese    # just the named ones
 """
 import json
 import os
@@ -28,6 +30,12 @@ def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")      # Chinese on a Windows console
     cases = json.loads((DEMO / "cases.json").read_text(encoding="utf-8"))
+    wanted = set(sys.argv[1:])
+    unknown = wanted - {c["id"] for c in cases}
+    if unknown:
+        print("no such case:", ", ".join(sorted(unknown)))
+        return 2
+    cases = [c for c in cases if not wanted or c["id"] in wanted]
     failures = 0
     for c in cases:
         files = [(n, (DEMO / n).read_bytes()) for n in c["attachments"]]
