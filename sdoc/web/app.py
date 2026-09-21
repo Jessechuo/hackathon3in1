@@ -158,6 +158,26 @@ def _attachment_meta(paths: list[str]) -> list[dict]:
     return meta
 
 
+def filter_href(category: str | None = None, status: str | None = None,
+                reviewed: bool = False) -> str:
+    """The inbox URL for one combination of header filters.
+
+    Every filter link is built here, so choosing one keeps the others.
+    Only BL_COMPARISON emails are compared, so only they carry a status or
+    a review: a status never rides along to another category, where it
+    could only ever show an empty list.
+    """
+    if category and category != "BL_COMPARISON":
+        status, reviewed = None, False
+    params = [(k, v) for k, v in (("category", category), ("status", status)) if v]
+    if reviewed:
+        params.append(("reviewed", "1"))
+    return "/" + ("?" + "&".join(f"{k}={quote(v)}" for k, v in params) if params else "")
+
+
+templates.env.globals["filter_href"] = filter_href
+
+
 def _shell(results: dict, active: str | None, active_status: str | None = None,
            active_reviewed: bool = False, user: str | None = None) -> dict:
     """Context the base template needs for the header, rail and filters."""

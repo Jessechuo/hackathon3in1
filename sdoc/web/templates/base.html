@@ -362,9 +362,11 @@ html[data-rail="open"] .rail-lbl {
 
   <div class="filters">
     {% if has_categories %}
-      <a class="fbtn" href="/" aria-pressed="{{ 'true' if not active else 'false' }}">All</a>
+      {# Each link keeps the other filters: filter_href in app.py. #}
+      <a class="fbtn" href="{{ filter_href(None, active_status, active_reviewed) }}"
+         aria-pressed="{{ 'true' if not active else 'false' }}">All</a>
       {% for c in categories_list %}
-        <a class="fbtn k-{{ c }}" href="/?category={{ c }}"
+        <a class="fbtn k-{{ c }}" href="{{ filter_href(c, active_status, active_reviewed) }}"
            aria-pressed="{{ 'true' if active == c else 'false' }}">{{ c }}</a>
       {% endfor %}
     {% else %}
@@ -375,14 +377,25 @@ html[data-rail="open"] .rail-lbl {
       {% endfor %}
     {% endif %}
     <span class="vr"></span>
-    {% if has_comparison %}
-      <a class="fbtn" href="/" aria-pressed="{{ 'true' if not active_status and not active_reviewed else 'false' }}">Status: All</a>
+    {% if has_comparison and active and active != "BL_COMPARISON" %}
+      {# Only document checks are compared, so nothing else has a status. #}
+      <span class="fbtn" aria-pressed="true">Status: All</span>
       {% for s in statuses %}
-        <a class="fbtn" href="/?status={{ s }}" aria-pressed="{{ 'true' if active_status == s else 'false' }}">
+        <span class="fbtn" aria-disabled="true" title="Only BL_COMPARISON emails have a status">
+          <span class="status {{ s }}"></span>{{ 'REVIEW' if s == 'NEEDS_REVIEW' else s }}
+        </span>
+      {% endfor %}
+      <span class="fbtn" aria-disabled="true" title="Only BL_COMPARISON emails are reviewed">
+        <svg class="ico ico-sm" aria-hidden="true"><use href="#i-check"/></svg>Reviewed
+      </span>
+    {% elif has_comparison %}
+      <a class="fbtn" href="{{ filter_href(active) }}" aria-pressed="{{ 'true' if not active_status and not active_reviewed else 'false' }}">Status: All</a>
+      {% for s in statuses %}
+        <a class="fbtn" href="{{ filter_href(active, s) }}" aria-pressed="{{ 'true' if active_status == s else 'false' }}">
           <span class="status {{ s }}"></span>{{ 'REVIEW' if s == 'NEEDS_REVIEW' else s }}
         </a>
       {% endfor %}
-      <a class="fbtn" href="/?reviewed=1" aria-pressed="{{ 'true' if active_reviewed else 'false' }}"
+      <a class="fbtn" href="{{ filter_href(active, reviewed=True) }}" aria-pressed="{{ 'true' if active_reviewed else 'false' }}"
          title="Emails a person has decided">
         <svg class="ico ico-sm" aria-hidden="true"><use href="#i-check"/></svg>Reviewed{% if n_reviewed %} {{ n_reviewed }}{% endif %}
       </a>

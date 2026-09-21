@@ -44,6 +44,66 @@ def test_status_filter_shows_only_that_status(site):
     assert 'data-id="email_004"' in html and 'data-id="email_001"' not in html
 
 
+# --- combining the header filters ----------------------------------------
+
+BL_MIX = {"email_001": {"category": "BL_COMPARISON", "status": "OK"},
+          "email_004": {"category": "BL_COMPARISON", "status": "MISMATCH"},
+          "email_002": {"category": "INVOICE_QUERY", "reason": "x"}}
+
+
+def header(html):
+    return html.split('<div class="filters">', 1)[1].split('<div class="head-right">', 1)[0]
+
+
+@pytest.mark.parametrize("args,href", [
+    ((), "/"),
+    (("BL_COMPARISON",), "/?category=BL_COMPARISON"),
+    (("BL_COMPARISON", "OK"), "/?category=BL_COMPARISON&status=OK"),
+    ((None, "MISMATCH"), "/?status=MISMATCH"),
+    (("BL_COMPARISON", None, True), "/?category=BL_COMPARISON&reviewed=1"),
+    # A status belongs to document checks only - it never follows elsewhere.
+    (("SPAM", "OK"), "/?category=SPAM"),
+    (("GENERAL", None, True), "/?category=GENERAL"),
+])
+def test_filter_links_are_built_from_every_active_filter(args, href):
+    assert web.filter_href(*args) == href
+
+
+def test_on_bl_comparison_the_status_buttons_keep_the_category(site):
+    client, write = site
+    write(BL_MIX)
+    bar = header(client.get("/?category=BL_COMPARISON").text)
+    assert 'href="/?category=BL_COMPARISON&amp;status=OK"' in bar
+    assert 'href="/?category=BL_COMPARISON&amp;status=MISMATCH"' in bar
+    assert 'href="/?category=BL_COMPARISON&amp;reviewed=1"' in bar
+    assert 'href="/?category=BL_COMPARISON" aria-pressed="true">Status: All' in bar
+
+
+def test_with_a_status_chosen_the_category_buttons_keep_it(site):
+    client, write = site
+    write(BL_MIX)
+    bar = header(client.get("/?category=BL_COMPARISON&status=MISMATCH").text)
+    assert 'href="/?status=MISMATCH"' in bar                          # All keeps the status
+    assert 'href="/?category=BL_COMPARISON&amp;status=MISMATCH"' in bar
+    assert 'href="/?category=SPAM"' in bar                            # nothing to keep there
+
+
+def test_both_filters_apply_together(site):
+    client, write = site
+    write(BL_MIX)
+    html = client.get("/?category=BL_COMPARISON&status=OK").text
+    assert 'data-id="email_001"' in html
+    assert 'data-id="email_004"' not in html and 'data-id="email_002"' not in html
+
+
+def test_on_another_category_the_status_buttons_say_why_they_are_off(site):
+    client, write = site
+    write(BL_MIX)
+    bar = header(client.get("/?category=INVOICE_QUERY").text)
+    assert "?status=" not in bar and "reviewed=1" not in bar
+    assert bar.count('title="Only BL_COMPARISON emails have a status"') == 3
+
+
 def test_the_content_is_pushed_down_by_the_headers_real_height(site):
     """The filter pills wrap on a narrow window, so the header is taller than
     48px there. A constant offset hid whatever sat at the top of the page."""
