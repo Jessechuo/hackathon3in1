@@ -54,6 +54,18 @@ def test_the_page_declares_its_language():
     assert '<html lang="zh-Hans" ' in client.get("/login").text     # it also carries data-theme
 
 
+def test_the_switch_sits_beside_the_mailops_logo():
+    client = TestClient(web.app)
+    app_page = client.get("/").text
+    header = app_page.split('<header class="app"', 1)[1]
+    after_brand = header.split("</a>", 1)[1].lstrip()          # the brand link comes first
+    assert after_brand.startswith('<nav class="langs"')
+    head_right = app_page.split('<div class="head-right">', 1)[1].split("</div>\n</header>", 1)[0]
+    assert 'class="langs"' not in head_right                    # and only there
+    mark = client.get("/login").text.split('<div class="mark">', 1)[1].split("</div>", 1)[0]
+    assert "MailOps" in mark and '<nav class="langs"' in mark
+
+
 def test_every_page_offers_the_three_languages_and_marks_the_current_one():
     client = TestClient(web.app)
     client.cookies.set("mailops-lang", "ms")

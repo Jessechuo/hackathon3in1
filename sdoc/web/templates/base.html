@@ -435,6 +435,7 @@ html[data-rail="open"] .rail-lbl {
     <img class="logo" src="/logo.png" alt="" width="26" height="26">
     <span class="t-headline-sm">MailOps</span>
   </a>
+  {% include "_langs.html" %}
 
   <div class="filters">
     {# Two groups: one row each on a phone. On a wider screen they are
@@ -517,7 +518,6 @@ html[data-rail="open"] .rail-lbl {
       <a class="linkbtn" href="/login?next={{ request.url.path }}">{{ t("Sign in") }}</a>
     {% endif %}
     <span class="vr"></span>
-    {% include "_langs.html" %}
     <button class="iconbtn" id="theme-toggle" title="{{ t('Toggle light / dark') }}" aria-label="{{ t('Toggle light or dark theme') }}">
       <svg class="ico"><use href="#i-contrast"/></svg>
     </button>
