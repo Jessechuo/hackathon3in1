@@ -114,6 +114,40 @@
   @media (max-width:1252px) {
     html[data-rail="open"] .c-from, html[data-rail="open"] td.from { display:none; }
   }
+
+  /* Phone: each email is a card, not a 940px row. ID, category, status and
+     attachments on top, the subject over two lines, the sender under it -
+     everything the desktop row shows, in the width a phone has. */
+  @media (max-width:720px) {
+    .ribbon { gap:var(--sm) var(--lg); padding:var(--md) var(--lg); }
+    .ribbon > .vr { display:none; }
+    .search { order:-1; flex:1 0 100%; margin-left:0; }
+    .search input { width:100%; max-width:none; height:38px; }
+    .search kbd { display:none; }
+    .shortcuts { display:none; }          /* keyboard shortcuts, on a touch screen */
+
+    .grid { overflow-x:visible; }
+    table, html[data-rail="open"] table { min-width:0; }
+    thead { display:none; }
+    tbody tr {
+      display:grid; grid-template-columns:auto auto minmax(0, 1fr) auto;
+      grid-template-areas:"id cat ver att" "subj subj subj subj" "from from from from";
+      align-items:center; gap:4px var(--md); height:auto; padding:10px var(--lg) 12px;
+    }
+    td { padding:0; }
+    td.id { grid-area:id; }
+    td.id a { padding:0; }
+    td.cat { grid-area:cat; }
+    td.ver { grid-area:ver; }
+    td.att { grid-area:att; }
+    td.subject { grid-area:subj; max-width:none; }
+    td.subject a {
+      padding:0; white-space:normal; line-height:19px;
+      display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2;
+    }
+    td.from, html[data-rail="open"] td.from { display:block; grid-area:from; max-width:none; }
+    .slot-badge { display:none; }
+  }
 </style>
 
 <section class="ribbon">
@@ -161,11 +195,11 @@
           data-q="{{ (e.email_id ~ ' ' ~ e.subject ~ ' ' ~ e['from'])|lower }}"
           class="{{ 'spam' if r.get('category') == 'SPAM' else '' }}">
         <td class="id"><a href="/email/{{ e.email_id }}" tabindex="-1">{{ e.email_id.replace('email_','') }}</a></td>
-        <td>
+        <td class="cat">
           {% if r.get('category') %}<span class="badge {{ r.category }}">{{ r.category }}</span>
           {% else %}<span class="slot-badge" aria-label="Not yet classified"></span>{% endif %}
         </td>
-        <td>
+        <td class="ver">
           {% if r.get('category') == 'BL_COMPARISON' and r.get('status') and r.get('note') != 'Not processed yet.' %}
             <span class="status {{ r.status }}">{{ 'REVIEW' if r.status == 'NEEDS_REVIEW' else r.status }}</span>
             {% if r.get('reviewed') %}<span class="rv" title="Decided by a reviewer{{ ' (system said ' ~ r.system_status ~ ')' if r.reviewer_changed else '' }}"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-check"/></svg><span class="vh">reviewed</span></span>{% endif %}

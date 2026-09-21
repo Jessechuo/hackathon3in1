@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ email.email_id }} — SDOC Inbox{% endblock %}
+{# Its tab is the queue's, but the queue's filters have nothing to sort here. #}
+{% block head_page %}email{% endblock %}
 {% block content %}
 <style>
   .doc { max-width:1040px; margin:0 auto; padding:var(--xl) var(--lg) var(--xl); }
@@ -17,7 +19,10 @@
     font-family:var(--mono); font-size:10px; color:var(--fg-subtle);
     border:1px solid var(--border-strong); border-radius:3px; padding:1px 5px;
   }
-  .toolbar .tags { display:flex; align-items:center; gap:var(--md); margin-left:var(--lg); }
+  /* The flexible part of the row: a long reason wraps here, so the buttons
+     and prev/next stay together at the right instead of dropping a line. */
+  .toolbar .tags { display:flex; align-items:center; gap:var(--md); margin-left:var(--lg);
+                   flex:1 1 0; min-width:0; }
   .toolbar .why { color:var(--fg-subtle); font-size:12px; font-style:italic; }
   .toolbar .acts { margin-left:auto; display:flex; align-items:center; gap:var(--md); }
 
@@ -80,7 +85,8 @@
     border-radius:var(--r-ctl);
   }
   .head { padding:var(--lg) var(--xl); }
-  .head h1 { margin:0 0 var(--md); font-size:20px; line-height:28px; font-weight:600;
+  .head h1 { margin:0 0 var(--md); padding-right:28px;      /* clear of the copy button */
+             font-size:20px; line-height:28px; font-weight:600;
              letter-spacing:-.01em; overflow-wrap:anywhere; }
   .head .meta {
     font-family:var(--mono); font-size:11px; line-height:18px; color:var(--fg-muted);
@@ -195,6 +201,49 @@
   .picker-grid input { width:16px; height:16px; accent-color:var(--mismatch); cursor:pointer; }
   .picker-err { margin:var(--lg) 0 0; color:var(--mismatch); font-size:12px; }
   .picker-acts { display:flex; gap:var(--md); margin-top:var(--xl); flex-wrap:wrap; }
+
+  /* Phone. The toolbar becomes rows: back and prev/next, then what the email
+     is, then the two decisions at full width. The comparison becomes one card
+     per field with SI and BL side by side - as four table columns the values
+     broke mid-word, "PACIF / IC". */
+  @media (max-width:720px) {
+    .doc { padding:var(--lg) var(--lg) var(--xl); }
+    .toolbar { gap:var(--md); margin-bottom:var(--lg); }
+    .back kbd, .act kbd { display:none; }
+    .pager { order:1; margin-left:auto; }
+    .pager a, .pager span { width:40px; height:36px; }
+    .toolbar .tags { order:2; flex:1 0 100%; flex-wrap:wrap; margin-left:0; }
+    .toolbar .why { flex:1 0 100%; }
+    .toolbar .acts { order:3; flex:1 0 100%; margin-left:0;
+                     display:grid; grid-template-columns:1fr 1fr; }
+    .toolbar .acts:not(:has(.act)) { display:none; }   /* no review buttons here */
+    .toolbar .acts .vr { display:none; }
+    .toolbar .acts .saved { grid-column:1 / -1; }
+    .act { height:40px; justify-content:center; }
+
+    .head { padding:var(--lg); }
+    .head h1 { font-size:17px; line-height:24px; }
+    .head .copy { top:var(--md); right:var(--md); }
+    .body { padding:var(--lg); font-size:12px; line-height:19px; }
+
+    .cmp-head { padding:var(--lg); }
+    .cmp-note { padding:var(--md) var(--lg); }
+    .cmp-table thead { display:none; }
+    .cmp-table tr { display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr) 32px;
+                    grid-template-areas:"fn fn mk" "si bl bl"; border-top:1px solid var(--border); }
+    .cmp-table td { border-top:0; padding:var(--sm) var(--lg); overflow-wrap:break-word; }
+    .cmp-table td.fn { grid-area:fn; padding-bottom:0; font-weight:600; color:var(--fg); }
+    .cmp-table td.mk { grid-area:mk; width:auto; padding-bottom:0; }
+    .cmp-table td.si { grid-area:si; }
+    .cmp-table td.bl { grid-area:bl; padding-left:var(--md); }
+    .cmp-table td.si::before, .cmp-table td.bl::before {
+      content:attr(data-l); display:block; font-family:var(--sans); font-size:10px;
+      font-weight:600; letter-spacing:.05em; color:var(--fg-subtle);
+    }
+    .atts .files { grid-template-columns:minmax(0, 1fr); }
+    .picker { padding:var(--lg); }
+    .picker-grid { grid-template-columns:minmax(0, 1fr); }
+  }
 </style>
 
 <div class="doc">
@@ -229,7 +278,10 @@
       <span class="saved" id="saved">{% if review %}saved {{ review.at[11:16] }} UTC{% endif %}</span>
       <span class="vr"></span>
       {% endif %}
-      <span class="pager">
+    </div>
+    {# Outside .acts so a phone can put it beside "Inbox" and the review
+       buttons on a row of their own. #}
+    <span class="pager">
         {% if prev_id %}
           <a href="/email/{{ prev_id }}" title="Previous (K)" aria-label="Previous email"><svg class="ico"><use href="#i-up"/></svg></a>
         {% else %}
@@ -240,8 +292,7 @@
         {% else %}
           <span aria-disabled="true"><svg class="ico"><use href="#i-down"/></svg></span>
         {% endif %}
-      </span>
-    </div>
+    </span>
   </div>
 
   {% if can_review %}
@@ -317,8 +368,8 @@
         {% set state = 'bad' if f.name in cat.defect_fields else ('miss' if f.match is none else 'ok') %}
         <tr class="{{ state }}">
           <td class="fn">{{ f.name }}</td>
-          <td>{{ f.si if f.si is not none else '(blank)' }}</td>
-          <td>{{ f.bl if f.bl is not none else '(blank)' }}</td>
+          <td class="si" data-l="SI">{{ f.si if f.si is not none else '(blank)' }}</td>
+          <td class="bl" data-l="BL">{{ f.bl if f.bl is not none else '(blank)' }}</td>
           <td class="mk" title="{{ {'bad': 'differs', 'miss': 'blank', 'ok': 'matches'}[state] }}">{{ {'bad': '✗', 'miss': '?', 'ok': '✓'}[state] }}</td>
         </tr>
       {% endfor %}

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{% block title %}SDOC Inbox{% endblock %}</title>
 <script>
 /* Must run before first paint, or the page renders in the OS theme and then
@@ -208,6 +208,7 @@ header.app {
   transition:color var(--t);
 }
 .linkbtn:hover { color:var(--fg); text-decoration:underline; }
+.linkbtn { white-space:nowrap; }
 
 /* Filter buttons: mono uppercase micro-labels. */
 .fbtn {
@@ -322,6 +323,58 @@ html[data-rail="open"] .rail-lbl {
 }
 .notice code { font-family:var(--mono); font-size:11px; color:var(--fg); }
 .notice svg { color:var(--primary); }
+
+/* ══ Phone ════════════════════════════════════════════════════════════
+   Below 720px the side panel becomes a tab bar along the bottom, and the
+   filters a single row that scrolls sideways under the header - wrapped,
+   they stacked five rows deep and took a quarter of the screen. */
+@media (max-width:720px) {
+  :root, html[data-rail="open"] { --rail:0px; }
+
+  header.app { flex-wrap:wrap; column-gap:var(--md); }
+  header.app .brand { height:48px; }
+  .head-right { margin-left:auto; }
+  .head-right > .vr:first-child { display:none; }
+  .filters {
+    order:3; flex:1 0 100%; flex-wrap:nowrap; overflow-x:auto;
+    margin:0 calc(-1 * var(--lg)); padding:0 28px var(--md) var(--lg);
+    scrollbar-width:none; -webkit-overflow-scrolling:touch;
+    /* A fade at the right edge says there is more to swipe to. */
+    -webkit-mask-image:linear-gradient(to right, #000 calc(100% - 28px), transparent);
+            mask-image:linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
+  .filters::-webkit-scrollbar { display:none; }
+  .filters > * { flex:none; }
+  .fbtn { height:32px; }
+  /* Filters sort the queue; on the other pages they only cost a row. */
+  header.app:not([data-page="inbox"]) .filters { display:none; }
+
+  aside.rail, html[data-rail="open"] aside.rail {
+    top:auto; bottom:0; left:0; right:0; width:auto;
+    height:calc(56px + env(safe-area-inset-bottom)); padding:0 0 env(safe-area-inset-bottom);
+    flex-direction:row; align-items:stretch;
+    border-right:0; border-top:1px solid var(--border);
+  }
+  .rail nav, html[data-rail="open"] .rail nav { flex-direction:row; flex:1; gap:0; padding:0; }
+  .rail a, html[data-rail="open"] .rail a {
+    flex:1 1 0; width:auto; height:56px; padding:0; border-radius:0;
+    flex-direction:column; justify-content:center; gap:2px;
+  }
+  .rail a:hover { background:transparent; }
+  .rail a[aria-current="page"] { background:transparent; color:var(--primary); }
+  /* The current tab: a soft pill behind the icon, the label in the accent. */
+  .rail a svg { box-sizing:content-box; padding:3px 14px; border-radius:14px; }
+  .rail a[aria-current="page"] svg { background:var(--primary-soft); }
+  .rail-lbl, html[data-rail="open"] .rail-lbl {
+    position:static; width:auto; height:auto; overflow:visible; clip:auto;
+    font-size:11px; line-height:14px; font-weight:500;
+  }
+  .rail-toggle { display:none; }
+  .shell { padding-bottom:calc(56px + env(safe-area-inset-bottom)); }
+
+  /* iOS zooms the whole page into any field set smaller than 16px. */
+  input:not([type="checkbox"]):not([type="radio"]), textarea, select { font-size:16px !important; }
+}
 </style>
 </head>
 <body>
@@ -354,7 +407,7 @@ html[data-rail="open"] .rail-lbl {
   <symbol id="i-spin" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9" /></symbol>
 </defs></svg>
 
-<header class="app">
+<header class="app" data-page="{% block head_page %}{{ page }}{% endblock %}">
   <a class="brand" href="/">
     <svg class="ico ico-lg"><use href="#i-anchor"/></svg>
     <span class="t-headline-sm">SDOC Inbox</span>
@@ -363,7 +416,7 @@ html[data-rail="open"] .rail-lbl {
   <div class="filters">
     {% if has_categories %}
       {# Each link keeps the other filters: filter_href in app.py. #}
-      <a class="fbtn" href="{{ filter_href(None, active_status, active_reviewed) }}"
+      <a class="fbtn all" href="{{ filter_href(None, active_status, active_reviewed) }}"
          aria-pressed="{{ 'true' if not active else 'false' }}">All</a>
       {% for c in categories_list %}
         <a class="fbtn k-{{ c }}" href="{{ filter_href(c, active_status, active_reviewed) }}"
@@ -389,7 +442,7 @@ html[data-rail="open"] .rail-lbl {
         <svg class="ico ico-sm" aria-hidden="true"><use href="#i-check"/></svg>Reviewed
       </span>
     {% elif has_comparison %}
-      <a class="fbtn" href="{{ filter_href(active) }}" aria-pressed="{{ 'true' if not active_status and not active_reviewed else 'false' }}">Status: All</a>
+      <a class="fbtn all" href="{{ filter_href(active) }}" aria-pressed="{{ 'true' if not active_status and not active_reviewed else 'false' }}">Status: All</a>
       {% for s in statuses %}
         <a class="fbtn" href="{{ filter_href(active, s) }}" aria-pressed="{{ 'true' if active_status == s else 'false' }}">
           <span class="status {{ s }}"></span>{{ 'REVIEW' if s == 'NEEDS_REVIEW' else s }}
@@ -550,6 +603,15 @@ html[data-rail="open"] .rail-lbl {
     sync();
   });
   sync();
+})();
+
+// On a phone the filters scroll sideways; bring the chosen one into view,
+// or a selected SPAM would sit off-screen with nothing to say it is on.
+(function () {
+  var row = document.querySelector(".filters");
+  if (!row || row.scrollWidth <= row.clientWidth) return;
+  var picked = row.querySelector('a.fbtn[aria-pressed="true"]:not(.all)');
+  if (picked) row.scrollLeft = picked.offsetLeft - row.clientWidth / 2 + picked.offsetWidth / 2;
 })();
 
 // Account menu: click the initial to open, click anywhere else or Esc to close.

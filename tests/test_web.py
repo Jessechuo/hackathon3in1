@@ -162,3 +162,57 @@ def test_the_rail_can_be_widened_to_show_labels(site):
     head = html.split("</head>", 1)[0]
     assert 'localStorage.getItem("sdoc-rail")' in head    # restored before paint
     assert 'html[data-rail="open"] { --rail:200px; }' in html
+
+
+# --- on a phone ------------------------------------------------------------
+
+def phone_rules(html):
+    """The CSS that applies below 720px, in one string."""
+    return " ".join(part.split("\n}\n", 1)[0] for part in html.split("@media (max-width:720px)")[1:])
+
+
+def test_on_a_phone_the_panel_is_a_bottom_tab_bar_and_the_filters_one_row(site):
+    """Wrapped, the eleven filter buttons stacked five rows deep and took a
+    quarter of a phone screen; the side panel took width it does not have."""
+    client, _ = site
+    html = client.get("/").text
+    assert "viewport-fit=cover" in html                       # room for the home bar
+    phone = phone_rules(html)
+    assert ':root, html[data-rail="open"] { --rail:0px; }' in phone
+    assert "top:auto; bottom:0;" in phone                     # the rail, along the bottom
+    assert "flex-wrap:nowrap; overflow-x:auto;" in phone      # filters swipe, never wrap
+    assert "font-size:16px !important" in phone               # no iOS zoom into fields
+
+
+def test_the_filter_row_shows_only_on_the_queue(site):
+    client, _ = site
+    assert '<header class="app" data-page="inbox">' in client.get("/").text
+    assert '<header class="app" data-page="email">' in client.get("/email/email_001").text
+    assert 'header.app:not([data-page="inbox"]) .filters { display:none; }' in client.get("/").text
+
+
+def test_on_a_phone_each_email_is_a_card_not_a_940px_row(site):
+    client, write = site
+    write({"email_001": {"category": "BL_COMPARISON", "status": "OK"}})
+    html = client.get("/").text
+    row = html.split('data-id="email_001"', 1)[1].split("</tr>", 1)[0]
+    for cell in ('class="id"', 'class="cat"', 'class="ver"', 'class="subject"', 'class="from"', 'class="att"'):
+        assert cell in row, cell                              # every cell has a grid area
+    phone = phone_rules(html)
+    assert "min-width:0;" in phone and "thead { display:none; }" in phone
+
+
+def test_on_a_phone_the_comparison_keeps_si_and_bl_side_by_side(site):
+    """As four table columns the values broke mid-word: "PACIF / IC"."""
+    client, write = site
+    write({"email_043": {
+        "category": "BL_COMPARISON", "reason": "x", "status": "MISMATCH", "review_reason": None,
+        "has_defect": True, "defect_fields": ["container_count"], "note": None,
+        "fields": [{"name": "container_count", "si": "3 x 20'GP", "bl": "5 x 20'GP", "match": False}],
+    }})
+    html = client.get("/email/email_043").text
+    assert 'class="si" data-l="SI"' in html and 'class="bl" data-l="BL"' in html
+    assert 'grid-template-areas:"fn fn mk" "si bl bl"' in phone_rules(html)
+    # prev/next sit outside the review buttons, so a phone can put them by "Inbox"
+    acts = html.split('<div class="acts">', 1)[1].split("</div>", 1)[0]
+    assert 'class="pager"' not in acts
