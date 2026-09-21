@@ -35,7 +35,11 @@
 
   /* ── Dense triage grid ──────────────────────────────────────────── */
   .grid { width:100%; overflow-x:auto; }
-  table { width:100%; border-collapse:collapse; text-align:left; min-width:940px; }
+  /* The minimum was tuned for the 48px icon rail. Opening the rail takes the
+     difference out of the content area, so the minimum gives the same back -
+     otherwise a laptop-width window scrolls sideways the moment it opens. */
+  table { width:100%; border-collapse:collapse; text-align:left;
+          min-width:calc(940px - var(--rail) + 48px); }
   thead tr { height:34px; background:var(--l2); }
   th {
     font-size:11px; line-height:14px; font-weight:600;
@@ -106,6 +110,11 @@
   }
 
   @media (max-width:1100px) { .c-from, td.from { display:none; } }
+  /* Same column, same reason, 152px sooner: that is how much wider the rail
+     is when open, and a media query sees the window, not the space left. */
+  @media (max-width:1252px) {
+    html[data-rail="open"] .c-from, html[data-rail="open"] td.from { display:none; }
+  }
 </style>
 
 <section class="ribbon">
