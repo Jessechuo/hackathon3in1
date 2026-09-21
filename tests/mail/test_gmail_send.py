@@ -120,7 +120,7 @@ def test_the_message_goes_as_base64url_with_the_bearer_token():
     raw = base64.urlsafe_b64decode(kwargs["json"]["raw"])
     sent = email.message_from_bytes(raw, policy=policy.default)
     assert sent["To"] == "ops@shipper.com"
-    assert sent["From"] == "hackathon3in1@gmail.com"
+    assert sent["From"].addresses[0].addr_spec == "hackathon3in1@gmail.com"
     assert sent["Subject"] == "Draft BL"
 
 

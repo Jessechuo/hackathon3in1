@@ -34,7 +34,9 @@ def test_the_message_is_addressed_from_the_watched_account():
     sent = []
     msg = snd.send("ops@shipper.com", "Draft BL", "Please see attached.", [],
                    transport=sent.append)
-    assert msg["From"] == "hackathon3in1@gmail.com"
+    assert msg["From"].addresses[0].addr_spec == "hackathon3in1@gmail.com"
+    assert msg["From"].addresses[0].display_name == "SDOC Inbox"   # a named sender
+    assert msg["Message-ID"]                                       # filters distrust none
     assert msg["To"] == "ops@shipper.com"
     assert msg["Subject"] == "Draft BL"
     assert "Please see attached." in msg.get_content()

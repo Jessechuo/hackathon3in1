@@ -15,6 +15,7 @@ import secrets
 import smtplib
 import socket
 from email.message import EmailMessage
+from email.utils import formataddr, make_msgid
 
 import sdoc.config  # noqa: F401  - importing loads .env / .env.txt
 from sdoc.mail import gmail_send
@@ -33,6 +34,11 @@ PORTS = (465, 587)
 # Without this smtplib waits forever on a blocked route, which reads as the
 # app hanging rather than as a send that cannot work.
 TIMEOUT = float(os.environ.get("SDOC_SMTP_TIMEOUT", "15"))
+
+# Shown beside the address in the recipient's inbox. A named sender is a
+# small but real trust signal to spam filters, and reads as a business
+# rather than a bare address.
+DISPLAY_NAME = os.environ.get("SDOC_MAIL_NAME", "SDOC Inbox")
 
 # Deliberately loose. Real address validity is decided by the mail server
 # rejecting it, not by a regex; this only catches obvious typing mistakes.
@@ -106,9 +112,13 @@ def valid_address(address: str) -> bool:
 def build_message(sender: str, to: str, subject: str, body: str,
                   attachments: list[tuple[str, bytes]]) -> EmailMessage:
     msg = EmailMessage()
-    msg["From"] = sender
+    msg["From"] = formataddr((DISPLAY_NAME, sender)) if DISPLAY_NAME else sender
     msg["To"] = to
     msg["Subject"] = subject
+    # Filters treat a message with no Message-ID as suspect. Gmail's API adds
+    # one if missing, SMTP relays do not always; setting it keeps every path
+    # the same.
+    msg["Message-ID"] = make_msgid(domain=sender.split("@")[-1] if "@" in sender else None)
     msg.set_content(body or "")
     for name, data in attachments:
         ctype = mimetypes.guess_type(name)[0] or "application/octet-stream"
