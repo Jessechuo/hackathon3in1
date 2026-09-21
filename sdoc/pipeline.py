@@ -79,7 +79,7 @@ def process(email: dict, cls: dict) -> dict:
         return _review(r, "wrong_doc_type", msg[0].upper() + msg[1:] + ".")
 
     # 5. Blank values, then 6. compare
-    result = compare(pair.si, pair.bl)
+    result = compare(pair.si, pair.bl, pair.si_en, pair.bl_en)
     r["fields"] = [asdict(row) for row in result.rows]
     if result.missing:
         return _review(r, "missing_value",

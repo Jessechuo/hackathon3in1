@@ -1,0 +1,20 @@
+[
+  {"id": "ms_si_request", "from": "logistik@kilangkertasselatan.com.my", "subject": "Permohonan SI - PO 7781",
+   "body": "ms_si_request.txt", "attachments": [],
+   "expect": {"category": "SI_REQUEST", "status": "OK"}},
+  {"id": "zh_check_ok", "from": "docs@huaxinpaper.com.my", "subject": "请核对提单草稿 - 订单 5521",
+   "body": "zh_check.txt", "attachments": ["zh_SI.txt", "en_BL.txt"],
+   "expect": {"category": "BL_COMPARISON", "status": "OK"}},
+  {"id": "zh_check_mismatch", "from": "docs@huaxinpaper.com.my", "subject": "请核对提单草稿 - 订单 5521",
+   "body": "zh_check.txt", "attachments": ["zh_SI.txt", "wrong_BL.txt"],
+   "expect": {"category": "BL_COMPARISON", "status": "MISMATCH", "defect_fields": ["container_count"]}},
+  {"id": "ms_check_ok", "from": "operasi@kertasutara.com.my", "subject": "Sila semak draf BL - PO 6620",
+   "body": "ms_check.txt", "attachments": ["ms_SI.txt", "ms_en_BL.txt"],
+   "expect": {"category": "BL_COMPARISON", "status": "OK"}},
+  {"id": "ms_invoice", "from": "akaun@kertasutara.com.my", "subject": "Pertanyaan invois caj tempatan - PO 6620",
+   "body": "ms_invoice.txt", "attachments": [],
+   "expect": {"category": "INVOICE_QUERY", "status": "OK"}},
+  {"id": "zh_spam", "from": "prize@lucky-draw.top", "subject": "恭喜您中奖了！",
+   "body": "zh_spam.txt", "attachments": [],
+   "expect": {"category": "SPAM", "status": "OK"}}
+]

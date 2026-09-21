@@ -187,6 +187,8 @@
   .cmp-table tr.bad td.mk { color:var(--mismatch); }
   .cmp-table tr.miss td { background:rgba(217,119,6,.10); }
   .cmp-table tr.ok td.mk { color:var(--ok); }
+  /* The English form under a value written in another language. */
+  .cmp-table td .en { display:block; margin-top:2px; font-size:11px; color:var(--fg-subtle); }
   .cmp-muted { margin-top:var(--lg); color:var(--fg-subtle); font-size:12px; }
   .cmp-head .by { font-size:12px; color:var(--fg-muted); }
   .cmp-head .by b { font-weight:600; color:var(--fg); }
@@ -248,17 +250,17 @@
 
 <div class="doc">
   <div class="toolbar">
-    <a class="back" href="/"><svg class="ico ico-sm"><use href="#i-back"/></svg> Inbox <kbd>Esc</kbd></a>
+    <a class="back" href="/"><svg class="ico ico-sm"><use href="#i-back"/></svg> {{ t("Inbox") }} <kbd>Esc</kbd></a>
     <div class="tags">
       {% if cat and cat.get('category') %}
         <span class="badge {{ cat.category }}">{{ cat.category }}</span>
         {% if cat.get('category') == 'BL_COMPARISON' and cat.get('status') %}
           <span class="status {{ cat.status }}">{{ 'REVIEW' if cat.status == 'NEEDS_REVIEW' else cat.status }}</span>
         {% endif %}
-        {% if cat.get('reason') %}<span class="why">{{ cat.reason }}</span>{% endif %}
+        {% if cat.get('reason') %}<span class="why" translate="no">{{ cat.reason }}</span>{% endif %}
       {% else %}
         <span class="slot-badge" style="width:120px"></span>
-        <span class="why">Not yet classified</span>
+        <span class="why">{{ t("Not yet classified") }}</span>
       {% endif %}
     </div>
     <div class="acts">
@@ -266,16 +268,16 @@
       <button class="act primary" id="verify"
               aria-pressed="{{ 'true' if review and review.decision == 'verified' else 'false' }}">
         <svg class="ico ico-sm"><use href="#i-check"/></svg>
-        <span id="verify-label">{{ 'Verified' if review and review.decision == 'verified' else 'Mark Verified' }}</span>
+        <span id="verify-label">{{ t('Verified') if review and review.decision == 'verified' else t('Mark Verified') }}</span>
         <kbd>V</kbd>
       </button>
       <button class="act danger" id="flag"
               aria-pressed="{{ 'true' if review and review.decision == 'mismatch' else 'false' }}">
         <svg class="ico ico-sm"><use href="#i-flag"/></svg>
-        <span id="flag-label">{{ 'Flagged' if review and review.decision == 'mismatch' else 'Flag Mismatch' }}</span>
+        <span id="flag-label">{{ t('Flagged') if review and review.decision == 'mismatch' else t('Flag Mismatch') }}</span>
         <kbd>F</kbd>
       </button>
-      <span class="saved" id="saved">{% if review %}saved {{ review.at[11:16] }} UTC{% endif %}</span>
+      <span class="saved" id="saved">{% if review %}{{ t("saved {time} UTC", time=review.at[11:16]) }}{% endif %}</span>
       <span class="vr"></span>
       {% endif %}
     </div>
@@ -283,12 +285,12 @@
        buttons on a row of their own. #}
     <span class="pager">
         {% if prev_id %}
-          <a href="/email/{{ prev_id }}" title="Previous (K)" aria-label="Previous email"><svg class="ico"><use href="#i-up"/></svg></a>
+          <a href="/email/{{ prev_id }}" title="{{ t('Previous (K)') }}" aria-label="{{ t('Previous email') }}"><svg class="ico"><use href="#i-up"/></svg></a>
         {% else %}
           <span aria-disabled="true"><svg class="ico"><use href="#i-up"/></svg></span>
         {% endif %}
         {% if next_id %}
-          <a href="/email/{{ next_id }}" title="Next (J)" aria-label="Next email"><svg class="ico"><use href="#i-down"/></svg></a>
+          <a href="/email/{{ next_id }}" title="{{ t('Next (J)') }}" aria-label="{{ t('Next email') }}"><svg class="ico"><use href="#i-down"/></svg></a>
         {% else %}
           <span aria-disabled="true"><svg class="ico"><use href="#i-down"/></svg></span>
         {% endif %}
@@ -297,80 +299,82 @@
 
   {% if can_review %}
   <div class="picker" id="picker" hidden>
-    <div class="picker-head">Which fields are wrong?</div>
+    <div class="picker-head">{{ t("Which fields are wrong?") }}</div>
     <div class="picker-grid">
       {% for name in field_names %}
-      <label><input type="checkbox" value="{{ name }}"{{ ' checked' if name in preticked else '' }}> {{ name }}</label>
+      <label><input type="checkbox" value="{{ name }}"{{ ' checked' if name in preticked else '' }}> <span translate="no">{{ name }}</span></label>
       {% endfor %}
     </div>
-    <p class="picker-err" id="picker-err" hidden>Tick at least one field.</p>
+    <p class="picker-err" id="picker-err" hidden>{{ t("Tick at least one field.") }}</p>
     <div class="picker-acts">
-      <button class="act danger" id="picker-save">Save mismatch</button>
-      <button class="act" id="picker-cancel">Cancel</button>
-      {% if review %}<button class="act" id="picker-clear">Clear decision</button>{% endif %}
+      <button class="act danger" id="picker-save">{{ t("Save mismatch") }}</button>
+      <button class="act" id="picker-cancel">{{ t("Cancel") }}</button>
+      {% if review %}<button class="act" id="picker-clear">{{ t("Clear decision") }}</button>{% endif %}
     </div>
   </div>
   {% endif %}
 
   <div class="panel head">
-    <button class="copy" id="copy" title="Copy subject and id" aria-label="Copy subject and id">
+    <button class="copy" id="copy" title="{{ t('Copy subject and id') }}" aria-label="{{ t('Copy subject and id') }}">
       <svg class="ico ico-sm"><use href="#i-copy"/></svg>
     </button>
-    <h1>{{ email.subject }}</h1>
+    <h1 translate="no">{{ email.subject }}</h1>
     <div class="meta"><b>{{ email.email_id }}</b> &middot;
-      {% if email.get('direction') == 'sent' %}sent to {{ email.to }}
+      {% if email.get('direction') == 'sent' %}{{ t("sent to {address}", address=email.to) }}
         {%- set by = email.get('sent_by') or {} %}
-        {%- if by.get('email') %} &middot; sent by <span class="by-who" title="{{ by.email }}">{{ by.get('name') or by.email }}</span>{% endif %}
-      {% else %}from {{ email['from'] }}{% endif %}
-      &middot; {{ position }} of {{ total }}</div>
+        {%- if by.get('email') %} &middot; {{ t("sent by") }} <span class="by-who" title="{{ by.email }}" translate="no">{{ by.get('name') or by.email }}</span>{% endif %}
+      {% else %}{{ t("from {address}", address=email['from']) }}{% endif %}
+      &middot; {{ t("{n} of {total}", n=position, total=total) }}</div>
   </div>
 
   {% if cat and cat.get('pending') %}
   <p class="working" role="status">
     <svg class="ico spin" aria-hidden="true"><use href="#i-spin"/></svg>
-    <span><b>Checking the documents, then sending.</b>
-    Reading both files takes a few seconds; this page refreshes itself when it is done.</span>
+    <span><b>{{ t("Checking the documents, then sending.") }}</b>
+    {{ t("Reading both files takes a few seconds; this page refreshes itself when it is done.") }}</span>
   </p>
   {% elif cat and cat.get('sent') %}
   <p class="working ok" role="status">
     <svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>
-    <span>Checked and sent to <b>{{ email.to }}</b>.</span>
+    <span>{{ t("Checked and sent to {address}.", address="<b>" ~ (email.to|e) ~ "</b>")|safe }}</span>
   </p>
   {% elif cat and cat.get('send_error') %}
   <p class="working bad" role="status">
     <svg class="ico" aria-hidden="true"><use href="#i-alert"/></svg>
-    <span>The documents were checked, but the message could not be sent:
-    <b>{{ cat.send_error }}</b></span>
+    <span>{{ t("The documents were checked, but the message could not be sent:") }}
+    <b translate="no">{{ cat.send_error }}</b></span>
   </p>
   {% endif %}
 
   <pre class="body">{{ email.body }}</pre>
 
   {% if cat and cat.get('category') == 'BL_COMPARISON' and 'fields' in cat %}
-  <section class="cmp" aria-label="Comparison report">
+  <section class="cmp" aria-label="{{ t('Comparison report') }}">
     <div class="cmp-head">
-      <span class="t"><svg class="ico"><use href="#i-diff"/></svg> Comparison report</span>
+      <span class="t"><svg class="ico"><use href="#i-diff"/></svg> {{ t("Comparison report") }}</span>
       <span class="status {{ cat.status }}">{{ 'REVIEW' if cat.status == 'NEEDS_REVIEW' else cat.status }}</span>
       {% if cat.get('review_reason') %}<span class="rr">{{ cat.review_reason }}</span>{% endif %}
       {% if cat.get('reviewed') %}
-        <span class="by">Decided by <b>a reviewer</b>{% if cat.reviewer_changed %} &middot; the system said
+        <span class="by">{{ t("Decided by {who}", who="<b>" ~ t("a reviewer") ~ "</b>")|safe }}{% if cat.reviewer_changed %} &middot; {{ t("the system said") }}
           {{ 'REVIEW' if cat.system_status == 'NEEDS_REVIEW' else cat.system_status }}
           {%- if cat.system_defect_fields %} ({{ cat.system_defect_fields|join(', ') }}){% endif %}{% endif %}</span>
       {% endif %}
     </div>
-    {% if cat.get('note') %}<p class="cmp-note">{{ cat.note }}</p>{% endif %}
+    {% if cat.get('note') %}<p class="cmp-note" translate="no">{{ cat.note }}</p>{% endif %}
     {% if cat.fields %}
     <table class="cmp-table">
-      <thead><tr><th>Field</th><th>SI (reference)</th><th>BL (draft)</th><th></th></tr></thead>
+      <thead><tr><th>{{ t("Field") }}</th><th>{{ t("SI (reference)") }}</th><th>{{ t("BL (draft)") }}</th><th></th></tr></thead>
       <tbody>
       {% for f in cat.fields %}
         {# colour by the FINAL answer: a reviewer's decision replaces the system's #}
         {% set state = 'bad' if f.name in cat.defect_fields else ('miss' if f.match is none else 'ok') %}
         <tr class="{{ state }}">
-          <td class="fn">{{ f.name }}</td>
-          <td class="si" data-l="SI">{{ f.si if f.si is not none else '(blank)' }}</td>
-          <td class="bl" data-l="BL">{{ f.bl if f.bl is not none else '(blank)' }}</td>
-          <td class="mk" title="{{ {'bad': 'differs', 'miss': 'blank', 'ok': 'matches'}[state] }}">{{ {'bad': '✗', 'miss': '?', 'ok': '✓'}[state] }}</td>
+          <td class="fn" translate="no">{{ f.name }}</td>
+          <td class="si" data-l="SI" translate="no">{{ f.si if f.si is not none else t('(blank)') }}
+            {%- if f.si_en and f.si_en != f.si %}<span class="en">{{ f.si_en }}</span>{% endif %}</td>
+          <td class="bl" data-l="BL" translate="no">{{ f.bl if f.bl is not none else t('(blank)') }}
+            {%- if f.bl_en and f.bl_en != f.bl %}<span class="en">{{ f.bl_en }}</span>{% endif %}</td>
+          <td class="mk" title="{{ t('differs' if state == 'bad' else ('blank' if state == 'miss' else 'matches')) }}">{{ {'bad': '✗', 'miss': '?', 'ok': '✓'}[state] }}</td>
         </tr>
       {% endfor %}
       </tbody>
@@ -378,17 +382,17 @@
     {% endif %}
   </section>
   {% elif cat and cat.get('category') and cat.get('category') != 'BL_COMPARISON' %}
-  <p class="cmp-muted">Not a document-check request, so no SI vs BL comparison is needed.</p>
+  <p class="cmp-muted">{{ t("Not a document-check request, so no SI vs BL comparison is needed.") }}</p>
   {% else %}
   <div class="report">
-    <span class="t"><svg class="ico"><use href="#i-diff"/></svg> Comparison report</span>
-    <div class="s">Appears here once the pipeline has run</div>
+    <span class="t"><svg class="ico"><use href="#i-diff"/></svg> {{ t("Comparison report") }}</span>
+    <div class="s">{{ t("Appears here once the pipeline has run") }}</div>
   </div>
   {% endif %}
 
   <section class="atts">
     <div class="hdr">
-      <span class="t-label-hdr">Attachments ({{ email.attachments|length }})</span>
+      <span class="t-label-hdr">{{ t("Attachments ({n})", n=email.attachments|length) }}</span>
     </div>
     {% if email.attachments %}
       <div class="files">
@@ -396,21 +400,21 @@
         <a class="file" href="/attachment/{{ a.path }}">
           <span class="ic"><svg class="ico"><use href="#i-doc"/></svg></span>
           <span class="txt">
-            <span class="nm">{{ a.name }}</span>
-            <span class="sz">{{ a.size }} &middot; {{ a.kind }}</span>
+            <span class="nm" translate="no">{{ a.name }}</span>
+            <span class="sz">{{ t('missing') if a.size == 'missing' else a.size }} &middot; {{ t(a.kind) }}</span>
           </span>
-          <span class="go">Preview</span>
+          <span class="go">{{ t("Preview") }}</span>
         </a>
         {% endfor %}
       </div>
     {% else %}
-      <p class="nofiles">No attachments on this email.</p>
+      <p class="nofiles">{{ t("No attachments on this email.") }}</p>
     {% endif %}
   </section>
 
   <div class="foot">
-    <span>Source: {{ email.email_id }}.json</span>
-    <span>{{ email.attachments|length }} file(s) referenced</span>
+    <span>{{ t("Source: {file}", file=email.email_id ~ ".json") }}</span>
+    <span>{{ t("{n} file referenced" if email.attachments|length == 1 else "{n} files referenced", n=email.attachments|length) }}</span>
   </div>
 </div>
 {% endblock %}
@@ -424,6 +428,7 @@
 {% endif %}
 <script>
 (function () {
+  var T = {{ js_strings("save failed")|tojson }};
   var EID = "{{ email.email_id }}";
   var CAN_REVIEW = {{ 'true' if can_review else 'false' }};
   var DECISION = {{ (review.decision if review else none) | tojson }};
@@ -446,7 +451,7 @@
         if (!r.ok) throw new Error(r.status);
         location.reload();
       })
-      .catch(function () { if (saved) saved.textContent = "save failed"; });
+      .catch(function () { if (saved) saved.textContent = T["save failed"]; });
   }
 
   function showPicker(open) {

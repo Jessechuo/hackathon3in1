@@ -8,7 +8,10 @@ import re
 
 _PLACEHOLDER_WORDS = {"TBA", "TBC", "TBD", "N/A", "NA", "NIL", "NONE", "UNKNOWN", "-"}
 _PLACEHOLDER_CHARS = re.compile(r"[\s_?\-.*/]+")
-_TONNES = re.compile(r"\b(MT|MTS|TONNES?|TONS?)\b")
+# Tonnes as written in English, Malay ("tan", "tan metrik") and Chinese.
+# The Chinese units are matched without word boundaries: Chinese has no
+# spaces, so \b never falls around them.
+_TONNES = re.compile(r"\b(MT|MTS|TONNES?|TONS?|TAN)\b|吨|公吨|噸")
 
 # A shorter party name only matches a longer one that starts with it when it
 # is at least this long — "APRIL" must not match "APRIL FAR EAST ...".
@@ -23,8 +26,11 @@ def is_blank(value: str | None) -> bool:
 
 
 def canon(value: str) -> str:
-    """Uppercase, punctuation to spaces, single-spaced."""
-    return " ".join(re.sub(r"[^A-Z0-9]+", " ", value.upper()).split())
+    """Uppercase, punctuation to spaces, single-spaced.
+
+    Letters of every script are kept: an A-Z-only version erased Chinese
+    names entirely and reported them as blanks."""
+    return " ".join(re.sub(r"[\W_]+", " ", value.upper()).split())
 
 
 def port_key(value: str) -> str:

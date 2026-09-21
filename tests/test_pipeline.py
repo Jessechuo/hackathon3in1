@@ -28,8 +28,10 @@ def readable(monkeypatch):
 
 
 def use_pair(monkeypatch, si=None, bl=None, si_type="SHIPPING_INSTRUCTION", bl_type="BILL_OF_LADING"):
+    si, bl = si or fields(), bl or fields()
+    # English documents: the English forms are the values themselves.
     pair = PairExtraction(si_doc_type=si_type, bl_doc_type=bl_type,
-                          si=si or fields(), bl=bl or fields())
+                          si=si, bl=bl, si_en=si, bl_en=bl)
     monkeypatch.setattr(pipeline, "extract_pair", lambda s, b: pair)
 
 

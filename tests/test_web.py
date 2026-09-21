@@ -257,3 +257,16 @@ def test_the_logo_loads_before_anyone_signs_in(monkeypatch):
     login = client.get("/login").text
     assert 'src="/logo.png"' in login and "<h1>MailOps</h1>" in login
     assert client.get("/", follow_redirects=False).status_code == 303   # the rest stays walled
+
+
+def test_a_non_english_value_shows_its_english_form(site):
+    client, write = site
+    write({"email_043": {
+        "category": "BL_COMPARISON", "reason": "x", "status": "OK", "review_reason": None,
+        "has_defect": False, "defect_fields": [], "note": None,
+        "fields": [{"name": "port_of_loading", "si": "巴生港", "bl": "PORT KLANG", "match": True,
+                    "si_en": "PORT KLANG", "bl_en": "PORT KLANG"}],
+    }})
+    html = client.get("/email/email_043").text
+    assert '巴生港<span class="en">PORT KLANG</span>' in html
+    assert 'PORT KLANG<span class="en">' not in html        # English already: nothing added

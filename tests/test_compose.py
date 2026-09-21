@@ -160,7 +160,7 @@ def test_too_many_attachments_are_refused(site):
     files = [("files", (f"f{i}.txt", b"x", "text/plain")) for i in range(6)]
     r = client.post("/compose", data={"to": "a@b.com", "subject": "s", "body": "b"},
                     files=files, follow_redirects=False)
-    assert r.status_code == 400 and "at most" in r.json()["detail"]
+    assert r.status_code == 400 and "at most" in r.json()["detail"].lower()
     assert sent == []
 
 

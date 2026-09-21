@@ -43,6 +43,11 @@ email in this inbox mentions "SI" or "draft BL" somewhere, so those phrases
 carry no information. Decide on INTENT - what is the sender asking the
 recipient to DO next?
 
+Emails may be written in English, Malay or Chinese, or mix them. Classify on
+meaning whatever the language: "Sila sediakan SI" (Malay) and "请制作提单"
+(Chinese) are requests to prepare documents; "Sila semak draf BL" and
+"请核对提单草稿" ask for a check. The categories and the reason stay in English.
+
   "make me a BL from these details"   -> SI_REQUEST
   "check this BL against the SI"      -> BL_COMPARISON
   "send me the draft BL for checking" -> BL_COMPARISON

@@ -20,6 +20,10 @@ class PairExtraction(BaseModel):
     bl_doc_type: DocType
     si: ShipmentFields
     bl: ShipmentFields
+    # The same seven values in English, each from its own document - so a
+    # Chinese SI can be checked against an English BL (巴生港 vs PORT KLANG).
+    si_en: ShipmentFields
+    bl_en: ShipmentFields
 
 
 PROMPT = """You are reading two shipping documents for a document-verification check.
@@ -49,6 +53,18 @@ DOCUMENT B was attached as the draft Bill of Lading (BL).
 
 Labels differ between documents ("Port of Loading", "POL", "Load Port";
 "Consignee", "To the Order of"). Match fields by meaning, not by label.
+
+The documents may be written in English, Malay or Chinese, or a mix.
+
+3. Also give si_en and bl_en: the same seven fields in English, for comparing
+   documents written in different languages.
+   - Write each from its own document only - never from the other document.
+   - If a value is already in English, copy it exactly, character for
+     character, even if it looks misspelled.
+   - Otherwise translate or romanise it as it would appear on an English
+     shipping document: 巴生港 -> PORT KLANG, 三个40尺高柜 -> 3 x 40'HC,
+     61.25 公吨 -> 61,250 KG, Pelabuhan Klang -> PORT KLANG.
+   - Null wherever the original value is null.
 
 Rules:
 - Copy each value exactly as it appears in THAT document. Never fill in or

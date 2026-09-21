@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Send an email — MailOps{% endblock %}
+{% block title %}{{ t("Send an email") }} — MailOps{% endblock %}
 
 {% block content %}
 <style>
@@ -86,83 +86,78 @@
 </style>
 
 <div class="compose">
-  <h1 class="t-headline-sm">Send an email</h1>
+  <h1 class="t-headline-sm">{{ t("Send an email") }}</h1>
 
-  <p class="lede">The attached documents are checked before the message goes out —
-  same classifier and same SI-against-BL comparison the rest of the queue uses.
-  A discrepancy is worth catching before a draft leaves, not after the customer
-  finds it.</p>
+  <p class="lede">{{ t("The attached documents are checked before the message goes out — same classifier and same SI-against-BL comparison the rest of the queue uses. A discrepancy is worth catching before a draft leaves, not after the customer finds it.") }}</p>
 
   {% if smtp_reachable is false %}
-  <p class="locked"><b>Sending is unavailable on this host.</b>
-  This deployment cannot reach a mail server — the hosting provider blocks
-  outbound SMTP, as most do so their addresses are not used for spam. Receiving
-  is unaffected: mail to <b>{{ mail_address }}</b> is still picked up and checked
-  within twenty seconds. Run the app locally and this form works.</p>
+  <p class="locked"><b>{{ t("Sending is unavailable on this host.") }}</b>
+  {{ t("This deployment cannot reach a mail server — the hosting provider blocks outbound SMTP, as most do so their addresses are not used for spam. Receiving is unaffected: mail to {address} is still picked up and checked within twenty seconds. Run the app locally and this form works.", address="<b>" ~ (mail_address|e) ~ "</b>")|safe }}</p>
   {% elif not can_send %}
-  <p class="locked"><b><a href="/login?next=/compose">Sign in</a> to send.</b>
-  Reading the queue needs no account; sending does, because the message leaves
-  under this address. This app is on a public URL, and an unlocked send form
-  would let strangers mail the world from it.</p>
+  <p class="locked"><b>{{ t("{link} to send.", link='<a href="/login?next=/compose">' ~ t("Sign in") ~ "</a>")|safe }}</b>
+  {{ t("Reading the queue needs no account; sending does, because the message leaves under this address. This app is on a public URL, and an unlocked send form would let strangers mail the world from it.") }}</p>
   {% endif %}
 
   <form method="post" action="/compose" enctype="multipart/form-data">
     <div class="from-line">
       <svg class="ico ico-sm"><use href="#i-send"/></svg>
-      <span>From <b>{{ mail_address or 'this account' }}</b></span>
+      <span>{{ t("From {address}", address="<b>" ~ ((mail_address or t('this account'))|e) ~ "</b>")|safe }}</span>
     </div>
 
     <label class="field">
-      <span class="lbl">To</span>
+      <span class="lbl">{{ t("To") }}</span>
       <input type="email" name="to" required placeholder="ops@shipper.com"
              {% if not can_send or smtp_reachable is false %}disabled{% endif %}>
     </label>
 
     <label class="field">
-      <span class="lbl">Subject</span>
+      <span class="lbl">{{ t("Subject") }}</span>
       <input type="text" name="subject" required
-             placeholder="Draft BL for confirmation - PO 26067"
+             placeholder="{{ t('Draft BL for confirmation - PO 26067') }}"
              {% if not can_send or smtp_reachable is false %}disabled{% endif %}>
     </label>
 
     <label class="field">
-      <span class="lbl">Body</span>
+      <span class="lbl">{{ t("Body") }}</span>
       <textarea name="body" {% if not can_send or smtp_reachable is false %}disabled{% endif %}
-        placeholder="Dear Sir/Madam,&#10;&#10;Please find attached the SI and the draft BL for your confirmation.&#10;&#10;Regards"></textarea>
+        placeholder="{{ t('Dear Sir/Madam,') }}&#10;&#10;{{ t('Please find attached the SI and the draft BL for your confirmation.') }}&#10;&#10;{{ t('Regards') }}"></textarea>
     </label>
 
     <div class="field">
-      <span class="lbl">Attachments</span>
+      <span class="lbl">{{ t("Attachments") }}</span>
 
       <div class="drop" id="drop">
         <input type="file" name="files" id="files" multiple hidden
                {% if not can_send or smtp_reachable is false %}disabled{% endif %}>
         <button type="button" class="attach" id="pick"
                 {% if not can_send or smtp_reachable is false %}disabled{% endif %}>
-          <svg class="ico ico-sm"><use href="#i-clip"/></svg> Add files
+          <svg class="ico ico-sm"><use href="#i-clip"/></svg> {{ t("Add files") }}
         </button>
-        <span class="drop-hint">or drop them here</span>
+        <span class="drop-hint">{{ t("or drop them here") }}</span>
       </div>
 
       <ul class="files" id="file-list"></ul>
       <p class="hint" id="file-error" hidden></p>
 
-      <p class="hint">Up to {{ max_attachments }} files, {{ max_mb }} MB each. Pick them
-      one at a time or several at once — they add up. Name them so the SI and the BL
-      are tellable apart: <code>SI.txt</code> and <code>BL.txt</code> is enough.
-      txt, pdf, docx and xlsx can be read and compared.</p>
+      <p class="hint">{{ t("Up to {n} files, {mb} MB each. Pick them one at a time or several at once — they add up. Name them so the SI and the BL are tellable apart: {si} and {bl} is enough. txt, pdf, docx and xlsx can be read and compared.", n=max_attachments, mb=max_mb, si="<code>SI.txt</code>", bl="<code>BL.txt</code>")|safe }}</p>
     </div>
 
 
     <button class="send" type="submit" {% if not can_send or smtp_reachable is false %}disabled{% endif %}>
-      <svg class="ico ico-sm"><use href="#i-send"/></svg> Check and send
+      <svg class="ico ico-sm"><use href="#i-send"/></svg> {{ t("Check and send") }}
     </button>
-    <p class="hint">Checking the documents costs about 2 cents of API credit.</p>
+    <p class="hint">{{ t("Checking the documents costs about 2 cents of API credit.") }}</p>
   </form>
 </div>
 
 <script>
 (function () {
+  var T = {{ js_strings("Remove {name}", "{name} is over {mb} MB", "Only {n} files can be attached")|tojson }};
+  function tr(s, vars) {
+    var out = T[s] || s;
+    for (var k in vars || {}) out = out.split("{" + k + "}").join(vars[k]);
+    return out;
+  }
   var input = document.getElementById("files"),
       pick = document.getElementById("pick"),
       drop = document.getElementById("drop"),
@@ -224,7 +219,7 @@
       x.type = "button";
       x.className = "x";
       x.textContent = "×";
-      x.setAttribute("aria-label", "Remove " + f.name);
+      x.setAttribute("aria-label", tr("Remove {name}", {name: f.name}));
       x.addEventListener("click", function () { removeAt(i); });
       li.appendChild(x);
 
@@ -249,9 +244,9 @@
         return g.name === f.name && g.size === f.size;
       });
       if (already) return;
-      if (f.size > MAX_BYTES) { rejected.push(f.name + " is over {{ max_mb }} MB"); return; }
+      if (f.size > MAX_BYTES) { rejected.push(tr("{name} is over {mb} MB", {name: f.name, mb: {{ max_mb }}})); return; }
       if (basket.files.length >= MAX_FILES) {
-        rejected.push("only " + MAX_FILES + " files can be attached");
+        rejected.push(tr("Only {n} files can be attached", {n: MAX_FILES}));
         return;
       }
       basket.items.add(f);

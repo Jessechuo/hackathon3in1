@@ -152,26 +152,26 @@
 
 <section class="ribbon">
   <div class="metric">
-    <span class="lbl t-label-hdr">Queue size:</span>
+    <span class="lbl t-label-hdr">{{ t("Queue size:") }}</span>
     <span class="big" id="shown">{{ emails|length }}</span>
-    <span class="sub">/ {{ total }} total</span>
+    <span class="sub">{{ t("/ {total} total", total=total) }}</span>
   </div>
   <span class="vr"></span>
   <div class="metric">
-    <span class="lbl t-label-hdr">B/L pending check:</span>
+    <span class="lbl t-label-hdr">{{ t("B/L pending check:") }}</span>
     {% if has_comparison %}
-      <span class="pend" style="color:var(--mismatch)">{{ n_mismatch }} mismatches</span>
+      <span class="pend" style="color:var(--mismatch)">{{ t("{n} mismatches", n=n_mismatch) }}</span>
       <span class="pend">&middot;</span>
-      <span class="pend" style="color:var(--review)">{{ n_review }} needs review</span>
+      <span class="pend" style="color:var(--review)">{{ t("{n} needs review", n=n_review) }}</span>
       <span class="pend">&middot;</span>
       <span class="pend" style="color:var(--ok)">{{ n_ok }} OK</span>
     {% else %}
-      <span class="pend">awaiting comparison</span>
+      <span class="pend">{{ t("awaiting comparison") }}</span>
     {% endif %}
   </div>
   <div class="search">
     <svg class="ico ico-sm"><use href="#i-search"/></svg>
-    <input id="q" type="search" autocomplete="off" placeholder="Filter subject, sender, or ID...">
+    <input id="q" type="search" autocomplete="off" placeholder="{{ t('Filter subject, sender, or ID...') }}">
     <kbd>/</kbd>
   </div>
 </section>
@@ -181,11 +181,11 @@
     <thead>
       <tr>
         <th class="c-id">ID</th>
-        <th class="c-cat">Category</th>
-        <th class="c-ver">Verification</th>
-        <th>Subject line / reference track</th>
-        <th class="c-from">Sender</th>
-        <th class="c-att" title="Attachments">Att</th>
+        <th class="c-cat">{{ t("Category") }}</th>
+        <th class="c-ver">{{ t("Verification") }}</th>
+        <th>{{ t("Subject line / reference track") }}</th>
+        <th class="c-from">{{ t("Sender") }}</th>
+        <th class="c-att" title="{{ t('Attachments') }}">{{ t("Att") }}</th>
       </tr>
     </thead>
     <tbody id="rows">
@@ -197,18 +197,18 @@
         <td class="id"><a href="/email/{{ e.email_id }}" tabindex="-1">{{ e.email_id.replace('email_','') }}</a></td>
         <td class="cat">
           {% if r.get('category') %}<span class="badge {{ r.category }}">{{ r.category }}</span>
-          {% else %}<span class="slot-badge" aria-label="Not yet classified"></span>{% endif %}
+          {% else %}<span class="slot-badge" aria-label="{{ t('Not yet classified') }}"></span>{% endif %}
         </td>
         <td class="ver">
           {% if r.get('category') == 'BL_COMPARISON' and r.get('status') and r.get('note') != 'Not processed yet.' %}
             <span class="status {{ r.status }}">{{ 'REVIEW' if r.status == 'NEEDS_REVIEW' else r.status }}</span>
-            {% if r.get('reviewed') %}<span class="rv" title="Decided by a reviewer{{ ' (system said ' ~ r.system_status ~ ')' if r.reviewer_changed else '' }}"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-check"/></svg><span class="vh">reviewed</span></span>{% endif %}
-          {% else %}<span class="slot-badge" aria-label="Not yet verified"></span>{% endif %}
+            {% if r.get('reviewed') %}<span class="rv" title="{{ t('Decided by a reviewer (the system said {status})', status=r.system_status) if r.reviewer_changed else t('Decided by a reviewer') }}"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-check"/></svg><span class="vh">{{ t("reviewed") }}</span></span>{% endif %}
+          {% else %}<span class="slot-badge" aria-label="{{ t('Not yet verified') }}"></span>{% endif %}
         </td>
-        <td class="subject"><a href="/email/{{ e.email_id }}">{{ e.subject }}</a></td>
-        <td class="from">
+        <td class="subject" translate="no"><a href="/email/{{ e.email_id }}">{{ e.subject }}</a></td>
+        <td class="from" translate="no">
           {%- if e.get('direction') == 'sent' -%}
-            <span class="dir" title="Sent from this account">TO</span> {{ e.to }}
+            <span class="dir" title="{{ t('Sent from this account') }}">{{ t("TO") }}</span> {{ e.to }}
           {%- else -%}
             {{ e['from'] }}
           {%- endif -%}
@@ -216,22 +216,22 @@
         <td class="att">
           {% if e.attachments %}
             <span><svg class="ico ico-sm"><use href="#i-clip"/></svg>{{ e.attachments|length }}</span>
-            <span class="vh">attachments</span>
+            <span class="vh">{{ t("attachments") }}</span>
           {% else %}<span class="dash">&ndash;</span>{% endif %}
         </td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
-  {% if not emails %}<p class="none">No emails match this filter.</p>{% endif %}
+  {% if not emails %}<p class="none">{{ t("No emails match this filter.") }}</p>{% endif %}
 </div>
 
 <div class="shortcuts">
-  <b>Shortcuts</b>
-  <span><kbd>J</kbd><kbd>K</kbd> Navigate</span>
-  <span><kbd>Enter</kbd> Open</span>
-  <span><kbd>/</kbd> Search</span>
-  <span><kbd>Esc</kbd> Clear</span>
+  <b>{{ t("Shortcuts") }}</b>
+  <span><kbd>J</kbd><kbd>K</kbd> {{ t("Navigate") }}</span>
+  <span><kbd>Enter</kbd> {{ t("Open") }}</span>
+  <span><kbd>/</kbd> {{ t("Search") }}</span>
+  <span><kbd>Esc</kbd> {{ t("Clear") }}</span>
 </div>
 {% endblock %}
 

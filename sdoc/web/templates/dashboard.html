@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Overview — MailOps{% endblock %}
+{% block title %}{{ t("Overview") }} — MailOps{% endblock %}
 {% block content %}
 <style>
   .dash { padding:var(--xl) var(--lg) var(--xl); }
@@ -87,113 +87,114 @@
 
 <div class="dash">
   <div class="dash-head">
-    <h1>Overview</h1>
+    <h1>{{ t("Overview") }}</h1>
   </div>
 
-  <section class="tiles" aria-label="Key figures">
+  <section class="tiles" aria-label="{{ t('Key figures') }}">
     <a class="stat-tile t-total" href="/">
       <div class="top">
         <span class="ic"><svg class="ico" aria-hidden="true"><use href="#i-inbox"/></svg></span>
         <div>
-          <div class="lbl">Total emails</div>
+          <div class="lbl">{{ t("Total emails") }}</div>
           <div class="val">{{ "{:,}".format(total) }}</div>
         </div>
       </div>
-      <div class="sub">{% if last_run %}Last run {{ last_run }}{% else %}Not classified yet{% endif %}</div>
+      <div class="sub">{% if last_run %}{{ t("Last run {when}", when=last_run) }}{% else %}{{ t("Not classified yet") }}{% endif %}</div>
     </a>
 
     <a class="stat-tile t-bad" href="/?status=MISMATCH">
       <div class="top">
         <span class="ic"><svg class="ico" aria-hidden="true"><use href="#i-flag"/></svg></span>
         <div>
-          <div class="lbl">Mismatches</div>
+          <div class="lbl">{{ t("Mismatches") }}</div>
           <div class="val">{{ stats.mismatches if stats.has_comparison else "—" }}</div>
         </div>
       </div>
-      <div class="sub">{% if stats.has_comparison %}SI and BL disagree — click to view them{% else %}Run <code>python -m sdoc.run_pipeline</code>{% endif %}</div>
+      <div class="sub">{% if stats.has_comparison %}{{ t("SI and BL disagree — click to view them") }}{% else %}{{ t("Run {command}", command="<code>python -m sdoc.run_pipeline</code>")|safe }}{% endif %}</div>
     </a>
 
     <a class="stat-tile t-review" href="/?status=NEEDS_REVIEW">
       <div class="top">
         <span class="ic"><svg class="ico" aria-hidden="true"><use href="#i-alert"/></svg></span>
         <div>
-          <div class="lbl">Needs review</div>
+          <div class="lbl">{{ t("Needs review") }}</div>
           <div class="val">{{ stats.needs_review if stats.has_comparison else "—" }}</div>
         </div>
       </div>
-      <div class="sub">{% if stats.has_comparison %}Could not be decided — open the review queue{% else %}Waiting for the comparison{% endif %}</div>
+      <div class="sub">{% if stats.has_comparison %}{{ t("Could not be decided — open the review queue") }}{% else %}{{ t("Waiting for the comparison") }}{% endif %}</div>
     </a>
 
     <a class="stat-tile t-human" href="/?status=NEEDS_REVIEW">
       <div class="top">
         <span class="ic"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg></span>
         <div>
-          <div class="lbl">Human decisions</div>
-          <div class="val">{% if stats.has_comparison %}{{ stats.decided }} <small>of {{ stats.attention }}</small>{% else %}—{% endif %}</div>
+          <div class="lbl">{{ t("Human decisions") }}</div>
+          <div class="val">{% if stats.has_comparison %}{{ stats.decided }} <small>{{ t("of {n}", n=stats.attention) }}</small>{% else %}—{% endif %}</div>
         </div>
       </div>
-      <div class="sub">Flagged emails checked by a person</div>
+      <div class="sub">{{ t("Flagged emails checked by a person") }}</div>
     </a>
   </section>
 
   <section class="panels">
     <div class="panel">
-      <h2>Emails by category</h2>
-      <p class="desc">What the classifier decided each email is. Click a category to open it.</p>
+      <h2>{{ t("Emails by category") }}</h2>
+      <p class="desc">{{ t("What the classifier decided each email is. Click a category to open it.") }}</p>
       {% if stats.by_category %}
       <table class="bars">
-        <thead class="vh"><tr><th>Category</th><th>Emails</th></tr></thead>
+        <thead class="vh"><tr><th>{{ t("Category") }}</th><th>{{ t("Emails") }}</th></tr></thead>
         <tbody>
         {% for r in stats.by_category %}
-          <tr title="{{ r.label }}: {{ r.count }} emails, {{ r.share }}% of the inbox">
-            <td class="name"><a href="{{ r.href }}">{{ r.label }}</a></td>
+          <tr title="{{ t('{label}: {n} email, {share}% of the inbox' if r.count == 1 else '{label}: {n} emails, {share}% of the inbox', label=r.label, n=r.count, share=r.share) }}">
+            <td class="name" translate="no"><a href="{{ r.href }}">{{ r.label }}</a></td>
             <td><div class="track"><span class="bar" style="width:{{ r.width * 0.85 }}%"></span><span class="n">{{ r.count }}</span></div></td>
           </tr>
         {% endfor %}
         </tbody>
       </table>
       {% else %}
-      <p class="empty">Run <code>python -m sdoc.run_classify</code> to see the categories.</p>
+      <p class="empty">{{ t("Run {command} to see the categories.", command="<code>python -m sdoc.run_classify</code>")|safe }}</p>
       {% endif %}
     </div>
 
     <div class="panel">
-      <h2>Most common mismatches</h2>
-      <p class="desc">Which of the seven fields differ between SI and BL most often. Each bar
-      counts the emails where that field is wrong.</p>
+      <h2>{{ t("Most common mismatches") }}</h2>
+      <p class="desc">{{ t("Which of the seven fields differ between SI and BL most often. Each bar counts the emails where that field is wrong.") }}</p>
       {% if stats.by_field %}
       <div class="tally">
         <div class="split" role="img"
-             aria-label="{{ stats.mismatches }} mismatch emails split by how many fields are wrong">
+             aria-label="{{ t('{n} mismatch emails split by how many fields are wrong', n=stats.mismatches) }}">
           {% for w in stats.by_width %}
           <span class="seg w{{ [w.fields, 3]|min }}" style="flex:{{ w.emails }}"
-                title="{{ w.emails }} email{{ 's' if w.emails != 1 }} wrong in {{ w.fields }} field{{ 's' if w.fields != 1 }}"></span>
+                title="{{ t(('{e} email wrong in {k} field' if w.fields == 1 else '{e} email wrong in {k} fields') if w.emails == 1
+                           else ('{e} emails wrong in {k} field' if w.fields == 1 else '{e} emails wrong in {k} fields'),
+                           e=w.emails, k=w.fields) }}"></span>
           {% endfor %}
         </div>
-        <p class="sum"><b>{{ stats.mismatches }}</b> mismatch emails =
+        <p class="sum"><b>{{ stats.mismatches }}</b> {{ t("mismatch emails =") }}
           {% for w in stats.by_width -%}
-            <span class="sw w{{ [w.fields, 3]|min }}"></span>{{ w.emails }} with {{ w.fields }} wrong field{{ 's' if w.fields != 1 }}{{ ' + ' if not loop.last }}
+            <span class="sw w{{ [w.fields, 3]|min }}"></span>{{ t("{e} with 1 wrong field" if w.fields == 1 else "{e} with {k} wrong fields", e=w.emails, k=w.fields) }}{{ ' + ' if not loop.last }}
           {%- endfor %}</p>
-        <p class="sum"><b>{{ stats.wrong_fields }}</b> wrong fields =
+        <p class="sum"><b>{{ stats.wrong_fields }}</b> {{ t("wrong fields =") }}
           {% for w in stats.by_width -%}
             {{ w.emails }} × {{ w.fields }}{{ ' + ' if not loop.last }}
-          {%- endfor %}, which is what the bars below add up to</p>
+          {%- endfor %}{{ t(", which is what the bars below add up to") }}</p>
       </div>
       <table class="bars">
-        <thead class="vh"><tr><th>Field</th><th>Mismatched emails</th></tr></thead>
+        <thead class="vh"><tr><th>{{ t("Field") }}</th><th>{{ t("Mismatched emails") }}</th></tr></thead>
         <tbody>
         {% for r in stats.by_field %}
-          <tr title="{{ r.label }}: wrong in {{ r.count }} emails, {{ r.share }}% of all field mismatches">
-            <td class="name">{{ r.label }}</td>
+          <tr title="{{ t('{label}: wrong in {n} email, {share}% of all field mismatches' if r.count == 1 else '{label}: wrong in {n} emails, {share}% of all field mismatches', label=r.label, n=r.count, share=r.share) }}">
+            <td class="name" translate="no">{{ r.label }}</td>
             <td><div class="track"><span class="bar" style="width:{{ r.width * 0.85 }}%"></span><span class="n">{{ r.count }}</span></div></td>
           </tr>
         {% endfor %}
         </tbody>
       </table>
       {% elif stats.has_comparison %}
-      <p class="empty">No mismatches found.</p>
+      <p class="empty">{{ t("No mismatches found.") }}</p>
       {% else %}
-      <p class="empty">Run <code>python -m sdoc.run_pipeline</code> to compare the documents.</p>
+      <p class="empty">{{ t("Run {command} to compare the documents.", command="<code>python -m sdoc.run_pipeline</code>")|safe }}</p>
       {% endif %}
     </div>
   </section>

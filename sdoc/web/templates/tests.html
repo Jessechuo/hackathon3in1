@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Test results — MailOps{% endblock %}
+{% block title %}{{ t("Test results") }} — MailOps{% endblock %}
 
 {% block content %}
 {% set short = {"BL_COMPARISON": "BL", "SI_REQUEST": "SI", "INVOICE_QUERY": "INVOICE",
@@ -261,8 +261,8 @@
 
 <div class="tests">
   <div class="t-head">
-    <h1>Test results</h1>
-    <span class="src">Checked live on this server, and scored by the organizers' own scorer</span>
+    <h1>{{ t("Test results") }}</h1>
+    <span class="src">{{ t("Checked live on this server, and scored by the organizers' own scorer") }}</span>
   </div>
 
   <section class="stage" id="stage" data-state="idle" aria-labelledby="verdict">
@@ -270,50 +270,49 @@
       <div>
         <h2>
           <span class="verdict-ico"><svg class="ico ico-lg" aria-hidden="true"><use id="verdict-use" href="#i-check"/></svg></span>
-          <span id="verdict" aria-live="polite">Check it live, on this server</span>
+          <span id="verdict" aria-live="polite">{{ t("Check it live, on this server") }}</span>
         </h2>
-        <p class="lede" id="lede">Three checks run in order, right now. Their results, and the full
-        score breakdown, appear when they finish.</p>
+        <p class="lede" id="lede">{{ t("Three checks run in order, right now. Their results, and the full score breakdown, appear when they finish.") }}</p>
       </div>
       <div class="stage-act">
         <span class="timer" id="timer" hidden></span>
         <button class="run" id="run-checks" type="button">
           <svg class="ico ico-sm" aria-hidden="true"><use href="#i-play"/></svg>
-          <span>Run live checks</span>
+          <span>{{ t("Run live checks") }}</span>
         </button>
       </div>
     </div>
 
     <div class="figs" id="figs" hidden>
-      <div class="fig"><span class="n" id="f-acc">0%</span><span class="k">accuracy</span></div>
-      <div class="fig"><span class="n"><span id="f-tests">0</span><span class="of" id="f-tests-of"></span></span><span class="k">tests passed</span></div>
-      <div class="fig"><span class="n" id="f-mails">0</span><span class="k">emails checked</span></div>
+      <div class="fig"><span class="n" id="f-acc">0%</span><span class="k">{{ t("accuracy") }}</span></div>
+      <div class="fig"><span class="n"><span id="f-tests">0</span><span class="of" id="f-tests-of"></span></span><span class="k">{{ t("tests passed") }}</span></div>
+      <div class="fig"><span class="n" id="f-mails">0</span><span class="k">{{ t("emails checked") }}</span></div>
     </div>
 
     <ol class="steps" id="steps">
       <li class="step" data-step="submission" data-n="1"
-          data-idle="every graded email present, every field valid">
-        <span class="dot">1</span><span class="name">Submission file</span>
-        <span class="detail">every graded email present, every field valid</span>
+          data-idle="{{ t('every graded email present, every field valid') }}">
+        <span class="dot">1</span><span class="name">{{ t("Submission file") }}</span>
+        <span class="detail">{{ t("every graded email present, every field valid") }}</span>
       </li>
       <li class="step" data-step="score" data-n="2"
-          data-idle="belongs to this exact submission, not an older one">
-        <span class="dot">2</span><span class="name">Saved score</span>
-        <span class="detail">belongs to this exact submission, not an older one</span>
+          data-idle="{{ t('belongs to this exact submission, not an older one') }}">
+        <span class="dot">2</span><span class="name">{{ t("Saved score") }}</span>
+        <span class="detail">{{ t("belongs to this exact submission, not an older one") }}</span>
       </li>
       <li class="step" data-step="tests" data-n="3"
-          data-idle="every automated test, run now in a sandbox with no live data or keys">
-        <span class="dot">3</span><span class="name">Test suite</span>
-        <span class="detail">every automated test, run now in a sandbox with no live data or keys</span>
+          data-idle="{{ t('every automated test, run now in a sandbox with no live data or keys') }}">
+        <span class="dot">3</span><span class="name">{{ t("Test suite") }}</span>
+        <span class="detail">{{ t("every automated test, run now in a sandbox with no live data or keys") }}</span>
       </li>
     </ol>
 
     <div class="wall-wrap" id="wall-wrap" hidden>
       <div class="wall-head">
-        <span id="wall-label">One square per test, lit the moment it passes on the server</span>
+        <span id="wall-label">{{ t("One square per test, lit the moment it passes on the server") }}</span>
         <span class="count" id="wall-count"></span>
       </div>
-      <div class="wall" id="wall" role="img" aria-label="Test results, one square per test"></div>
+      <div class="wall" id="wall" role="img" aria-label="{{ t('Test results, one square per test') }}"></div>
     </div>
 
     <p class="foot" id="foot"></p>
@@ -322,7 +321,7 @@
   <div class="results" id="results" hidden>
   {% if not score %}
   <div class="none">
-    <p>No scorer output yet. From the project folder, run:</p>
+    <p>{{ t("No scorer output yet. From the project folder, run:") }}</p>
     <pre><code>python sdoc-hackathon-docker/server/score_cli.py out/submission.json --json &gt; out/score.json</code></pre>
   </div>
   {% else %}
@@ -333,17 +332,17 @@
   <aside class="caveat above" role="note">
     <svg class="ico" aria-hidden="true"><use href="#i-info"/></svg>
     <div>
-      <b>{{ overrides }} email{{ 's' if overrides != 1 }} {{ 'has' if overrides == 1 else 'have' }} a reviewer decision that differs from the system.</b>
-      <p>The score below grades the system's own answers in <code>out/submission.json</code>,
-      the file the organizers receive. A person's decision changes what this app shows, not
-      that file, so it does not move the score. <a href="/?reviewed=1">See the reviewed emails</a></p>
+      <b>{{ t("{n} email has a reviewer decision that differs from the system." if overrides == 1
+               else "{n} emails have a reviewer decision that differs from the system.", n=overrides) }}</b>
+      <p>{{ t("The score below grades the system's own answers in {file}, the file the organizers receive. A person's decision changes what this app shows, not that file, so it does not move the score.", file="<code>out/submission.json</code>")|safe }}
+      <a href="/?reviewed=1">{{ t("See the reviewed emails") }}</a></p>
     </div>
   </aside>
   {% endif %}
 
-  <section class="hero" aria-label="Final score">
+  <section class="hero" aria-label="{{ t('Final score') }}">
     <div>
-      <div class="lbl">Final score</div>
+      <div class="lbl">{{ t("Final score") }}</div>
       <div class="big"><span id="final-num" data-value="{{ score.final }}">{{ "%.4f"|format(score.final) }}</span><span class="pct">{{ (score.final * 100)|round|int }}%</span></div>
     </div>
     <div class="formula">
@@ -354,7 +353,7 @@
       {% for p in score.parts -%}
         <b>{{ "%.2f"|format(p.contributes) }}</b>{% if not loop.last %} + {% endif %}
       {%- endfor %} = <b>{{ "%.4f"|format(score.final) }}</b></span>
-      <br>across {{ score.n }} emails
+      <br>{{ t("across {n} emails", n=score.n) }}
     </div>
   </section>
 
@@ -363,13 +362,13 @@
     <div class="stat-tile">
       <div class="top">
         <span class="lbl">{{ p.name }}</span>
-        <span class="w">weight {{ (p.weight * 100)|round|int }}%</span>
+        <span class="w">{{ t("weight {pct}%", pct=(p.weight * 100)|round|int) }}</span>
       </div>
       <div class="val">
         {% if p.count %}{{ p.count }}<small>{{ p.metric }}</small>
         {% else %}{{ "%.3f"|format(p.value) }}<small>{{ p.metric }}</small>{% endif %}
       </div>
-      <div class="sub">{{ p.what }} · adds <b>{{ "%.2f"|format(p.contributes) }}</b> to the score</div>
+      <div class="sub">{{ p.what }} · {{ t("adds {n} to the score", n="<b>" ~ "%.2f"|format(p.contributes) ~ "</b>")|safe }}</div>
     </div>
     {% endfor %}
   </div>
@@ -377,23 +376,21 @@
   <div class="panels">
 
     <section class="panel wide">
-      <h2>Stage 1 · Email classification</h2>
-      <p class="desc">Each email sorted into one of five categories. Precision: of the emails it
-      put in a category, how many belonged there. Recall: of the emails that belonged there, how
-      many it found.</p>
+      <h2>{{ t("Stage 1 · Email classification") }}</h2>
+      <p class="desc">{{ t("Each email sorted into one of five categories. Precision: of the emails it put in a category, how many belonged there. Recall: of the emails that belonged there, how many it found.") }}</p>
       <div class="split">
         <div>
           <div class="meters">
-            {{ meter("Accuracy", score.raw.stage1.accuracy) }}
-            {{ meter("Macro-F1 — each category weighted equally", score.raw.stage1.macro_f1) }}
+            {{ meter(t("Accuracy"), score.raw.stage1.accuracy) }}
+            {{ meter(t("Macro-F1 — each category weighted equally"), score.raw.stage1.macro_f1) }}
           </div>
-          <div class="h3">Per category</div>
+          <div class="h3">{{ t("Per category") }}</div>
           <div class="scroll-x"><table class="tbl">
-            <thead><tr><th>Category</th><th>Precision</th><th>Recall</th><th>F1</th><th>Correct</th></tr></thead>
+            <thead><tr><th>{{ t("Category") }}</th><th>{{ t("Precision") }}</th><th>{{ t("Recall") }}</th><th>F1</th><th>{{ t("Correct") }}</th></tr></thead>
             <tbody>
               {% for c in score.categories %}
               <tr>
-                <td class="cat">{{ c.name }}</td>
+                <td class="cat" translate="no">{{ c.name }}</td>
                 <td>{{ "%.2f"|format(c.precision) }}</td>
                 <td>{{ "%.2f"|format(c.recall) }}</td>
                 <td>{{ "%.2f"|format(c.f1) }}</td>
@@ -404,8 +401,8 @@
           </table></div>
         </div>
         <div>
-          <div class="h3" style="margin-top:0">Confusion matrix</div>
-          <div class="cm-axis"><span>Actual category ↓</span><span>Predicted →</span></div>
+          <div class="h3" style="margin-top:0">{{ t("Confusion matrix") }}</div>
+          <div class="cm-axis"><span>{{ t("Actual category ↓") }}</span><span>{{ t("Predicted →") }}</span></div>
           <div class="scroll-x"><table class="cm">
             <thead>
               <tr><th></th>
@@ -419,47 +416,46 @@
                 {% for cell in row.cells %}
                 <td class="{{ 'on' if cell.share > 0.55 else ('mid' if cell.n else '') }}"
                     style="--d:{{ (r + loop.index0) * 45 }}ms; background:color-mix(in srgb, var(--primary) {{ (cell.share * 100)|round(1) }}%, var(--l2))"
-                    title="Actually {{ row.actual }}, predicted {{ cell.predicted }}: {{ cell.n }} of {{ row.total }}">{{ cell.n }}</td>
+                    title="{{ t('Actually {actual}, predicted {predicted}: {n} of {total}', actual=row.actual, predicted=cell.predicted, n=cell.n, total=row.total) }}">{{ cell.n }}</td>
                 {% endfor %}
               </tr>
               {% endfor %}
             </tbody>
           </table></div>
           <p class="cm-note">
-            {% if score.off_diagonal == 0 %}Every email sits on the diagonal — nothing was put in the wrong category.
-            {% else %}{{ score.off_diagonal }} email{{ 's' if score.off_diagonal != 1 }} off the diagonal were put in the wrong category.{% endif %}
+            {% if score.off_diagonal == 0 %}{{ t("Every email sits on the diagonal — nothing was put in the wrong category.") }}
+            {% else %}{{ t("{n} email off the diagonal was put in the wrong category." if score.off_diagonal == 1
+                           else "{n} emails off the diagonal were put in the wrong category.", n=score.off_diagonal) }}{% endif %}
           </p>
         </div>
       </div>
     </section>
 
     <section class="panel">
-      <h2>Stage 3 · SI vs BL comparison</h2>
-      <p class="desc">The {{ score.stage3.doc_total }} document checks that could be compared. A defect is a
-      field that differs between the Shipping Instruction and the draft Bill of Lading.</p>
+      <h2>{{ t("Stage 3 · SI vs BL comparison") }}</h2>
+      <p class="desc">{{ t("The {n} document checks that could be compared. A defect is a field that differs between the Shipping Instruction and the draft Bill of Lading.", n=score.stage3.doc_total) }}</p>
       <div class="meters">
-        {{ meter("Defect recall — real discrepancies found", score.stage3.defect_recall) }}
-        {{ meter("Defect precision — flags that were real", score.stage3.defect_precision) }}
-        {{ meter("Field-level F1", score.stage3.field_f1) }}
-        {{ meter("Exact match — every field right", score.stage3.exact_match_rate) }}
+        {{ meter(t("Defect recall — real discrepancies found"), score.stage3.defect_recall) }}
+        {{ meter(t("Defect precision — flags that were real"), score.stage3.defect_precision) }}
+        {{ meter(t("Field-level F1"), score.stage3.field_f1) }}
+        {{ meter(t("Exact match — every field right"), score.stage3.exact_match_rate) }}
       </div>
     </section>
 
     <section class="panel">
-      <h2>Reliability · escalating what it can't decide</h2>
-      <p class="desc">Emails it should hand to a person rather than guess at. {{ score.reliability.pred_review }}
-      flagged, {{ score.reliability.gold_review }} should have been.</p>
+      <h2>{{ t("Reliability · escalating what it can't decide") }}</h2>
+      <p class="desc">{{ t("Emails it should hand to a person rather than guess at. {flagged} flagged, {should} should have been.", flagged=score.reliability.pred_review, should=score.reliability.gold_review) }}</p>
       <div class="meters">
-        {{ meter("Escalation recall — caught the ones it should", score.reliability.escalation_recall) }}
-        {{ meter("Escalation precision — no false alarms", score.reliability.escalation_precision) }}
+        {{ meter(t("Escalation recall — caught the ones it should"), score.reliability.escalation_recall) }}
+        {{ meter(t("Escalation precision — no false alarms"), score.reliability.escalation_precision) }}
       </div>
-      <div class="h3">By reason</div>
+      <div class="h3">{{ t("By reason") }}</div>
       <table class="tbl">
-        <thead><tr><th>Reason</th><th>Escalated</th><th>Rate</th></tr></thead>
+        <thead><tr><th>{{ t("Reason") }}</th><th>{{ t("Escalated") }}</th><th>{{ t("Rate") }}</th></tr></thead>
         <tbody>
           {% for r in score.reasons %}
           <tr>
-            <td class="cat">{{ r.name }}</td>
+            <td class="cat" translate="no">{{ r.name }}</td>
             <td>{{ r.caught }}<span class="of"> / {{ r.total }}</span></td>
             <td>{{ "%.2f"|format(r.rate) }}</td>
           </tr>
@@ -469,11 +465,10 @@
     </section>
 
     <section class="panel wide">
-      <h2>End-to-end · the headline metric</h2>
-      <p class="desc">An email counts only if every step went right: classified as a document check,
-      both documents read, and exactly the right fields flagged. Half the final score.</p>
+      <h2>{{ t("End-to-end · the headline metric") }}</h2>
+      <p class="desc">{{ t("An email counts only if every step went right: classified as a document check, both documents read, and exactly the right fields flagged. Half the final score.") }}</p>
       <div class="meters">
-        {{ meter(score.end_to_end.success ~ " of " ~ score.end_to_end.total ~ " defect emails caught all the way through",
+        {{ meter(t("{n} of {total} defect emails caught all the way through", n=score.end_to_end.success, total=score.end_to_end.total),
                  score.end_to_end.rate) }}
       </div>
     </section>
@@ -483,16 +478,13 @@
   <aside class="caveat" role="note">
     <svg class="ico" aria-hidden="true"><use href="#i-alert"/></svg>
     <div>
-      <b>Not a held-out result.</b>
-      <p>This was scored against the same answer key used to find mistakes while building. Every
-      fix was a general rule, never a special case for one email, and no code in the application
-      reads the answer key — but it shows the system is right on these {{ score.n }} emails, not
-      that it would score the same on emails it has never seen.</p>
+      <b>{{ t("Not a held-out result.") }}</b>
+      <p>{{ t("This was scored against the same answer key used to find mistakes while building. Every fix was a general rule, never a special case for one email, and no code in the application reads the answer key — but it shows the system is right on these {n} emails, not that it would score the same on emails it has never seen.", n=score.n) }}</p>
     </div>
   </aside>
 
   <div class="repro">
-    <div class="h3">Reproduce it</div>
+    <div class="h3">{{ t("Reproduce it") }}</div>
     <pre><code>python sdoc-hackathon-docker/server/score_cli.py out/submission.json</code></pre>
   </div>
 
@@ -515,6 +507,33 @@
   // to see might as well not be on the page.
   var STEP_GAP = reduce ? 0 : 450;
   var run = null;
+  var T = {{ js_strings(
+    "Running…", "Run again", "Run live checks", "checking…", "starting the test suite…",
+    "{total} of {expected} graded emails", "{n} missing", "{n} that are not graded emails",
+    "({n} from the live mailbox)", "{n} invalid, e.g. {problem}", "every field valid",
+    "no live mail mixed in", "no saved scorer output - run the scorer locally to produce out/score.json",
+    "the saved {pct}% score belongs to this submission: same emails, categories and escalations",
+    "the saved score is from a different submission ({which} differ) - re-run the scorer",
+    "Test {n}: {state}", "passed", "failed", "skipped",
+    "Running the checks…", "Live on this server. Each square below is one test, lit as it passes.",
+    "One square per test, lit the moment it passes on the server", "{n} of {total} finished",
+    "could not run", "The checks could not run", "The server stopped the run.",
+    "{n} of {total} passed", "{n} of {total} passed in {s} s", "the run did not finish",
+    "All checks passed", "Some checks failed", "Ran on this server.", "Ran on this server at {time}.",
+    "Ran on this server. The test suite took {s} seconds.",
+    "Ran on this server at {time}. The test suite took {s} seconds.", ", ",
+    "Every square is a test that passed",
+    "Red squares are tests that failed", "{n} / {total} passed", "{n} of {total} tests passed",
+    "Accuracy is the organizers' scorer's result. It needs the answer key, which is deliberately not on this server - what ran here proves the saved score belongs to this submission.",
+    "These results are from a run that finished seconds ago; a fresh one can start in {s}s.",
+    "Not started: {reason}.", "the server refused", "the checks are already running",
+    "wait {s}s before running again", "Could not reach the server - try again."
+  )|tojson }};
+  function tr(s, vars) {
+    var out = T[s] || s;
+    for (var k in vars || {}) out = out.split("{" + k + "}").join(vars[k]);
+    return out;
+  }
 
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -549,28 +568,28 @@
     btn.querySelector("svg").setAttribute("class", "ico ico-sm" + (mode === "running" ? " spin" : ""));
     btn.querySelector("use").setAttribute("href", mode === "running" ? "#i-spin" : "#i-play");
     btn.querySelector("span").textContent =
-      mode === "running" ? "Running…" : mode === "again" ? "Run again" : "Run live checks";
+      mode === "running" ? tr("Running…") : mode === "again" ? tr("Run again") : tr("Run live checks");
   }
 
   // --- what each check found, in words ---------------------------------
 
   function submissionSays(sub) {
-    var bits = [sub.total + " of " + sub.expected + " graded emails"];
-    if (sub.missing) bits.push(sub.missing + " missing");
-    if (sub.extra) bits.push(sub.extra + " that are not graded emails" +
-                             (sub.live_mail_leaked ? " (" + sub.live_mail_leaked + " from the live mailbox)" : ""));
-    if (sub.invalid) bits.push(sub.invalid + " invalid, e.g. " + sub.first_problem.join(": "));
-    if (sub.ok) bits.push("every field valid", "no live mail mixed in");
-    return [!!sub.ok, bits.join(", ")];
+    var bits = [tr("{total} of {expected} graded emails", {total: sub.total, expected: sub.expected})];
+    if (sub.missing) bits.push(tr("{n} missing", {n: sub.missing}));
+    if (sub.extra) bits.push(tr("{n} that are not graded emails", {n: sub.extra}) +
+                             (sub.live_mail_leaked ? " " + tr("({n} from the live mailbox)", {n: sub.live_mail_leaked}) : ""));
+    if (sub.invalid) bits.push(tr("{n} invalid, e.g. {problem}", {n: sub.invalid, problem: sub.first_problem.join(": ")}));
+    if (sub.ok) bits.push(tr("every field valid"), tr("no live mail mixed in"));
+    return [!!sub.ok, bits.join(tr(", "))];
   }
 
   function scoreSays(sc) {
-    if (!sc) return [false, "no saved scorer output - run the scorer locally to produce out/score.json"];
-    if (sc.ok) return [true, "the saved " + Math.round((sc.final || 0) * 100) +
-                             "% score belongs to this submission: same emails, categories and escalations"];
+    if (!sc) return [false, tr("no saved scorer output - run the scorer locally to produce out/score.json")];
+    if (sc.ok) return [true, tr("the saved {pct}% score belongs to this submission: same emails, categories and escalations",
+                                {pct: Math.round((sc.final || 0) * 100)})];
     var off = Object.keys(sc.checks).filter(function (k) { return !sc.checks[k]; });
-    return [false, "the saved score is from a different submission (" + off.join(", ") +
-                   " differ) - re-run the scorer"];
+    return [false, tr("the saved score is from a different submission ({which} differ) - re-run the scorer",
+                      {which: off.join(tr(", "))})];
   }
 
   // --- the wall ----------------------------------------------------------
@@ -583,7 +602,8 @@
     cells(i + 1);
     var c = wall.children[i];
     c.className = ch === "F" || ch === "E" ? "f" : ch === "s" || ch === "x" ? "s" : "p";
-    c.title = "Test " + (i + 1) + ": " + (c.className === "f" ? "failed" : c.className === "s" ? "skipped" : "passed");
+    c.title = tr("Test {n}: {state}", {n: i + 1,
+                 state: tr(c.className === "f" ? "failed" : c.className === "s" ? "skipped" : "passed")});
   }
 
   // --- one run, from the click to the verdict ----------------------------
@@ -592,17 +612,17 @@
     run = { latest: s, t0: performance.now(), shown: 0, next: 0, lit: 0, note: note || "" };
     run.next = run.t0 + STEP_GAP;
     stage.dataset.state = "running";
-    verdict.textContent = "Running the checks…";
-    lede.textContent = "Live on this server. Each square below is one test, lit as it passes.";
+    verdict.textContent = tr("Running the checks…");
+    lede.textContent = tr("Live on this server. Each square below is one test, lit as it passes.");
     foot.textContent = "";
     figs.hidden = true;
     results.hidden = true;
     results.classList.remove("on");
     wall.textContent = "";
     wallWrap.hidden = true;
-    wallLabel.textContent = "One square per test, lit the moment it passes on the server";
+    wallLabel.textContent = tr("One square per test, lit the moment it passes on the server");
     wallCount.textContent = "";
-    step("submission", "active", "checking…");
+    step("submission", "active", tr("checking…"));
     step("score", "wait");
     step("tests", "wait");
     timer.hidden = false;
@@ -625,8 +645,8 @@
         step(run.shown === 0 ? "submission" : "score", said[0] ? "pass" : "fail", said[1]);
         run.shown += 1;
         run.next = now + STEP_GAP;
-        if (run.shown === 1) step("score", "active", "checking…");
-        else step("tests", "active", "starting the test suite…");
+        if (run.shown === 1) step("score", "active", tr("checking…"));
+        else step("tests", "active", tr("starting the test suite…"));
       }
     }
 
@@ -645,7 +665,7 @@
       }
       if (run.lit) {
         wallCount.textContent = run.lit + " / " + (total || "…");
-        step("tests", "active", run.lit + " of " + (total || "…") + " finished");
+        step("tests", "active", tr("{n} of {total} finished", {n: run.lit, total: total || "…"}));
       }
       var ended = s.state === "passed" || s.state === "failed";
       if (ended && run.lit >= seq.length) return finish();
@@ -676,30 +696,37 @@
 
     if (s.state === "error") {
       var stuck = stage.querySelector(".step.active");
-      if (stuck) step(stuck.dataset.step, "fail", "could not run");
+      if (stuck) step(stuck.dataset.step, "fail", tr("could not run"));
       stage.dataset.state = "error";
       $("verdict-use").setAttribute("href", "#i-alert");
-      verdict.textContent = "The checks could not run";
-      lede.textContent = s.error || "The server stopped the run.";
+      verdict.textContent = tr("The checks could not run");
+      lede.textContent = s.error || tr("The server stopped the run.");
       return;
     }
 
     var total = (t.passed || 0) + (t.failed || 0) + (t.errors || 0);
     step("tests", t.ok ? "pass" : "fail",
-         t.ok ? t.passed + " of " + total + " passed" + (t.duration ? " in " + t.duration.toFixed(1) + " s" : "")
-              : (t.summary || "the run did not finish"),
+         t.ok ? (t.duration ? tr("{n} of {total} passed in {s} s", {n: t.passed, total: total, s: t.duration.toFixed(1)})
+                            : tr("{n} of {total} passed", {n: t.passed, total: total}))
+              : (t.summary || tr("the run did not finish")),
          t.ok ? null : t.tail);
 
     var passed = s.state === "passed";
     stage.dataset.state = s.state;
     $("verdict-use").setAttribute("href", passed ? "#i-check" : "#i-alert");
-    verdict.textContent = passed ? "All checks passed" : "Some checks failed";
+    verdict.textContent = passed ? tr("All checks passed") : tr("Some checks failed");
     var at = new Date(s.finished_at);
-    lede.textContent = "Ran on this server" + (isNaN(at) ? "" : " at " + at.toLocaleTimeString()) +
-      (t.duration ? ". The test suite took " + t.duration.toFixed(1) + " seconds." : ".");
-    wallLabel.textContent = passed ? "Every square is a test that passed" : "Red squares are tests that failed";
-    wallCount.textContent = t.passed + " / " + total + " passed";
-    wall.setAttribute("aria-label", t.passed + " of " + total + " tests passed");
+    // One whole sentence per case: joined halves put an English space
+    // between two Chinese sentences.
+    var when = isNaN(at) ? "" : at.toLocaleTimeString(document.documentElement.lang),
+        took = t.duration ? t.duration.toFixed(1) : "";
+    lede.textContent = took
+      ? (when ? tr("Ran on this server at {time}. The test suite took {s} seconds.", {time: when, s: took})
+              : tr("Ran on this server. The test suite took {s} seconds.", {s: took}))
+      : (when ? tr("Ran on this server at {time}.", {time: when}) : tr("Ran on this server."));
+    wallLabel.textContent = passed ? tr("Every square is a test that passed") : tr("Red squares are tests that failed");
+    wallCount.textContent = tr("{n} / {total} passed", {n: t.passed, total: total});
+    wall.setAttribute("aria-label", tr("{n} of {total} tests passed", {n: t.passed, total: total}));
 
     figs.hidden = false;
     countUp($("f-acc"), sc && sc.accuracy != null ? sc.accuracy * 100 : null,
@@ -708,9 +735,7 @@
     $("f-tests-of").textContent = total ? "/ " + total : "";
     countUp($("f-mails"), sub.total, whole, 1000);
 
-    foot.textContent = (note ? note + " " : "") + "Accuracy is the organizers' scorer's result. " +
-      "It needs the answer key, which is deliberately not on this server - what ran here proves " +
-      "the saved score belongs to this submission.";
+    foot.textContent = (note ? note + " " : "") + tr("Accuracy is the organizers' scorer's result. It needs the answer key, which is deliberately not on this server - what ran here proves the saved score belongs to this submission.");
 
     setTimeout(reveal, reduce ? 0 : 650);
   }
@@ -746,15 +771,22 @@
         if (s.started || s.state === "running") return begin(s);
         if (s.state === "passed" || s.state === "failed") {
           // Refused only because a run ended seconds ago: show that one.
-          var wait = ((s.reason || "").match(/\d+/) || ["a few "])[0];
-          return begin(s, "These results are from a run that finished seconds ago; " +
-                          "a fresh one can start in " + wait + "s.");
+          var wait = ((s.reason || "").match(/\d+/) || ["10"])[0];
+          return begin(s, tr("These results are from a run that finished seconds ago; a fresh one can start in {s}s.", {s: wait}));
         }
         btn.disabled = false;
-        foot.textContent = "Not started: " + (s.reason || "the server refused") + ".";
+        foot.textContent = tr("Not started: {reason}.", {reason: why(s.reason)});
       })
-      .catch(function () { btn.disabled = false; foot.textContent = "Could not reach the server - try again."; });
+      .catch(function () { btn.disabled = false; foot.textContent = tr("Could not reach the server - try again."); });
   });
+
+  // The server's reasons, in the page's language.
+  function why(reason) {
+    var wait = /^wait (\d+)s/.exec(reason || "");
+    if (wait) return tr("wait {s}s before running again", {s: wait[1]});
+    if (reason === "already running") return tr("the checks are already running");
+    return reason || tr("the server refused");
+  }
 
   // Opening the page never shows an old run. Only one still in progress
   // is picked up, so a reload mid-run keeps watching it.

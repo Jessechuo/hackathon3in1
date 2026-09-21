@@ -1,0 +1,27 @@
+BILL OF LADING (DRAFT - NOT NEGOTIABLE)
+
+B/L Number        : DRAFT-5521
+Vessel / Voyage   : MV ORIENT GRACE / 026N
+Place and Date    : PORT KLANG, 21 September 2026
+
+Shipper           : HUAXIN PAPER (MALAYSIA) SDN BHD
+                    23 Jalan Kapar, Klang
+                    Selangor, Malaysia
+
+Consignee         : SHANGHAI HONGDA PACKAGING CO., LTD
+                    88 Pudong Avenue
+                    Shanghai, China
+
+Notify Party      : SAME AS CONSIGNEE
+
+Port of Loading   : PORT KLANG, MALAYSIA (MYPKG)
+Port of Discharge : SHANGHAI, CHINA (CNSHA)
+
+Container Count   : 5 x 40'HC
+Gross Weight      : 61,250 KGS
+Measurement       : 198.600 CBM
+
+Description       : COATED WHITE BOARD
+Marks and Numbers : PO 5521 / MADE IN MALAYSIA
+
+Freight Prepaid. Shipped on board in apparent good order and condition.

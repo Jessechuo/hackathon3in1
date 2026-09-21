@@ -1,0 +1,27 @@
+托运单（SHIPPING INSTRUCTION）
+
+订舱号          ：订单 5521 / OC 5MYX-20931
+船名 / 航次     ：MV ORIENT GRACE / 026N
+日期            ：2026年9月21日
+
+发货人          ：HUAXIN PAPER (MALAYSIA) SDN BHD
+                  （华新纸业（马来西亚）有限公司）
+                  马来西亚雪兰莪州巴生市 Jalan Kapar 23 号
+
+收货人          ：SHANGHAI HONGDA PACKAGING CO., LTD
+                  （上海宏达包装有限公司）
+                  中国上海市浦东大道 88 号
+
+通知方          ：同收货人
+
+装货港          ：巴生港，马来西亚 (MYPKG)
+卸货港          ：上海，中国 (CNSHA)
+
+集装箱数量      ：三个40尺高柜
+毛重            ：61.25 公吨
+体积            ：198.600 立方米
+
+货物名称        ：涂布白纸板
+唛头            ：订单 5521 / MADE IN MALAYSIA
+
+请根据以上资料缮制提单草稿。

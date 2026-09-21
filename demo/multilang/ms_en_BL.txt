@@ -1,0 +1,27 @@
+BILL OF LADING (DRAFT - NOT NEGOTIABLE)
+
+B/L Number        : DRAFT-6620
+Vessel / Voyage   : MV STRAITS PEARL / 0419S
+Place and Date    : PORT KLANG, 21 September 2026
+
+Shipper           : KERTAS UTARA SDN BHD
+                    Lot 12, Prai Industrial Estate
+                    13600 Prai, Penang, Malaysia
+
+Consignee         : SINGAPORE PAPER TRADING PTE LTD
+                    9 Tuas Avenue 5
+                    Singapore 639336
+
+Notify Party      : SAME AS CONSIGNEE
+
+Port of Loading   : PORT KLANG, MALAYSIA (MYPKG)
+Port of Discharge : SINGAPORE (SGSIN)
+
+Container Count   : 2 x 40'HC
+Gross Weight      : 38,500 KGS
+Measurement       : 121.400 CBM
+
+Description       : COATED PAPER
+Marks and Numbers : PO 6620 / MADE IN MALAYSIA
+
+Freight Prepaid. Shipped on board in apparent good order and condition.

@@ -1,0 +1,8 @@
+{#- The language switch: three short links, the current one filled. Links,
+    not a menu: one tap, no script, each labelled in its own language. -#}
+{% set here = request.url.path ~ ('?' ~ request.url.query if request.url.query else '') %}
+<nav class="langs" aria-label="{{ t('Language') }}">
+  {%- for code, label in LANGS.items() %}
+  <a {% if code == lang() %}aria-current="true" {% endif %}href="/lang/{{ code }}?next={{ here|urlencode }}" lang="{{ HTML_LANG[code] }}">{{ label }}</a>
+  {%- endfor %}
+</nav>

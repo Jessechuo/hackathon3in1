@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from sdoc.config import OUT_DIR
+from sdoc.web import i18n
 
 log = logging.getLogger(__name__)
 
@@ -108,13 +109,13 @@ def password_problems(password: str) -> list[str]:
     password = password or ""
     problems = []
     if len(password) < MIN_PASSWORD:
-        problems.append(f"at least {MIN_PASSWORD} characters")
+        problems.append(i18n.t("at least {n} characters", n=MIN_PASSWORD))
     if not re.search(r"[A-Z]", password):
-        problems.append("an uppercase letter")
+        problems.append(i18n.t("an uppercase letter"))
     if not re.search(r"[0-9]", password):
-        problems.append("a number")
+        problems.append(i18n.t("a number"))
     if not re.search(r"[^A-Za-z0-9]", password):
-        problems.append("a symbol")
+        problems.append(i18n.t("a symbol"))
     return problems
 
 
@@ -137,19 +138,19 @@ def create_user(email: str, password: str, out_dir: Path | None = None,
     to be read by the person who typed it."""
     email = normalise(email)
     if not (name or "").strip():
-        raise ValueError("your name is required")
+        raise ValueError(i18n.t("your name is required"))
     if "@" not in email or "." not in email.split("@")[-1]:
-        raise ValueError("that does not look like an email address")
+        raise ValueError(i18n.t("that does not look like an email address"))
     problems = password_problems(password)
     if problems:
-        raise ValueError("password needs " + ", ".join(problems))
+        raise ValueError(i18n.t("password needs {items}", items=", ".join(problems)))
     if confirm is not None and password != confirm:
-        raise ValueError("the two passwords do not match")
+        raise ValueError(i18n.t("the two passwords do not match"))
     if desk and desk not in DESKS:
-        raise ValueError("pick a desk from the list")
+        raise ValueError(i18n.t("pick a desk from the list"))
     users = load_users(out_dir)
     if email in users:
-        raise ValueError("an account with that email already exists")
+        raise ValueError(i18n.t("an account with that email already exists"))
     users[email] = {
         "email": email,
         "name": name.strip(),

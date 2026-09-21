@@ -1,5 +1,5 @@
 {% extends "_terminal.html" %}
-{% block title %}Sign in — MailOps{% endblock %}
+{% block title %}{{ t("Sign in") }} — MailOps{% endblock %}
 
 {% block screen %}
 <div class="stack">
@@ -24,13 +24,13 @@
           </span>
           <span class="micro" style="background:var(--l3);padding:2px var(--sm);border-radius:var(--r-badge)">OPS_GATEWAY</span>
         </div>
-        <p class="sub" style="margin-top:6px">Operational Document Triage Portal &middot; Line Operations Desk</p>
+        <p class="sub" style="margin-top:6px">{{ t("Operational Document Triage Portal · Line Operations Desk") }}</p>
       </div>
 
       <div class="clearance">
         <span class="l">
           <svg class="ico sm" style="color:var(--primary)"><use href="#i-shield"/></svg>
-          <span class="label-badge">RESTRICTED ACCESS</span>
+          <span class="label-badge">{{ t("RESTRICTED ACCESS") }}</span>
         </span>
         <span class="micro dim">SSO / PROTOCOL-2FA</span>
       </div>
@@ -47,7 +47,7 @@
 
         <label class="field">
           <span class="field-head">
-            <span class="lbl">Operator email</span>
+            <span class="lbl">{{ t("Operator email") }}</span>
             <span class="micro dim">EDI_ID / DOMAIN</span>
           </span>
           <span class="input-wrap">
@@ -59,14 +59,14 @@
 
         <label class="field">
           <span class="field-head">
-            <span class="lbl">Password</span>
-            <span class="micro dim" title="Not built: no mail sender is wired up for resets">Forgot password?</span>
+            <span class="lbl">{{ t("Password") }}</span>
+            <span class="micro dim" title="{{ t('Not built: no mail sender is wired up for resets') }}">{{ t("Forgot password?") }}</span>
           </span>
           <span class="input-wrap">
             <span class="lead"><svg class="ico sm"><use href="#i-key"/></svg></span>
             <input type="password" name="password" id="pw" required
                    autocomplete="current-password" placeholder="............">
-            <button type="button" class="trail" id="peek" aria-label="Show password">
+            <button type="button" class="trail" id="peek" aria-label="{{ t('Show password') }}">
               <svg class="ico sm"><use href="#i-eye"/></svg>
             </button>
           </span>
@@ -75,33 +75,33 @@
         <div class="check-row">
           <label class="check">
             <input type="checkbox" name="remember" value="1" checked>
-            <span>Keep active session on this terminal</span>
+            <span>{{ t("Keep active session on this terminal") }}</span>
           </label>
           <span class="micro dim" style="background:var(--l3);padding:2px var(--sm);border-radius:var(--r-badge)">12H TTL</span>
         </div>
 
         <button class="primary-btn" type="submit">
-          Sign in to Terminal
+          {{ t("Sign in to Terminal") }}
           <svg class="ico"><use href="#i-arrow"/></svg>
           <kbd>&crarr;</kbd>
         </button>
       </form>
 
-      <div class="divider"><span class="label-badge">Operator onboarding</span></div>
+      <div class="divider"><span class="label-badge">{{ t("Operator onboarding") }}</span></div>
 
       <a class="row-btn" href="/register">
         <span class="l">
           <svg class="ico"><use href="#i-badge"/></svg>
-          <span>Request terminal access / Register</span>
+          <span>{{ t("Request terminal access / Register") }}</span>
         </span>
         <svg class="ico sm"><use href="#i-chev"/></svg>
       </a>
 
       <span class="row-btn" aria-disabled="true"
-            title="Not built: this demo has no identity provider behind it">
+            title="{{ t('Not built: this demo has no identity provider behind it') }}">
         <span class="l">
           <svg class="ico"><use href="#i-finger"/></svg>
-          <span>Identity Provider SSO (Okta / Entra)</span>
+          <span>{{ t("Identity Provider SSO (Okta / Entra)") }}</span>
         </span>
         <span class="micro dim">ENTERPRISE</span>
       </span>
@@ -122,18 +122,18 @@
       <svg class="ico sm"><use href="#i-anchor-small"/></svg>
       MSC.428(98) COMPLIANT SYSTEM
     </span>
-    <p>Authorised personnel only. All access attempts, manifest modifications and
-       bill of lading interactions are logged.</p>
+    <p>{{ t("Authorised personnel only. All access attempts, manifest modifications and bill of lading interactions are logged.") }}</p>
   </div>
 
 </div>
 
 <script>
+  var T = {{ js_strings("Show password", "Hide password")|tojson }};
   var pw = document.getElementById("pw"), peek = document.getElementById("peek");
   peek.addEventListener("click", function () {
     var shown = pw.type === "text";
     pw.type = shown ? "password" : "text";
-    peek.setAttribute("aria-label", shown ? "Show password" : "Hide password");
+    peek.setAttribute("aria-label", shown ? T["Show password"] : T["Hide password"]);
     peek.querySelector("use").setAttribute("href", shown ? "#i-eye" : "#i-eye-off");
     pw.focus();
   });

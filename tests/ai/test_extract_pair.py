@@ -34,7 +34,7 @@ def test_extract_pair_uses_the_extract_model_with_room_to_think(monkeypatch):
         seen.update(model=model, max_tokens=max_tokens)
         empty = {f: None for f in FIELDS}
         return schema(si_doc_type="SHIPPING_INSTRUCTION", bl_doc_type="BILL_OF_LADING",
-                      si=empty, bl=empty)
+                      si=empty, bl=empty, si_en=empty, bl_en=empty)
 
     monkeypatch.setattr(X, "call_structured", fake)
     r = X.extract_pair("si", "bl")

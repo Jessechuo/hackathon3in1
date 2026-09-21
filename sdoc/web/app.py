@@ -30,7 +30,7 @@ from sdoc.mail.send import note_unreachable, reachable, valid_address
 from sdoc.mail.send import probe as probe_smtp
 from sdoc.mail.store import save_email
 from sdoc.review import apply_reviews
-from sdoc.web import auth, checks, watcher
+from sdoc.web import auth, checks, i18n, watcher
 
 
 @asynccontextmanager
@@ -72,11 +72,34 @@ async def sign_in_wall(request: Request, call_next):
     fair: nobody is locked out, they make an account first."""
     path = request.url.path
     if (auth.require_login() and path not in OPEN_PATHS
+            and not path.startswith("/lang/")
             and not auth.current_user(request)):
         target = path if request.method == "GET" else "/"
         return RedirectResponse(f"/login?next={quote(target, safe='/')}",
                                 status_code=303)
     return await call_next(request)
+
+
+@app.middleware("http")
+async def language(request: Request, call_next):
+    """Every page renders in the visitor's language: their saved choice,
+    else their browser's."""
+    token = i18n.use(i18n.pick(request.cookies.get(i18n.COOKIE),
+                               request.headers.get("accept-language")))
+    try:
+        return await call_next(request)
+    finally:
+        i18n.reset(token)
+
+
+@app.get("/lang/{code}", include_in_schema=False)
+def set_language(code: str, next: str = "/"):
+    """The EN / BM / 中文 switch: remember the choice, go back to the page."""
+    if code not in i18n.LANGS:
+        raise HTTPException(status_code=404, detail="unknown language")
+    response = RedirectResponse(_safe_next(next), status_code=303)
+    response.set_cookie(i18n.COOKIE, code, max_age=365 * 24 * 3600, samesite="lax")
+    return response
 
 
 # Added LAST so it is the outermost layer and runs FIRST. Starlette builds
@@ -92,6 +115,8 @@ app.add_middleware(SessionMiddleware, secret_key=auth.session_secret(),
 
 log = logging.getLogger(__name__)
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+templates.env.globals.update(t=i18n.t, lang=i18n.current, LANGS=i18n.LANGS,
+                             HTML_LANG=i18n.HTML_LANG, js_strings=i18n.strings)
 
 KINDS = {
     ".txt": "Plain text",
@@ -326,12 +351,12 @@ def score_view(s: dict) -> dict:
     w = s.get("weights", {})
     e2e = s.get("end_to_end", {})
     parts = [
-        {"name": "Stage 1", "what": "Email classification", "weight": w.get("stage1", 0),
+        {"name": i18n.t("Stage 1"), "what": i18n.t("Email classification"), "weight": w.get("stage1", 0),
          "metric": "macro-F1", "value": s1.get("macro_f1", 0)},
-        {"name": "Stage 3", "what": "SI vs BL comparison", "weight": w.get("stage3", 0),
-         "metric": "defect F1", "value": s.get("stage3", {}).get("defect_f1", 0)},
-        {"name": "End-to-end", "what": "Defects caught all the way through",
-         "weight": w.get("end_to_end", 0), "metric": "caught",
+        {"name": i18n.t("Stage 3"), "what": i18n.t("SI vs BL comparison"), "weight": w.get("stage3", 0),
+         "metric": i18n.t("defect F1"), "value": s.get("stage3", {}).get("defect_f1", 0)},
+        {"name": i18n.t("End-to-end"), "what": i18n.t("Defects caught all the way through"),
+         "weight": w.get("end_to_end", 0), "metric": i18n.t("caught"),
          "value": e2e.get("rate", 0), "count": f'{e2e.get("success", 0)} / {e2e.get("total", 0)}'},
     ]
     for part in parts:
@@ -553,7 +578,7 @@ def login_submit(request: Request, email: str = Form(""), password: str = Form("
         # One message for both halves: saying which was wrong tells an
         # attacker which addresses have accounts.
         return _auth_page(request, "login.html", status=401, next=next,
-                          error="That email and password do not match an account.",
+                          error=i18n.t("That email and password do not match an account."),
                           email=email)
     request.session[auth.SESSION_KEY] = who
     # The screen offers to keep the terminal signed in; honour it.
@@ -580,10 +605,10 @@ def register_submit(request: Request, name: str = Form(""), email: str = Form(""
     typed = {"name": name, "email": email, "desk": desk}
     if not auth.code_ok(code):
         return _auth_page(request, "register.html", status=400, **typed,
-                          error="That access code is not right.")
+                          error=i18n.t("That access code is not right."))
     if not acknowledge:
         return _auth_page(request, "register.html", status=400, **typed,
-                          error="You need to acknowledge the audit logging policy.")
+                          error=i18n.t("You need to acknowledge the audit logging policy."))
     try:
         auth.create_user(email, password, out_dir=OUT_DIR, name=name, desk=desk,
                          confirm=confirm)
@@ -651,18 +676,18 @@ async def compose_submit(request: Request, to: str = Form(""), subject: str = Fo
     both give the same readable 400.
     """
     if not auth.current_user(request):
-        raise HTTPException(status_code=401, detail="sign in to send mail")
+        raise HTTPException(status_code=401, detail=i18n.t("Sign in to send mail."))
 
     to, subject = to.strip(), subject.strip()
     if not valid_address(to):
-        raise HTTPException(status_code=400, detail=f"not an email address: {to!r}")
+        raise HTTPException(status_code=400, detail=i18n.t("Not an email address: {to}", to=to))
     if not subject:
-        raise HTTPException(status_code=400, detail="subject is required")
+        raise HTTPException(status_code=400, detail=i18n.t("A subject is required."))
 
     uploads = [f for f in files if f.filename]
     if len(uploads) > MAX_ATTACHMENTS:
         raise HTTPException(status_code=400,
-                            detail=f"at most {MAX_ATTACHMENTS} attachments")
+                            detail=i18n.t("At most {n} attachments.", n=MAX_ATTACHMENTS))
 
     attachments = []
     for f in uploads:
@@ -670,8 +695,8 @@ async def compose_submit(request: Request, to: str = Form(""), subject: str = Fo
         if len(data) > MAX_ATTACHMENT_BYTES:
             raise HTTPException(
                 status_code=400,
-                detail=f"{f.filename} is too large (limit "
-                       f"{MAX_ATTACHMENT_BYTES // 1024 // 1024} MB)")
+                detail=i18n.t("{name} is too large (limit {mb} MB).", name=f.filename,
+                              mb=MAX_ATTACHMENT_BYTES // 1024 // 1024))
         attachments.append((f.filename, data))
 
     account = os.environ.get("SDOC_MAIL_USER") or "sdoc@localhost"
