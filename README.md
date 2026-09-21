@@ -145,6 +145,9 @@ Open **http://localhost:8000**
   Decided emails leave the Review queue and appear under **Reviewed**
 - **Send an email** (`/compose`, paper-plane icon) — send a real message from the
   watched account, with its attachments checked first. See [Mail in and out](#mail-in-and-out)
+- **Test results** (`/tests`, target icon) — the organizers' scorer output as a
+  page: the final score, each weighted stage, per-category precision and recall,
+  the confusion matrix and the escalations. Read from `out/score.json`
 - `/` search · `J`/`K` navigate · `Enter` open · `Esc` back · theme toggle top-right
 
 Category and verification columns stay empty until the classifier has run; a
@@ -370,7 +373,7 @@ ground truth.
 python -m pytest -v
 ```
 
-287 tests, no API key required, no network. Every LLM call is replaced by a test
+301 tests, no API key required, no network. Every LLM call is replaced by a test
 double, so the entire pipeline is verifiable offline.
 
 ---
@@ -448,7 +451,7 @@ tools/
 ├── make_submission.py categories.json -> submission.json
 ├── gmail_auth.py     one-time: get the Gmail API refresh token
 └── diff_errors.py     which emails did we get wrong? (dev tool)
-tests/                 mirrors the sdoc/ layout — 287 tests, no API key needed
+tests/                 mirrors the sdoc/ layout — 301 tests, no API key needed
 docs/superpowers/      design spec and implementation plan
 design/                UI design system and mockups
 ```

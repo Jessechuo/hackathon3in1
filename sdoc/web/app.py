@@ -20,7 +20,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
 from sdoc.ai.classify import CATEGORIES
-from sdoc.config import MAIL_DIR, OUT_DIR
+from sdoc.config import MAIL_DIR, OUT_DIR, ROOT
 from sdoc.core.fields import FIELDS
 from sdoc.extract import read_document
 from sdoc.ingest import ingest, load_mail_results, mark_pending, update_result
@@ -228,6 +228,86 @@ def dashboard_stats(results: dict, review: dict) -> dict:
     }
 
 
+def load_score() -> dict | None:
+    """The organizers' scorer output, saved as out/score.json.
+
+    Read from the copy that ships with the code first. On a deploy OUT_DIR is
+    a volume seeded once and never overwritten, so a re-scored file committed
+    later would never reach it - and this is a build result, not runtime state.
+    The answer key itself never ships; only these metrics do.
+    """
+    for base in (Path(ROOT) / "out", Path(OUT_DIR)):
+        path = base / "score.json"
+        if path.exists():
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                log.warning("%s is not readable JSON", path)
+                return None
+    return None
+
+
+def _ratio(num: float, den: float) -> float:
+    return num / den if den else 0.0
+
+
+def score_view(s: dict) -> dict:
+    """Shape the scorer output for the page.
+
+    Categories are listed in their fixed order, never by score, so a category
+    keeps its row whatever happens to it. The confusion matrix is normalised
+    by row - the share of each actual category predicted as each column - so
+    a perfect run reads as a clean diagonal whatever the class sizes.
+    """
+    s1 = s.get("stage1", {})
+    per = s1.get("per", {})
+    categories = []
+    for c in CATEGORIES:
+        d = per.get(c, {})
+        tp, fp, fn = d.get("tp", 0), d.get("fp", 0), d.get("fn", 0)
+        precision, recall = _ratio(tp, tp + fp), _ratio(tp, tp + fn)
+        categories.append({
+            "name": c, "correct": tp, "total": tp + fn,
+            "precision": precision, "recall": recall,
+            "f1": _ratio(2 * precision * recall, precision + recall),
+        })
+
+    confusion = s1.get("confusion", {})         # actual -> predicted -> n
+    matrix = []
+    for actual in CATEGORIES:
+        row = confusion.get(actual, {})
+        total = sum(row.values())
+        matrix.append({"actual": actual, "total": total, "cells": [
+            {"predicted": pred, "n": row.get(pred, 0),
+             "share": _ratio(row.get(pred, 0), total), "hit": pred == actual}
+            for pred in CATEGORIES]})
+    off_diagonal = sum(c["n"] for r in matrix for c in r["cells"] if not c["hit"])
+
+    rel = s.get("reliability", {})
+    reasons = [{"name": k, "caught": v.get("caught", 0), "total": v.get("total", 0),
+                "rate": _ratio(v.get("caught", 0), v.get("total", 0))}
+               for k, v in rel.get("per_reason", {}).items()]
+
+    w = s.get("weights", {})
+    e2e = s.get("end_to_end", {})
+    parts = [
+        {"name": "Stage 1", "what": "Email classification", "weight": w.get("stage1", 0),
+         "metric": "macro-F1", "value": s1.get("macro_f1", 0)},
+        {"name": "Stage 3", "what": "SI vs BL comparison", "weight": w.get("stage3", 0),
+         "metric": "defect F1", "value": s.get("stage3", {}).get("defect_f1", 0)},
+        {"name": "End-to-end", "what": "Defects caught all the way through",
+         "weight": w.get("end_to_end", 0), "metric": "caught",
+         "value": e2e.get("rate", 0), "count": f'{e2e.get("success", 0)} / {e2e.get("total", 0)}'},
+    ]
+    for part in parts:
+        part["contributes"] = part["weight"] * part["value"]
+
+    return {"raw": s, "final": s.get("final_score", 0), "n": s.get("n_emails", 0),
+            "parts": parts, "categories": categories, "matrix": matrix,
+            "off_diagonal": off_diagonal, "reasons": reasons,
+            "stage3": s.get("stage3", {}), "reliability": rel, "end_to_end": e2e}
+
+
 def _last_run() -> str | None:
     for name in ("results.json", "categories.json"):
         path = Path(OUT_DIR) / name
@@ -249,6 +329,17 @@ def dashboard(request: Request):
             "last_run": _last_run(),
             **_shell(apply_reviews(results, decisions), None, user=auth.current_user(request)),
         },
+    )
+
+
+@app.get("/tests", response_class=HTMLResponse)
+def tests_page(request: Request):
+    """The organizers' scorer, run against submission.json - on one page."""
+    raw = load_score()
+    return templates.TemplateResponse(
+        request=request, name="tests.html",
+        context={"page": "tests", "score": score_view(raw) if raw else None,
+                 **_shell(load_view(), None, user=auth.current_user(request))},
     )
 
 

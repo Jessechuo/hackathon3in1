@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+{% block title %}Test results — SDOC Inbox{% endblock %}
+
+{% block content %}
+{% set short = {"BL_COMPARISON": "BL", "SI_REQUEST": "SI", "INVOICE_QUERY": "INVOICE",
+                "GENERAL": "GENERAL", "SPAM": "SPAM"} %}
+{% macro meter(label, value, note=None) -%}
+  <div class="m">
+    <div class="m-top">
+      <span class="m-lbl">{{ label }}</span>
+      <span class="m-val">{{ "%.3f"|format(value) }}</span>
+    </div>
+    <div class="m-track" role="meter" aria-label="{{ label }}"
+         aria-valuemin="0" aria-valuemax="1" aria-valuenow="{{ value }}"
+         title="{{ label }}: {{ "%.3f"|format(value) }}{% if note %} · {{ note }}{% endif %}">
+      <span class="m-fill" style="width:{{ (value * 100)|round(1) }}%"></span>
+    </div>
+  </div>
+{%- endmacro %}
+
+<style>
+  .tests { padding:var(--xl) var(--lg) 48px; }
+  .t-head { display:flex; align-items:baseline; gap:var(--md); flex-wrap:wrap; margin-bottom:var(--xl); }
+  .t-head h1 { margin:0; font-size:20px; line-height:28px; font-weight:600; letter-spacing:-.01em; }
+  .t-head .src { font-size:12px; color:var(--fg-muted); }
+  .t-head .src code { font-family:var(--mono); font-size:11px; color:var(--fg); }
+
+  /* ── Hero: the one number this page leads with ─────────────────────── */
+  .hero {
+    display:flex; align-items:center; gap:var(--xl) 40px; flex-wrap:wrap;
+    padding:var(--xl) 24px; background:var(--l1);
+    border:1px solid var(--border); border-left:3px solid var(--primary);
+    border-radius:var(--r-ctl); margin-bottom:var(--lg);
+  }
+  .hero .lbl { font-size:11px; line-height:14px; font-weight:600; letter-spacing:.05em;
+               text-transform:uppercase; color:var(--fg-muted); }
+  /* Proportional figures: tabular (the app's default) spaces a big number loosely. */
+  .hero .big { font-size:56px; line-height:60px; font-weight:600; letter-spacing:-.02em;
+               color:var(--fg); font-variant-numeric:normal; margin-top:4px; }
+  .hero .pct { font-size:20px; font-weight:500; color:var(--fg-muted); margin-left:6px;
+               letter-spacing:0; }
+  .hero .formula { font-family:var(--mono); font-size:12px; line-height:20px; color:var(--fg-muted); }
+  .hero .formula b { color:var(--fg); font-weight:600; }
+  .hero .formula .eq { color:var(--fg); }
+
+  /* ── KPI row: the three weighted parts of the score ────────────────── */
+  .tiles { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:var(--lg); }
+  @media (max-width:900px) { .tiles { grid-template-columns:1fr; } }
+  .stat-tile {
+    display:flex; flex-direction:column; gap:var(--md);
+    padding:var(--xl); background:var(--l1);
+    border:1px solid var(--border); border-left:3px solid var(--primary);
+    border-radius:var(--r-ctl);
+  }
+  .stat-tile .top { display:flex; align-items:baseline; justify-content:space-between; gap:var(--md); }
+  .stat-tile .lbl { font-size:11px; line-height:14px; font-weight:600; letter-spacing:.05em;
+                    text-transform:uppercase; color:var(--fg-muted); }
+  .stat-tile .w { font-family:var(--mono); font-size:11px; color:var(--fg-subtle); }
+  .stat-tile .val { display:flex; align-items:baseline; gap:6px;
+                    font-size:32px; line-height:38px; font-weight:600; color:var(--fg);
+                    font-variant-numeric:normal; letter-spacing:-.01em; }
+  .stat-tile .val small { font-size:14px; font-weight:500; color:var(--fg-muted); letter-spacing:0; }
+  .stat-tile .sub { margin-top:auto; font-size:12px; line-height:16px; color:var(--fg-muted); }
+  .stat-tile .sub b { color:var(--fg); font-weight:600; font-family:var(--mono); font-size:11px; }
+
+  /* ── Panels ────────────────────────────────────────────────────────── */
+  .panels { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:var(--lg); margin-top:var(--lg); }
+  .panels .wide { grid-column:1 / -1; }
+  @media (max-width:900px) { .panels { grid-template-columns:1fr; } }
+  .panel { background:var(--l1); border:1px solid var(--border); border-radius:var(--r-ctl);
+           padding:var(--xl); min-width:0; }
+  .panel h2 { margin:0; font-size:14px; line-height:20px; font-weight:600; }
+  .panel .desc { margin:2px 0 var(--lg); font-size:12px; line-height:17px; color:var(--fg-muted); }
+  .split { display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:28px; align-items:start; }
+  @media (max-width:1000px) { .split { grid-template-columns:1fr; } }
+  .h3 { margin:var(--lg) 0 var(--md); font-size:11px; line-height:14px; font-weight:600;
+        letter-spacing:.05em; text-transform:uppercase; color:var(--fg-muted); }
+
+  /* ── Meters: one ratio against a limit of 1.
+     The track is a lighter step of the fill's own hue, so the empty part
+     still reads as part of the same bar. Square at the baseline, 4px rounded
+     data-end, and the value printed in ink - never only in the colour. */
+  .meters { display:flex; flex-direction:column; gap:var(--lg); }
+  .m-top { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px; }
+  .m-lbl { font-size:12px; color:var(--fg-muted); }
+  .m-val { font-family:var(--mono); font-size:12px; font-weight:600; color:var(--fg); }
+  .m-track { display:block; height:8px; border-radius:0 4px 4px 0;
+             background:color-mix(in srgb, var(--primary) 16%, var(--l1)); overflow:hidden; }
+  .m-fill { display:block; height:100%; min-width:2px; background:var(--primary);
+            border-radius:0 4px 4px 0; }
+
+  /* ── Tables ────────────────────────────────────────────────────────── */
+  .tbl { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+  .tbl th { font-size:10px; line-height:14px; font-weight:600; letter-spacing:.05em;
+            text-transform:uppercase; color:var(--fg-subtle); text-align:right;
+            padding:0 var(--sm) var(--sm); border-bottom:1px solid var(--border); white-space:nowrap; }
+  .tbl th:first-child, .tbl td:first-child { text-align:left; }
+  .tbl td { padding:7px var(--sm); border-bottom:1px solid var(--border);
+            font-family:var(--mono); font-size:12px; color:var(--fg); text-align:right; }
+  .tbl tbody tr:last-child td { border-bottom:0; }
+  .tbl tbody tr:hover { background:var(--l2); }
+  .tbl td.cat { font-size:11px; color:var(--fg-muted); }
+  .tbl td .of { color:var(--fg-subtle); }
+
+  /* ── Confusion matrix: a one-hue heatmap, and a real table.
+     Shade is the share of that actual category predicted as each column,
+     so a perfect run is a clean diagonal whatever the class sizes. A label
+     inside a filled cell takes ink or on-primary by the fill's darkness. */
+  .cm { width:100%; border-collapse:separate; border-spacing:2px; font-variant-numeric:tabular-nums; }
+  .cm th { font-size:10px; font-weight:600; letter-spacing:.04em; color:var(--fg-subtle);
+           text-transform:uppercase; padding:2px 4px; white-space:nowrap; }
+  .cm thead th { text-align:center; }
+  .cm tbody th { text-align:right; font-family:var(--mono); letter-spacing:0; text-transform:none;
+                 font-size:11px; color:var(--fg-muted); padding-right:var(--md); }
+  .cm td { height:34px; min-width:44px; text-align:center; border-radius:3px;
+           font-family:var(--mono); font-size:12px; color:var(--fg-subtle); }
+  .cm td.on  { color:var(--on-primary); font-weight:600; }
+  .cm td.mid { color:var(--fg); }
+  .cm abbr { text-decoration:none; cursor:help; }
+  .cm-axis { display:flex; justify-content:space-between; font-size:11px; color:var(--fg-subtle);
+             margin-bottom:var(--xs); }
+  .cm-note { margin:var(--md) 0 0; font-size:12px; color:var(--fg-muted); }
+
+  /* ── The honest part ───────────────────────────────────────────────── */
+  .caveat {
+    display:flex; gap:var(--lg); margin-top:var(--lg); padding:var(--lg) var(--xl);
+    background:var(--l1); border:1px solid var(--border); border-left:3px solid var(--review);
+    border-radius:var(--r-ctl);
+  }
+  .caveat svg { flex:none; color:var(--review); margin-top:2px; }
+  .caveat b { display:block; font-size:13px; color:var(--fg); margin-bottom:3px; }
+  .caveat p { margin:0; font-size:12px; line-height:18px; color:var(--fg-muted); max-width:78ch; }
+
+  .repro { margin-top:var(--lg); }
+  .repro pre {
+    margin:var(--sm) 0 0; padding:var(--md) var(--lg); overflow-x:auto;
+    background:var(--l2); border:1px solid var(--border); border-radius:var(--r-ctl);
+    font-family:var(--mono); font-size:12px; color:var(--fg);
+  }
+
+  .none { padding:var(--xl); background:var(--l1); border:1px solid var(--border);
+          border-radius:var(--r-ctl); font-size:13px; color:var(--fg-muted); }
+  .none code { font-family:var(--mono); font-size:12px; color:var(--fg); }
+</style>
+
+<div class="tests">
+  <div class="t-head">
+    <h1>Test results</h1>
+    <span class="src">From the organizers' own scorer, run against <code>out/submission.json</code></span>
+  </div>
+
+  {% if not score %}
+  <div class="none">
+    <p>No scorer output yet. From the project folder, run:</p>
+    <pre><code>python sdoc-hackathon-docker/server/score_cli.py out/submission.json --json &gt; out/score.json</code></pre>
+  </div>
+  {% else %}
+
+  <section class="hero" aria-label="Final score">
+    <div>
+      <div class="lbl">Final score</div>
+      <div class="big">{{ "%.4f"|format(score.final) }}<span class="pct">{{ (score.final * 100)|round|int }}%</span></div>
+    </div>
+    <div class="formula">
+      {% for p in score.parts -%}
+        {{ "%.1f"|format(p.weight) }} × {{ p.name }}{% if not loop.last %}<br>{% endif %}
+      {%- endfor %}
+      <br><span class="eq">=
+      {% for p in score.parts -%}
+        <b>{{ "%.2f"|format(p.contributes) }}</b>{% if not loop.last %} + {% endif %}
+      {%- endfor %} = <b>{{ "%.4f"|format(score.final) }}</b></span>
+      <br>across {{ score.n }} emails
+    </div>
+  </section>
+
+  <div class="tiles">
+    {% for p in score.parts %}
+    <div class="stat-tile">
+      <div class="top">
+        <span class="lbl">{{ p.name }}</span>
+        <span class="w">weight {{ (p.weight * 100)|round|int }}%</span>
+      </div>
+      <div class="val">
+        {% if p.count %}{{ p.count }}<small>{{ p.metric }}</small>
+        {% else %}{{ "%.3f"|format(p.value) }}<small>{{ p.metric }}</small>{% endif %}
+      </div>
+      <div class="sub">{{ p.what }} · adds <b>{{ "%.2f"|format(p.contributes) }}</b> to the score</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="panels">
+
+    <section class="panel wide">
+      <h2>Stage 1 · Email classification</h2>
+      <p class="desc">Each email sorted into one of five categories. Precision: of the emails it
+      put in a category, how many belonged there. Recall: of the emails that belonged there, how
+      many it found.</p>
+      <div class="split">
+        <div>
+          <div class="meters">
+            {{ meter("Accuracy", score.raw.stage1.accuracy) }}
+            {{ meter("Macro-F1 — each category weighted equally", score.raw.stage1.macro_f1) }}
+          </div>
+          <div class="h3">Per category</div>
+          <table class="tbl">
+            <thead><tr><th>Category</th><th>Precision</th><th>Recall</th><th>F1</th><th>Correct</th></tr></thead>
+            <tbody>
+              {% for c in score.categories %}
+              <tr>
+                <td class="cat">{{ c.name }}</td>
+                <td>{{ "%.2f"|format(c.precision) }}</td>
+                <td>{{ "%.2f"|format(c.recall) }}</td>
+                <td>{{ "%.2f"|format(c.f1) }}</td>
+                <td>{{ c.correct }}<span class="of"> / {{ c.total }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <div class="h3" style="margin-top:0">Confusion matrix</div>
+          <div class="cm-axis"><span>Actual category ↓</span><span>Predicted →</span></div>
+          <table class="cm">
+            <thead>
+              <tr><th></th>
+                {% for c in score.categories %}<th><abbr title="{{ c.name }}">{{ short[c.name] }}</abbr></th>{% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in score.matrix %}
+              <tr>
+                <th scope="row">{{ row.actual }}</th>
+                {% for cell in row.cells %}
+                <td class="{{ 'on' if cell.share > 0.55 else ('mid' if cell.n else '') }}"
+                    style="background:color-mix(in srgb, var(--primary) {{ (cell.share * 100)|round(1) }}%, var(--l2))"
+                    title="Actually {{ row.actual }}, predicted {{ cell.predicted }}: {{ cell.n }} of {{ row.total }}">{{ cell.n }}</td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <p class="cm-note">
+            {% if score.off_diagonal == 0 %}Every email sits on the diagonal — nothing was put in the wrong category.
+            {% else %}{{ score.off_diagonal }} email{{ 's' if score.off_diagonal != 1 }} off the diagonal were put in the wrong category.{% endif %}
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Stage 3 · SI vs BL comparison</h2>
+      <p class="desc">The {{ score.stage3.doc_total }} document checks that could be compared. A defect is a
+      field that differs between the Shipping Instruction and the draft Bill of Lading.</p>
+      <div class="meters">
+        {{ meter("Defect recall — real discrepancies found", score.stage3.defect_recall) }}
+        {{ meter("Defect precision — flags that were real", score.stage3.defect_precision) }}
+        {{ meter("Field-level F1", score.stage3.field_f1) }}
+        {{ meter("Exact match — every field right", score.stage3.exact_match_rate) }}
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Reliability · escalating what it can't decide</h2>
+      <p class="desc">Emails it should hand to a person rather than guess at. {{ score.reliability.pred_review }}
+      flagged, {{ score.reliability.gold_review }} should have been.</p>
+      <div class="meters">
+        {{ meter("Escalation recall — caught the ones it should", score.reliability.escalation_recall) }}
+        {{ meter("Escalation precision — no false alarms", score.reliability.escalation_precision) }}
+      </div>
+      <div class="h3">By reason</div>
+      <table class="tbl">
+        <thead><tr><th>Reason</th><th>Escalated</th><th>Rate</th></tr></thead>
+        <tbody>
+          {% for r in score.reasons %}
+          <tr>
+            <td class="cat">{{ r.name }}</td>
+            <td>{{ r.caught }}<span class="of"> / {{ r.total }}</span></td>
+            <td>{{ "%.2f"|format(r.rate) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="panel wide">
+      <h2>End-to-end · the headline metric</h2>
+      <p class="desc">An email counts only if every step went right: classified as a document check,
+      both documents read, and exactly the right fields flagged. Half the final score.</p>
+      <div class="meters">
+        {{ meter(score.end_to_end.success ~ " of " ~ score.end_to_end.total ~ " defect emails caught all the way through",
+                 score.end_to_end.rate) }}
+      </div>
+    </section>
+
+  </div>
+
+  <aside class="caveat" role="note">
+    <svg class="ico" aria-hidden="true"><use href="#i-alert"/></svg>
+    <div>
+      <b>Not a held-out result.</b>
+      <p>This was scored against the same answer key used to find mistakes while building. Every
+      fix was a general rule, never a special case for one email, and no code in the application
+      reads the answer key — but it shows the system is right on these {{ score.n }} emails, not
+      that it would score the same on emails it has never seen.</p>
+    </div>
+  </aside>
+
+  <div class="repro">
+    <div class="h3">Reproduce it</div>
+    <pre><code>python sdoc-hackathon-docker/server/score_cli.py out/submission.json</code></pre>
+  </div>
+
+  {% endif %}
+</div>
+{% endblock %}

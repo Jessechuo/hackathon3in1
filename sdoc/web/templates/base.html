@@ -340,6 +340,7 @@ html[data-rail="open"] .rail-lbl {
   <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
   <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
   <symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></symbol>
+  <symbol id="i-score" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/></symbol>
   <symbol id="i-signout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></symbol>
   <symbol id="i-spin" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9" /></symbol>
 </defs></svg>
@@ -423,6 +424,7 @@ html[data-rail="open"] .rail-lbl {
     <a href="/dashboard" aria-current="{{ 'page' if page == 'dashboard' else 'false' }}" title="Overview"><svg class="ico ico-lg"><use href="#i-grid"/></svg><span class="rail-lbl">Overview</span></a>
     <a href="/" aria-current="{{ 'page' if page == 'inbox' else 'false' }}" title="Triage Queue"><svg class="ico ico-lg"><use href="#i-inbox"/></svg><span class="rail-lbl">Triage Queue</span></a>
     <a href="/compose" aria-current="{{ 'page' if page == 'compose' else 'false' }}" title="Send an email"><svg class="ico ico-lg"><use href="#i-send"/></svg><span class="rail-lbl">Send an email</span></a>
+    <a href="/tests" aria-current="{{ 'page' if page == 'tests' else 'false' }}" title="Test results"><svg class="ico ico-lg"><use href="#i-score"/></svg><span class="rail-lbl">Test results</span></a>
   </nav>
   <button class="rail-toggle" id="rail-toggle" type="button"
           aria-controls="rail" aria-expanded="false"

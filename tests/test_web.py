@@ -70,8 +70,8 @@ def test_the_rail_offers_only_what_works(site):
     html = client.get("/").text
     rail = html.split('<aside class="rail"', 1)[1].split("</aside>", 1)[0]
     assert "not built yet" not in rail
-    assert rail.count("<a ") == 3            # overview, queue, send
-    for href in ('href="/dashboard"', 'href="/"', 'href="/compose"'):
+    assert rail.count("<a ") == 4            # overview, queue, send, test results
+    for href in ('href="/dashboard"', 'href="/"', 'href="/compose"', 'href="/tests"'):
         assert href in rail
 
 
