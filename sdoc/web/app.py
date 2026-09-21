@@ -15,7 +15,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -51,10 +51,19 @@ async def lifespan(app: FastAPI):
         handle[1].set()
 
 
-app = FastAPI(title="SDOC Inbox", lifespan=lifespan)
+app = FastAPI(title="MailOps", lifespan=lifespan)
 
-# Reachable without an account: the front door itself, and the way back out.
-OPEN_PATHS = {"/login", "/register", "/logout"}
+# Reachable without an account: the front door itself, the way back out, and
+# the logo the front door shows.
+OPEN_PATHS = {"/login", "/register", "/logout", "/logo.png", "/favicon.ico"}
+LOGO = Path(__file__).parent / "static" / "mailops.png"
+
+
+@app.get("/logo.png", include_in_schema=False)
+@app.get("/favicon.ico", include_in_schema=False)     # asked for by browsers regardless
+def logo():
+    return FileResponse(LOGO, media_type="image/png",
+                        headers={"Cache-Control": "public, max-age=86400"})
 
 
 @app.middleware("http")

@@ -233,3 +233,27 @@ def test_on_a_phone_the_comparison_keeps_si_and_bl_side_by_side(site):
     # prev/next sit outside the review buttons, so a phone can put them by "Inbox"
     acts = html.split('<div class="acts">', 1)[1].split("</div>", 1)[0]
     assert 'class="pager"' not in acts
+
+
+# --- the brand ---------------------------------------------------------------
+
+def test_the_header_carries_the_mailops_logo_and_name(site):
+    client, _ = site
+    html = client.get("/").text
+    brand = html.split('<a class="brand"', 1)[1].split("</a>", 1)[0]
+    assert 'src="/logo.png"' in brand and "MailOps" in brand
+    assert '<link rel="icon" type="image/png" href="/logo.png">' in html
+    assert "SDOC Inbox" not in html
+
+
+def test_the_logo_loads_before_anyone_signs_in(monkeypatch):
+    """The sign-in page shows it, so it cannot sit behind the sign-in."""
+    monkeypatch.setenv("SDOC_REQUIRE_LOGIN", "1")
+    client = TestClient(web.app)
+    for path in ("/logo.png", "/favicon.ico"):
+        r = client.get(path, follow_redirects=False)
+        assert r.status_code == 200 and r.headers["content-type"] == "image/png", path
+        assert r.content[:8] == b"\x89PNG\r\n\x1a\n"
+    login = client.get("/login").text
+    assert 'src="/logo.png"' in login and "<h1>MailOps</h1>" in login
+    assert client.get("/", follow_redirects=False).status_code == 303   # the rest stays walled

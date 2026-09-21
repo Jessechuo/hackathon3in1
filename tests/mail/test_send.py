@@ -35,7 +35,7 @@ def test_the_message_is_addressed_from_the_watched_account():
     msg = snd.send("ops@shipper.com", "Draft BL", "Please see attached.", [],
                    transport=sent.append)
     assert msg["From"].addresses[0].addr_spec == "hackathon3in1@gmail.com"
-    assert msg["From"].addresses[0].display_name == "SDOC Inbox"   # a named sender
+    assert msg["From"].addresses[0].display_name == "MailOps"   # a named sender
     assert msg["Message-ID"]                                       # filters distrust none
     assert msg["To"] == "ops@shipper.com"
     assert msg["Subject"] == "Draft BL"
@@ -152,7 +152,7 @@ def test_the_sender_is_named_via_the_desk():
     msg = snd.build_message("hackathon3in1@gmail.com", "ops@shipper.com", "s", "b", [],
                             sender_name="Chuo Jesse")
     addr = msg["From"].addresses[0]
-    assert addr.display_name == "Chuo Jesse via SDOC Inbox"
+    assert addr.display_name == "Chuo Jesse via MailOps"
     assert addr.addr_spec == "hackathon3in1@gmail.com"     # still the desk's address
 
 
@@ -170,5 +170,5 @@ def test_no_reply_to_when_it_would_only_repeat_the_sender():
 
 def test_with_nobody_named_it_is_just_the_desk():
     msg = snd.build_message("hackathon3in1@gmail.com", "ops@shipper.com", "s", "b", [])
-    assert msg["From"].addresses[0].display_name == "SDOC Inbox"
+    assert msg["From"].addresses[0].display_name == "MailOps"
     assert msg["Reply-To"] is None

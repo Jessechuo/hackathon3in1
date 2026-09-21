@@ -38,7 +38,7 @@ TIMEOUT = float(os.environ.get("SDOC_SMTP_TIMEOUT", "15"))
 # Shown beside the address in the recipient's inbox. A named sender is a
 # small but real trust signal to spam filters, and reads as a business
 # rather than a bare address.
-DISPLAY_NAME = os.environ.get("SDOC_MAIL_NAME", "SDOC Inbox")
+DISPLAY_NAME = os.environ.get("SDOC_MAIL_NAME", "MailOps")
 
 # Deliberately loose. Real address validity is decided by the mail server
 # rejecting it, not by a regex; this only catches obvious typing mistakes.
@@ -110,7 +110,7 @@ def valid_address(address: str) -> bool:
 
 
 def from_name(sender_name: str | None = None) -> str:
-    """"Chuo Jesse via SDOC Inbox", or just "SDOC Inbox" when nobody is named.
+    """"Chuo Jesse via MailOps", or just "MailOps" when nobody is named.
 
     The desk's shared address sends every message - it is the only account
     the app has permission to send as - so the name is what tells the

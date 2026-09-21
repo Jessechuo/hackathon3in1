@@ -8,7 +8,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block title %}SDOC Inbox{% endblock %}</title>
+<title>{% block title %}MailOps{% endblock %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -44,11 +44,8 @@ a:hover { text-decoration:underline; }
   padding:0 var(--xl); flex:none;
 }
 .mark { display:flex; align-items:center; gap:var(--md); }
-.mark .glyph {
-  width:32px; height:32px; border-radius:var(--r-ctl);
-  background:var(--primary); color:var(--on-primary);
-  display:flex; align-items:center; justify-content:center;
-}
+/* The logo carries its own colour, so no tile behind it. */
+.mark .glyph, .brandline .glyph { width:32px; height:32px; display:block; flex:none; }
 .mark .words { display:flex; align-items:baseline; gap:var(--xs); }
 .mark .a { font-size:16px; font-weight:600; letter-spacing:-.01em; }
 .mark .b { font-size:14px; color:var(--fg-muted); }
@@ -97,11 +94,6 @@ main { flex:1; display:flex; align-items:center; justify-content:center; padding
 /* ---- headings ---- */
 .brandline { display:flex; align-items:center; justify-content:space-between; }
 .brandline .left { display:flex; align-items:center; gap:var(--sm); }
-.brandline .glyph {
-  width:32px; height:32px; border-radius:var(--r-ctl);
-  background:var(--primary); color:var(--on-primary);
-  display:flex; align-items:center; justify-content:center;
-}
 h1 { margin:0; font-size:20px; line-height:28px; font-weight:600; letter-spacing:-.01em; }
 .sub { margin:0; font-size:12px; line-height:16px; color:var(--fg-muted); }
 
@@ -240,7 +232,6 @@ input:focus-visible, select:focus-visible {
 <body>
 
 <svg width="0" height="0" style="position:absolute"><defs>
-  <symbol id="i-anchor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="3"/><path d="M12 22V8M5 12H2a10 10 0 0 0 20 0h-3"/></symbol>
   <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></symbol>
   <symbol id="i-at" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></symbol>
   <symbol id="i-key" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="3.5"/><path d="M10 13L21 2M18 5l2 2M15 8l2 2"/></symbol>
@@ -258,9 +249,9 @@ input:focus-visible, select:focus-visible {
 
 <header class="topbar">
   <div class="mark">
-    <span class="glyph"><svg class="ico lg"><use href="#i-anchor"/></svg></span>
+    <img class="glyph" src="/logo.png" alt="" width="32" height="32">
     <span class="words">
-      <span class="a">SDOC</span><span class="b">Inbox</span><span class="chip">OPS-CORE</span>
+      <span class="a">MailOps</span><span class="chip">OPS-CORE</span>
     </span>
   </div>
   <div class="status-right">

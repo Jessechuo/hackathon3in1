@@ -130,11 +130,11 @@ def test_the_relays_carry_the_name_and_reply_to_as_well(monkeypatch, key, provid
     monkeypatch.setenv(key, "secret")
     client = FakeClient()
     api.send_via_api("desk@line.com", "ops@shipper.com", "s", "b", [], client=client,
-                     reply_to="clerk@line.com", name="Chuo Jesse via SDOC Inbox")
+                     reply_to="clerk@line.com", name="Chuo Jesse via MailOps")
     payload = client.calls[0]["json"]
     if provider == "brevo":
-        assert payload["sender"]["name"] == "Chuo Jesse via SDOC Inbox"
+        assert payload["sender"]["name"] == "Chuo Jesse via MailOps"
         assert payload["replyTo"] == {"email": "clerk@line.com"}
     else:
-        assert payload["from"]["name"] == "Chuo Jesse via SDOC Inbox"
+        assert payload["from"]["name"] == "Chuo Jesse via MailOps"
         assert payload["reply_to"] == {"email": "clerk@line.com"}

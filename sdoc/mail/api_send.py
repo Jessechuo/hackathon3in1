@@ -56,7 +56,7 @@ def _encode(attachments: list[tuple[str, bytes]]) -> list[tuple[str, str, str]]:
 def _brevo_payload(sender, to, subject, body, attachments,
                    reply_to=None, name=None) -> dict:
     payload = {
-        "sender": {"email": sender, "name": name or "SDOC Inbox"},
+        "sender": {"email": sender, "name": name or "MailOps"},
         "to": [{"email": to}],
         "subject": subject,
         "textContent": body or " ",     # it rejects an empty body
@@ -73,7 +73,7 @@ def _sendgrid_payload(sender, to, subject, body, attachments,
                       reply_to=None, name=None) -> dict:
     payload = {
         "personalizations": [{"to": [{"email": to}]}],
-        "from": {"email": sender, "name": name or "SDOC Inbox"},
+        "from": {"email": sender, "name": name or "MailOps"},
         "subject": subject,
         "content": [{"type": "text/plain", "value": body or " "}],
     }

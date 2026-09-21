@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>{% block title %}SDOC Inbox{% endblock %}</title>
+<title>{% block title %}MailOps{% endblock %}</title>
 <script>
 /* Must run before first paint, or the page renders in the OS theme and then
    flips to the saved one — a visible flash on every navigation. Blocking and
@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%232563eb'/><path d='M3.5 5h9M3.5 8h9M3.5 11h5.5' stroke='white' stroke-width='1.5' stroke-linecap='round'/></svg>">
+<link rel="icon" type="image/png" href="/logo.png">
 <style>
 /* ══ SDOC Operational Triage ═════════════════════════════════════════════
    Ported from design/sdoc_operational_triage/DESIGN.md.
@@ -159,7 +159,7 @@ header.app {
   padding:0 var(--lg);
 }
 .brand { display:flex; align-items:center; gap:var(--sm); color:var(--fg); }
-.brand svg { color:var(--primary); }
+.brand .logo { display:block; flex:none; }
 .vr { width:1px; height:16px; background:var(--border-strong); flex:none; }
 .filters { display:flex; align-items:center; gap:3px; margin-left:auto; flex-wrap:wrap; }
 .fgroup { display:contents; }
@@ -398,7 +398,6 @@ html[data-rail="open"] .rail-lbl {
 <a class="skip" href="#main">Skip to content</a>
 
 <svg class="vh" aria-hidden="true"><defs>
-  <symbol id="i-anchor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="3"/><path d="M12 22V8M5 12H2a10 10 0 0 0 20 0h-3"/></symbol>
   <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
   <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></symbol>
   <symbol id="i-clip-board" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></symbol>
@@ -426,8 +425,8 @@ html[data-rail="open"] .rail-lbl {
 
 <header class="app" data-page="{% block head_page %}{{ page }}{% endblock %}">
   <a class="brand" href="/">
-    <svg class="ico ico-lg"><use href="#i-anchor"/></svg>
-    <span class="t-headline-sm">SDOC Inbox</span>
+    <img class="logo" src="/logo.png" alt="" width="26" height="26">
+    <span class="t-headline-sm">MailOps</span>
   </a>
 
   <div class="filters">
