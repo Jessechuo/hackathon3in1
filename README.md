@@ -11,6 +11,9 @@ send it a real email at **hackathon3in1@gmail.com** and watch it get triaged
 > | Email | `hackathon3in1@gmail.com` |
 > | Password | `Hackathon3in1*` |
 >
+> Or create your own account on the
+> [Register page](https://hackathon3in1.up.railway.app/register).
+>
 > This login is for the MailOps website above. To watch a live check, email
 > **hackathon3in1@gmail.com** with an SI and a draft BL attached —
 > [`demo/SI.txt`](demo/SI.txt) and [`demo/BL.txt`](demo/BL.txt) are a
