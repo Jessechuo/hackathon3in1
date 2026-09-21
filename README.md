@@ -269,8 +269,35 @@ category and verdict, marked `TO` in the queue.
 
 **Sending from a deployed host.** Most cloud providers block outbound SMTP so
 their addresses are not used for spam — Railway answers `[Errno 101] Network is
-unreachable` on every port. Port 443 is never blocked, so set one of these and
-the app sends over HTTPS instead:
+unreachable` on every port. Port 443 is never blocked, so the app can send over
+HTTPS instead, in this order of preference:
+
+**1. The Gmail API** (recommended) — Google sends it as the account itself, so
+it authenticates, lands in the Inbox, shows no "via" label and appears in the
+account's Sent folder. Free, about 500 messages a day.
+
+```
+SDOC_GMAIL_CLIENT_ID=....apps.googleusercontent.com
+SDOC_GMAIL_CLIENT_SECRET=GOCSPX-...
+SDOC_GMAIL_REFRESH_TOKEN=1//...
+```
+
+The first two come from an OAuth client of type **Desktop app** in Google Cloud
+Console, with the Gmail API enabled. The third comes from running, once, on your
+own machine:
+
+```bash
+python tools/gmail_auth.py
+```
+
+It opens a browser, you sign in as the sending account, and it prints the
+refresh token. It asks for `gmail.send` only — the token can send as the
+account and cannot read, search or delete anything in it. While the Google
+Cloud app is left in **Testing**, refresh tokens expire after seven days;
+publish it to lift that.
+
+**2. A relay** — works, but cannot prove it owns a Gmail address, so Gmail may
+label it "via" the relay and file it as Spam:
 
 ```
 SDOC_BREVO_KEY=xkeysib-...      # brevo.com,    300 emails/day free
@@ -343,7 +370,7 @@ ground truth.
 python -m pytest -v
 ```
 
-261 tests, no API key required, no network. Every LLM call is replaced by a test
+276 tests, no API key required, no network. Every LLM call is replaced by a test
 double, so the entire pipeline is verifiable offline.
 
 ---
@@ -407,6 +434,7 @@ sdoc/
 │   ├── parse.py       RFC 822 bytes -> sender, subject, body, files
 │   ├── send.py        mail out: HTTPS provider if set, else SMTP
 │   ├── api_send.py    Brevo / SendGrid over HTTPS, for hosts that block SMTP
+│   ├── gmail_send.py  the Gmail API: sends as the account itself
 │   └── gmail.py       IMAP; the only file that talks to a mail server
 ├── pipeline.py        the checks, in order -> one decision per email
 ├── ingest.py          one received email -> classified, compared, saved
@@ -418,8 +446,9 @@ sdoc/
     └── watcher.py     runs the mailbox poll inside the web process
 tools/
 ├── make_submission.py categories.json -> submission.json
+├── gmail_auth.py     one-time: get the Gmail API refresh token
 └── diff_errors.py     which emails did we get wrong? (dev tool)
-tests/                 mirrors the sdoc/ layout — 261 tests, no API key needed
+tests/                 mirrors the sdoc/ layout — 276 tests, no API key needed
 docs/superpowers/      design spec and implementation plan
 design/                UI design system and mockups
 ```

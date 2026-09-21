@@ -17,6 +17,7 @@ import socket
 from email.message import EmailMessage
 
 import sdoc.config  # noqa: F401  - importing loads .env / .env.txt
+from sdoc.mail import gmail_send
 from sdoc.mail.api_send import provider as api_provider
 from sdoc.mail.api_send import send_via_api
 
@@ -47,7 +48,7 @@ _REACHABLE: bool | None = None
 def reachable() -> bool | None:
     """Can mail leave this machine? An HTTP provider always can - port 443
     is not blocked anywhere, or nothing would work."""
-    if api_provider():
+    if gmail_send.configured() or api_provider():
         return True
     return _REACHABLE
 
@@ -61,7 +62,7 @@ def probe(timeout: float = 5.0) -> bool:
     mystery.
     """
     global _REACHABLE
-    if api_provider():
+    if gmail_send.configured() or api_provider():
         _REACHABLE = True
         return True
     for port in PORTS:
@@ -130,9 +131,14 @@ def send(to: str, subject: str, body: str, attachments: list[tuple[str, bytes]],
     if transport is not None:
         transport(msg)
         return msg
-    # An HTTP provider goes over 443, which is what makes sending work on a
-    # host that blocks SMTP. SMTP stays the default for running locally.
-    if api_provider():
+    # Preference order. The Gmail API sends as the account itself, so it
+    # authenticates and lands in the Inbox; a relay like SendGrid cannot prove
+    # it owns a Gmail address and is more likely to be filed as Spam. Both go
+    # over 443, which is what makes either work on a host that blocks SMTP.
+    # SMTP remains the fallback, and is what running locally uses.
+    if gmail_send.configured():
+        gmail_send.send_message(msg)
+    elif api_provider():
         send_via_api(user, to, subject, body, attachments)
     else:
         deliver(msg, user, password)

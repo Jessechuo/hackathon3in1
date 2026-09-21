@@ -17,5 +17,6 @@ def _test_defaults(monkeypatch):
     # A real sending key in a developer's .env would otherwise decide how the
     # app behaves here - whether mail can leave is a thing tests state, not a
     # thing they inherit from whoever is running them.
-    for key in ("SDOC_BREVO_KEY", "SDOC_SENDGRID_KEY"):
+    for key in ("SDOC_BREVO_KEY", "SDOC_SENDGRID_KEY", "SDOC_GMAIL_CLIENT_ID",
+                "SDOC_GMAIL_CLIENT_SECRET", "SDOC_GMAIL_REFRESH_TOKEN"):
         monkeypatch.delenv(key, raising=False)
