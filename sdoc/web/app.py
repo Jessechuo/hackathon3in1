@@ -30,7 +30,7 @@ from sdoc.mail.send import note_unreachable, reachable, valid_address
 from sdoc.mail.send import probe as probe_smtp
 from sdoc.mail.store import save_email
 from sdoc.review import apply_reviews
-from sdoc.web import auth, watcher
+from sdoc.web import auth, checks, watcher
 
 
 @asynccontextmanager
@@ -339,8 +339,26 @@ def tests_page(request: Request):
     return templates.TemplateResponse(
         request=request, name="tests.html",
         context={"page": "tests", "score": score_view(raw) if raw else None,
+                 "checks": checks.status(),
                  **_shell(load_view(), None, user=auth.current_user(request))},
     )
+
+
+@app.post("/tests/run")
+def tests_run():
+    """Start the live checks. They run in the background and the page polls
+    /tests/status; one run at a time, with a short cooldown between runs."""
+    started, reason = checks.start(load_score)
+    if not started:
+        code = 409 if reason == "already running" else 429
+        return JSONResponse({"started": False, "reason": reason, **checks.status()},
+                            status_code=code)
+    return JSONResponse({"started": True, **checks.status()}, status_code=202)
+
+
+@app.get("/tests/status")
+def tests_status():
+    return JSONResponse(checks.status())
 
 
 @app.get("/", response_class=HTMLResponse)

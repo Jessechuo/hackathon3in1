@@ -138,6 +138,50 @@
     font-family:var(--mono); font-size:12px; color:var(--fg);
   }
 
+  /* ── Live checks ─────────────────────────────────────────────────── */
+  .live { padding:var(--xl); background:var(--l1); border:1px solid var(--border);
+          border-radius:var(--r-ctl); margin-bottom:var(--lg); }
+  .live-top { display:flex; align-items:flex-start; justify-content:space-between; gap:var(--lg); }
+  .live h2 { margin:0; font-size:14px; line-height:20px; font-weight:600; }
+  .live .desc { margin:2px 0 0; font-size:12px; line-height:17px; color:var(--fg-muted); }
+  .run {
+    flex:none; display:inline-flex; align-items:center; gap:var(--md);
+    height:34px; padding:0 var(--xl); border:0; border-radius:var(--r-ctl);
+    background:var(--primary); color:var(--on-primary);
+    font:inherit; font-size:13px; font-weight:600; cursor:pointer; transition:filter var(--t);
+  }
+  .run:hover { filter:brightness(1.08); }
+  .run[disabled] { opacity:.5; cursor:progress; }
+  .live-progress { margin-top:var(--lg); }
+
+  /* The three headline figures, once a run has finished. */
+  .strip { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:var(--lg);
+           margin-top:var(--lg); padding-top:var(--lg); border-top:1px solid var(--border); }
+  @media (max-width:600px) { .strip { grid-template-columns:1fr; } }
+  .fig { display:flex; flex-direction:column; gap:2px; }
+  .fig .n { font-size:30px; line-height:36px; font-weight:600; color:var(--fg);
+            font-variant-numeric:normal; letter-spacing:-.01em; }
+  .fig .k { font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase;
+            color:var(--fg-muted); }
+
+  /* One row per check. Status colour sits on the icon only, and always
+     alongside a word - never colour alone. */
+  .rows { list-style:none; margin:var(--lg) 0 0; padding:0; display:flex; flex-direction:column; gap:var(--sm); }
+  .rows li { display:flex; align-items:flex-start; gap:var(--md); font-size:13px; line-height:18px; }
+  .rows svg { flex:none; margin-top:1px; }
+  .rows .pass svg { color:var(--ok); }
+  .rows .fail svg { color:var(--mismatch); }
+  .rows .what { flex:none; width:96px; font-weight:600; color:var(--fg); }
+  .rows .verdict { flex:none; width:44px; font-family:var(--mono); font-size:11px; font-weight:600;
+                   letter-spacing:.04em; text-transform:uppercase; color:var(--fg-muted); padding-top:1px; }
+  .rows .detail { color:var(--fg-muted); min-width:0; }
+  .rows .detail code { font-family:var(--mono); font-size:11px; color:var(--fg); }
+  .tail { margin:var(--sm) 0 0; padding:var(--md); background:var(--l2); border-radius:var(--r-ctl);
+          font-family:var(--mono); font-size:11px; line-height:16px; color:var(--fg);
+          white-space:pre-wrap; overflow-x:auto; max-height:180px; }
+  .live-foot { margin:var(--md) 0 0; font-size:11px; color:var(--fg-subtle); font-family:var(--mono); }
+  .live-foot:empty { display:none; }
+
   .none { padding:var(--xl); background:var(--l1); border:1px solid var(--border);
           border-radius:var(--r-ctl); font-size:13px; color:var(--fg-muted); }
   .none code { font-family:var(--mono); font-size:12px; color:var(--fg); }
@@ -148,6 +192,38 @@
     <h1>Test results</h1>
     <span class="src">From the organizers' own scorer, run against <code>out/submission.json</code></span>
   </div>
+
+  <section class="live" aria-labelledby="live-h">
+    <div class="live-top">
+      <div>
+        <h2 id="live-h">Live checks</h2>
+        <p class="desc">Runs the automated test suite and checks the submission file right now, on this server.</p>
+      </div>
+      <button class="run" id="run-checks" type="button">
+        <svg class="ico ico-sm" aria-hidden="true"><use href="#i-play"/></svg>
+        <span>Run checks</span>
+      </button>
+    </div>
+
+    <div class="live-progress" id="live-progress" hidden>
+      <div class="m-top">
+        <span class="m-lbl" id="live-label">Running the automated tests…</span>
+        <span class="m-val" id="live-pct">0%</span>
+      </div>
+      <div class="m-track" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+           aria-valuenow="0" id="live-bar"><span class="m-fill" id="live-fill" style="width:0%"></span></div>
+    </div>
+
+    <div class="strip" id="live-strip" hidden>
+      <div class="fig"><span class="n" id="f-acc">–</span><span class="k">accuracy</span></div>
+      <div class="fig"><span class="n" id="f-tests">–</span><span class="k">tests passed</span></div>
+      <div class="fig"><span class="n" id="f-mails">–</span><span class="k">emails checked</span></div>
+    </div>
+
+    <ul class="rows" id="live-rows" hidden></ul>
+
+    <p class="live-foot" id="live-foot"></p>
+  </section>
 
   {% if not score %}
   <div class="none">
@@ -313,4 +389,148 @@
 
   {% endif %}
 </div>
+{% endblock %}
+
+{% block script %}
+<script>
+(function () {
+  var btn = document.getElementById("run-checks"),
+      progress = document.getElementById("live-progress"),
+      fill = document.getElementById("live-fill"),
+      bar = document.getElementById("live-bar"),
+      pct = document.getElementById("live-pct"),
+      label = document.getElementById("live-label"),
+      strip = document.getElementById("live-strip"),
+      rows = document.getElementById("live-rows"),
+      foot = document.getElementById("live-foot"),
+      polling = false;
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;     // text, never HTML: this is server output
+    return n;
+  }
+
+  function icon(name) {
+    var ns = "http://www.w3.org/2000/svg",
+        svg = document.createElementNS(ns, "svg"), use = document.createElementNS(ns, "use");
+    svg.setAttribute("class", "ico ico-sm"); svg.setAttribute("aria-hidden", "true");
+    use.setAttribute("href", "#" + name); svg.appendChild(use);
+    return svg;
+  }
+
+  function row(ok, what, detail, tail) {
+    var li = el("li", ok ? "pass" : "fail");
+    li.appendChild(icon(ok ? "i-check" : "i-alert"));
+    li.appendChild(el("span", "what", what));
+    li.appendChild(el("span", "verdict", ok ? "pass" : "fail"));
+    var d = el("span", "detail", detail);
+    if (tail && tail.length) d.appendChild(el("pre", "tail", tail.join("\n")));
+    li.appendChild(d);
+    rows.appendChild(li);
+  }
+
+  function when(iso) {
+    if (!iso) return "";
+    var d = new Date(iso);
+    return isNaN(d) ? iso : d.toLocaleString();
+  }
+
+  function render(s) {
+    var running = s.state === "running";
+    btn.disabled = running;
+    btn.querySelector("span").textContent = running ? "Running…" : "Run checks";
+
+    progress.hidden = !running;
+    if (running) {
+      var p = s.progress || 0;
+      fill.style.width = p + "%";
+      bar.setAttribute("aria-valuenow", p);
+      pct.textContent = p + "%";
+      label.textContent = p ? "Running the automated tests…" : "Checking the submission, starting the tests…";
+    }
+
+    var finished = s.state === "passed" || s.state === "failed";
+    strip.hidden = rows.hidden = !finished;
+    rows.textContent = "";
+
+    if (finished) {
+      var t = s.tests || {}, sub = s.submission || {}, sc = s.score;
+      var total = (t.passed || 0) + (t.failed || 0) + (t.errors || 0);
+
+      document.getElementById("f-acc").textContent =
+        sc && sc.accuracy != null ? Math.round(sc.accuracy * 100) + "%" : "–";
+      document.getElementById("f-tests").textContent = total ? t.passed + " / " + total : "–";
+      document.getElementById("f-mails").textContent = sub.total != null ? sub.total : "–";
+
+      row(!!t.ok, "Tests",
+          t.ok ? t.passed + " of " + total + " passed" + (t.duration ? " in " + t.duration.toFixed(1) + "s" : "")
+               : (t.summary || "the run did not finish"),
+          t.ok ? null : t.tail);
+
+      var subBits = [sub.total + " of " + sub.expected + " graded emails"];
+      if (sub.missing) subBits.push(sub.missing + " missing");
+      if (sub.extra) subBits.push(sub.extra + " that are not graded emails" +
+                                  (sub.live_mail_leaked ? " (" + sub.live_mail_leaked + " from the live mailbox)" : ""));
+      if (sub.invalid) subBits.push(sub.invalid + " invalid, e.g. " + sub.first_problem.join(": "));
+      if (sub.ok) subBits.push("every field valid", "no live mail mixed in");
+      row(!!sub.ok, "Submission", subBits.join(" · "));
+
+      if (!sc) {
+        row(false, "Score", "no saved scorer output - run the scorer locally to produce out/score.json");
+      } else if (sc.ok) {
+        row(true, "Score", "the saved " + Math.round((sc.final || 0) * 100) +
+            "% score belongs to this submission - same email count, same categories, same escalations");
+      } else {
+        var off = Object.keys(sc.checks).filter(function (k) { return !sc.checks[k]; });
+        row(false, "Score", "the saved score is from a different submission (" + off.join(", ") +
+            " differ) - re-run the scorer");
+      }
+    }
+
+    if (s.state === "error") {
+      foot.textContent = "The checks could not run: " + s.error;
+    } else if (finished) {
+      foot.textContent = "Last run " + when(s.finished_at) +
+        ". Accuracy comes from the organizers' scorer, which needs the answer key - deliberately not on this server.";
+    } else if (!running) {
+      foot.textContent = "Not run since the server last started.";
+    } else {
+      foot.textContent = "";
+    }
+  }
+
+  function poll() {
+    if (polling) return;
+    polling = true;
+    (function tick() {
+      fetch("/tests/status", { credentials: "same-origin" })
+        .then(function (r) { return r.json(); })
+        .then(function (s) {
+          render(s);
+          if (s.state === "running") setTimeout(tick, 700);
+          else polling = false;
+        })
+        .catch(function () { polling = false; });
+    })();
+  }
+
+  btn.addEventListener("click", function () {
+    btn.disabled = true;
+    fetch("/tests/run", { method: "POST", credentials: "same-origin" })
+      .then(function (r) { return r.json(); })
+      .then(function (s) {
+        render(s);
+        if (s.started || s.state === "running") poll();
+        else if (s.reason) foot.textContent = "Not started: " + s.reason + ".";
+      })
+      .catch(function () { btn.disabled = false; foot.textContent = "Could not reach the server."; });
+  });
+
+  var initial = {{ checks|tojson }};
+  render(initial);
+  if (initial.state === "running") poll();
+})();
+</script>
 {% endblock %}

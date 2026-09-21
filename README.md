@@ -147,7 +147,11 @@ Open **http://localhost:8000**
   watched account, with its attachments checked first. See [Mail in and out](#mail-in-and-out)
 - **Test results** (`/tests`, target icon) — the organizers' scorer output as a
   page: the final score, each weighted stage, per-category precision and recall,
-  the confusion matrix and the escalations. Read from `out/score.json`
+  the confusion matrix and the escalations. Read from `out/score.json`.
+  **Run checks** runs the whole test suite on the server there and then, and
+  checks the submission: every graded email present and valid, and the saved
+  score belonging to this exact submission. The scorer itself cannot re-run on
+  the server — it needs the answer key, which is deliberately not deployed
 - `/` search · `J`/`K` navigate · `Enter` open · `Esc` back · theme toggle top-right
 
 Category and verification columns stay empty until the classifier has run; a
@@ -373,7 +377,7 @@ ground truth.
 python -m pytest -v
 ```
 
-302 tests, no API key required, no network. Every LLM call is replaced by a test
+327 tests, no API key required, no network. Every LLM call is replaced by a test
 double, so the entire pipeline is verifiable offline.
 
 ---
@@ -451,7 +455,7 @@ tools/
 ├── make_submission.py categories.json -> submission.json
 ├── gmail_auth.py     one-time: get the Gmail API refresh token
 └── diff_errors.py     which emails did we get wrong? (dev tool)
-tests/                 mirrors the sdoc/ layout — 302 tests, no API key needed
+tests/                 mirrors the sdoc/ layout — 327 tests, no API key needed
 docs/superpowers/      design spec and implementation plan
 design/                UI design system and mockups
 ```
