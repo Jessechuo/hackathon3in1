@@ -244,6 +244,10 @@ def dashboard_stats(results: dict, review: dict) -> dict:
     flagged = [eid for eid, r in checked.items()
                if r["system_status"] in ("MISMATCH", "NEEDS_REVIEW")]
     by_field = Counter(f for eid in mismatches for f in view[eid].get("defect_fields") or [])
+    # The card counts emails and the bars count fields, and one email can be
+    # wrong in several fields - so the two never match on their own. How many
+    # emails are wrong in one field, two, ... is what reconciles them.
+    per_email = Counter(len(view[eid].get("defect_fields") or []) for eid in mismatches)
     by_category = Counter(r["category"] for r in view.values() if r.get("category"))
     return {
         "total": len(view),
@@ -254,6 +258,8 @@ def dashboard_stats(results: dict, review: dict) -> dict:
         "decided": sum(1 for eid in flagged if view[eid]["reviewed"]),
         "by_category": _bar_rows(by_category, lambda c: f"/?category={c}"),
         "by_field": _bar_rows(by_field),
+        "wrong_fields": sum(by_field.values()),
+        "by_width": [{"fields": k, "emails": n} for k, n in sorted(per_email.items())],
     }
 
 
@@ -365,11 +371,15 @@ def dashboard(request: Request):
 def tests_page(request: Request):
     """The organizers' scorer, run against submission.json - on one page."""
     raw = load_score()
+    view = load_view()
+    # A reviewer's decision changes what the app shows, never submission.json,
+    # so it cannot move the score. Counted so the page can say so.
+    overrides = sum(1 for r in view.values() if r.get("reviewer_changed"))
     return templates.TemplateResponse(
         request=request, name="tests.html",
         context={"page": "tests", "score": score_view(raw) if raw else None,
-                 "checks": checks.status(),
-                 **_shell(load_view(), None, user=auth.current_user(request))},
+                 "checks": checks.status(), "overrides": overrides,
+                 **_shell(view, None, user=auth.current_user(request))},
     )
 
 

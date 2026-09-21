@@ -155,3 +155,24 @@ def test_with_no_score_the_page_says_how_to_make_one(tmp_path, monkeypatch):
 def test_the_rail_links_to_it(site):
     rail = site.get("/").text.split('<aside class="rail"', 1)[1].split("</aside>", 1)[0]
     assert 'href="/tests"' in rail and "Test results" in rail
+
+
+# --- a reviewer's decision is not the system's answer ---------------------
+
+def test_reviewer_changes_are_named_and_kept_out_of_the_score(site, monkeypatch):
+    """Flipping OK to MISMATCH on an email changes what the app shows, not
+    out/submission.json - the file the organizers grade. The page says so
+    rather than leaving a person to wonder why 100% did not move."""
+    view = {"email_001": {"category": "BL_COMPARISON", "status": "MISMATCH", "reviewed": True,
+                          "reviewer_changed": True, "system_status": "OK"},
+            "email_002": {"category": "BL_COMPARISON", "status": "OK", "reviewed": True,
+                          "reviewer_changed": False, "system_status": "OK"}}
+    monkeypatch.setattr(web, "load_view", lambda: view)
+    flat = " ".join(site.get("/tests").text.split())
+    assert "1 email has a reviewer decision that differs from the system" in flat
+    assert "out/submission.json" in flat and 'href="/?reviewed=1"' in flat
+
+
+def test_no_reviewer_changes_no_note(site, monkeypatch):
+    monkeypatch.setattr(web, "load_view", lambda: {})
+    assert "reviewer decision that differs" not in site.get("/tests").text

@@ -81,3 +81,26 @@ def test_dashboard_without_results_explains_what_to_run(site):
 def test_rail_links_to_the_dashboard(site):
     client, _ = site
     assert 'href="/dashboard"' in client.get("/").text
+
+
+# --- the mismatch card and the field bars must reconcile -------------------
+
+def test_the_field_bars_reconcile_with_the_mismatch_count():
+    """The card counts emails, the bars count fields, and one email can be
+    wrong in more than one field - 2 emails here, 3 wrong fields. The split
+    by fields-per-email is what makes both numbers add up."""
+    s = web.dashboard_stats(RESULTS, review={})
+    assert s["mismatches"] == 2
+    assert s["wrong_fields"] == sum(r["count"] for r in s["by_field"]) == 3
+    assert [(w["fields"], w["emails"]) for w in s["by_width"]] == [(1, 1), (2, 1)]
+    assert sum(w["emails"] for w in s["by_width"]) == s["mismatches"]
+    assert sum(w["fields"] * w["emails"] for w in s["by_width"]) == s["wrong_fields"]
+
+
+def test_the_dashboard_says_how_emails_and_fields_add_up(site):
+    client, tmp = site
+    (tmp / "results.json").write_text(json.dumps(RESULTS), encoding="utf-8")
+    flat = " ".join(client.get("/dashboard").text.split())
+    assert "<b>2</b> mismatch emails" in flat
+    assert "<b>3</b> wrong fields" in flat
+    assert "1 × 1 + 1 × 2" in flat

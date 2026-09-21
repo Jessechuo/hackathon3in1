@@ -68,6 +68,20 @@
   .bar { display:block; height:10px; min-width:2px; background:var(--primary); border-radius:0 4px 4px 0; }
   .track .n { font-size:12px; color:var(--fg); font-variant-numeric:tabular-nums; }
   .empty { font-size:12px; color:var(--fg-subtle); margin:0; }
+
+  /* ── The tally: how the mismatch card and the field bars agree ─────
+     The card counts emails, the bars count fields. One bar split by how
+     many fields each email has wrong, lighter to darker for more, adds up
+     to the card; the same split, multiplied out, adds up to the bars. */
+  .tally { margin:0 0 var(--lg); padding:var(--md) 0 var(--lg); border-bottom:1px solid var(--border); }
+  .split { display:flex; gap:2px; height:10px; margin-bottom:var(--md); }
+  .split .seg { border-radius:2px; min-width:3px; }
+  .w1 { background:color-mix(in srgb, var(--primary) 45%, var(--l1)); }
+  .w2 { background:var(--primary); }
+  .w3 { background:color-mix(in srgb, var(--primary) 65%, var(--fg)); }
+  .sum { margin:0; font-size:12px; line-height:19px; color:var(--fg-muted); }
+  .sum b { color:var(--fg); font-weight:600; }
+  .sum .sw { display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:3px; }
   .empty code { font-family:var(--mono); font-size:11px; color:var(--fg); }
 </style>
 
@@ -145,8 +159,26 @@
 
     <div class="panel">
       <h2>Most common mismatches</h2>
-      <p class="desc">Which of the seven fields differ between SI and BL most often.</p>
+      <p class="desc">Which of the seven fields differ between SI and BL most often. Each bar
+      counts the emails where that field is wrong.</p>
       {% if stats.by_field %}
+      <div class="tally">
+        <div class="split" role="img"
+             aria-label="{{ stats.mismatches }} mismatch emails split by how many fields are wrong">
+          {% for w in stats.by_width %}
+          <span class="seg w{{ [w.fields, 3]|min }}" style="flex:{{ w.emails }}"
+                title="{{ w.emails }} email{{ 's' if w.emails != 1 }} wrong in {{ w.fields }} field{{ 's' if w.fields != 1 }}"></span>
+          {% endfor %}
+        </div>
+        <p class="sum"><b>{{ stats.mismatches }}</b> mismatch emails =
+          {% for w in stats.by_width -%}
+            <span class="sw w{{ [w.fields, 3]|min }}"></span>{{ w.emails }} with {{ w.fields }} wrong field{{ 's' if w.fields != 1 }}{{ ' + ' if not loop.last }}
+          {%- endfor %}</p>
+        <p class="sum"><b>{{ stats.wrong_fields }}</b> wrong fields =
+          {% for w in stats.by_width -%}
+            {{ w.emails }} × {{ w.fields }}{{ ' + ' if not loop.last }}
+          {%- endfor %}, which is what the bars below add up to</p>
+      </div>
       <table class="bars">
         <thead class="vh"><tr><th>Field</th><th>Mismatched emails</th></tr></thead>
         <tbody>

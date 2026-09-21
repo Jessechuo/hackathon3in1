@@ -243,6 +243,10 @@
   .caveat svg { flex:none; color:var(--review); margin-top:2px; }
   .caveat b { display:block; font-size:13px; color:var(--fg); margin-bottom:3px; }
   .caveat p { margin:0; font-size:12px; line-height:18px; color:var(--fg-muted); max-width:78ch; }
+  .caveat.above { margin:0 0 var(--lg); border-left-color:var(--primary); }
+  .caveat.above svg { color:var(--primary); }
+  .caveat code { font-family:var(--mono); font-size:11px; color:var(--fg); }
+  .caveat a { color:var(--primary); text-decoration:underline; text-underline-offset:2px; }
 
   .repro { margin-top:var(--lg); }
   .repro pre, .none pre {
@@ -322,6 +326,20 @@
     <pre><code>python sdoc-hackathon-docker/server/score_cli.py out/submission.json --json &gt; out/score.json</code></pre>
   </div>
   {% else %}
+
+  {% if overrides %}
+  {# A reviewer flipping OK and MISMATCH changes what the app shows, not the
+     graded file - so the score does not move, and the page says why. #}
+  <aside class="caveat above" role="note">
+    <svg class="ico" aria-hidden="true"><use href="#i-info"/></svg>
+    <div>
+      <b>{{ overrides }} email{{ 's' if overrides != 1 }} {{ 'has' if overrides == 1 else 'have' }} a reviewer decision that differs from the system.</b>
+      <p>The score below grades the system's own answers in <code>out/submission.json</code>,
+      the file the organizers receive. A person's decision changes what this app shows, not
+      that file, so it does not move the score. <a href="/?reviewed=1">See the reviewed emails</a></p>
+    </div>
+  </aside>
+  {% endif %}
 
   <section class="hero" aria-label="Final score">
     <div>
