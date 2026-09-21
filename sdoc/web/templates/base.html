@@ -246,14 +246,13 @@ aside.rail {
   padding:var(--md) 0;
 }
 .rail nav { display:flex; flex-direction:column; gap:var(--xs); }
-.rail a, .rail span.item {
+.rail a {
   width:36px; height:36px; border-radius:var(--r-ctl);
   display:flex; align-items:center; justify-content:center;
   color:var(--fg-muted); transition:background var(--t), color var(--t);
 }
 .rail a:hover { background:var(--l2); color:var(--fg); }
 .rail a[aria-current="page"] { background:var(--primary); color:var(--on-primary); }
-.rail span.item { opacity:.3; cursor:not-allowed; }
 
 .shell { padding-left:var(--rail); padding-top:var(--head); }
 
@@ -404,13 +403,8 @@ aside.rail {
   <nav aria-label="Sections">
     <a href="/dashboard" aria-current="{{ 'page' if page == 'dashboard' else 'false' }}" title="Overview"><svg class="ico ico-lg"><use href="#i-grid"/></svg><span class="vh">Overview</span></a>
     <a href="/" aria-current="{{ 'page' if page == 'inbox' else 'false' }}" title="Triage Queue"><svg class="ico ico-lg"><use href="#i-inbox"/></svg><span class="vh">Triage Queue</span></a>
-    <a href="/compose" aria-current="{{ 'page' if page == 'compose' else 'false' }}" title="New email"><svg class="ico ico-lg"><use href="#i-send"/></svg><span class="vh">New email</span></a>
-    <span class="item" title="Bills of Lading — not built yet"><svg class="ico ico-lg"><use href="#i-doc"/></svg></span>
-    <span class="item" title="Shipping Instructions — not built yet"><svg class="ico ico-lg"><use href="#i-clip-board"/></svg></span>
-    <span class="item" title="Customs &amp; Invoices — not built yet"><svg class="ico ico-lg"><use href="#i-receipt"/></svg></span>
-    <span class="item" title="Discrepancy Log — not built yet"><svg class="ico ico-lg"><use href="#i-diff"/></svg></span>
+    <a href="/compose" aria-current="{{ 'page' if page == 'compose' else 'false' }}" title="Send an email"><svg class="ico ico-lg"><use href="#i-send"/></svg><span class="vh">Send an email</span></a>
   </nav>
-  <span class="item" title="Settings — not built yet"><svg class="ico ico-lg"><use href="#i-tune"/></svg></span>
 </aside>
 
 <div class="shell">

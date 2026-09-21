@@ -61,3 +61,15 @@ def test_no_bare_element_selector_can_clobber_the_avatar(site):
     html = client.get("/").text
     assert ".acct-id span" not in html          # the selector that did it
     assert ".acct-id .addr" in html             # named, so it hits one thing
+
+
+def test_the_rail_offers_only_what_works(site):
+    """Disabled 'not built yet' icons are a promise the app does not keep,
+    sitting beside the links that do work."""
+    client, _ = site
+    html = client.get("/").text
+    rail = html.split('<aside class="rail">', 1)[1].split("</aside>", 1)[0]
+    assert "not built yet" not in rail
+    assert rail.count("<a ") == 3            # overview, queue, send
+    for href in ('href="/dashboard"', 'href="/"', 'href="/compose"'):
+        assert href in rail
