@@ -162,6 +162,7 @@ header.app {
 .brand svg { color:var(--primary); }
 .vr { width:1px; height:16px; background:var(--border-strong); flex:none; }
 .filters { display:flex; align-items:center; gap:3px; margin-left:auto; flex-wrap:wrap; }
+.fgroup { display:contents; }
 .head-right { display:flex; align-items:center; gap:var(--xs); }
 /* Who is signed in: an initial, not an address. The header is the most
    contested row on the page and an email eats a third of it. */
@@ -335,17 +336,33 @@ html[data-rail="open"] .rail-lbl {
   header.app .brand { height:48px; }
   .head-right { margin-left:auto; }
   .head-right > .vr:first-child { display:none; }
+  /* Categories on one row, statuses on the next - each its own scroller,
+     so swiping one never moves the other. */
   .filters {
-    order:3; flex:1 0 100%; flex-wrap:nowrap; overflow-x:auto;
-    margin:0 calc(-1 * var(--lg)); padding:0 28px var(--md) var(--lg);
+    order:3; flex:1 0 100%; flex-direction:column; align-items:stretch; gap:6px;
+    margin:0 calc(-1 * var(--lg)); padding:0 0 var(--md);
+    /* Both needed, or each row grows to fit every button and is cut off
+       instead of scrolling: a flex item is otherwise at least as wide as its
+       content, and a wrapping column sizes each line to its content rather
+       than to the screen. */
+    min-width:0; flex-wrap:nowrap;
+  }
+  .filters > .vr { display:none; }
+  .fgroup {
+    display:flex; align-items:center; gap:3px;
+    flex-wrap:nowrap; overflow-x:auto; padding:0 var(--lg);
     scrollbar-width:none; -webkit-overflow-scrolling:touch;
-    /* A fade at the right edge says there is more to swipe to. */
+  }
+  .fgroup::-webkit-scrollbar { display:none; }
+  .fgroup > * { flex:none; }
+  /* A fade at the right edge, only while there is more to swipe to. */
+  .fgroup.more {
     -webkit-mask-image:linear-gradient(to right, #000 calc(100% - 28px), transparent);
             mask-image:linear-gradient(to right, #000 calc(100% - 28px), transparent);
   }
-  .filters::-webkit-scrollbar { display:none; }
-  .filters > * { flex:none; }
-  .fbtn { height:32px; }
+  /* 6px sides, not 8: the five status buttons then fit a phone's width
+     whole instead of cutting REVIEWED off at the edge. */
+  .fbtn { height:32px; padding:0 6px; }
   /* Filters sort the queue; on the other pages they only cost a row. */
   header.app:not([data-page="inbox"]) .filters { display:none; }
 
@@ -414,6 +431,9 @@ html[data-rail="open"] .rail-lbl {
   </a>
 
   <div class="filters">
+    {# Two groups: one row each on a phone. On a wider screen they are
+       display:contents, so the buttons flow exactly as before. #}
+    <div class="fgroup">
     {% if has_categories %}
       {# Each link keeps the other filters: filter_href in app.py. #}
       <a class="fbtn all" href="{{ filter_href(None, active_status, active_reviewed) }}"
@@ -429,7 +449,9 @@ html[data-rail="open"] .rail-lbl {
               title="Available once classification has run">{{ c }}</span>
       {% endfor %}
     {% endif %}
+    </div>
     <span class="vr"></span>
+    <div class="fgroup">
     {% if has_comparison and active and active != "BL_COMPARISON" %}
       {# Only document checks are compared, so nothing else has a status. #}
       <span class="fbtn" aria-pressed="true">Status: All</span>
@@ -460,6 +482,7 @@ html[data-rail="open"] .rail-lbl {
         </span>
       {% endfor %}
     {% endif %}
+    </div>
   </div>
 
   <div class="head-right">
@@ -605,13 +628,25 @@ html[data-rail="open"] .rail-lbl {
   sync();
 })();
 
-// On a phone the filters scroll sideways; bring the chosen one into view,
-// or a selected SPAM would sit off-screen with nothing to say it is on.
+// On a phone each filter row scrolls sideways. Bring the chosen button into
+// view - a selected SPAM would otherwise sit off-screen with nothing to say
+// it is on - and fade the right edge only while there is more to swipe to.
 (function () {
-  var row = document.querySelector(".filters");
-  if (!row || row.scrollWidth <= row.clientWidth) return;
-  var picked = row.querySelector('a.fbtn[aria-pressed="true"]:not(.all)');
-  if (picked) row.scrollLeft = picked.offsetLeft - row.clientWidth / 2 + picked.offsetWidth / 2;
+  Array.prototype.forEach.call(document.querySelectorAll(".fgroup"), function (row) {
+    // Measured on the last button, not the scroll width: that includes the
+    // row's end padding, which would fade a button that is fully in view.
+    function edge() {
+      var last = row.lastElementChild;
+      row.classList.toggle("more", !!last &&
+        last.getBoundingClientRect().right > row.getBoundingClientRect().right + 1);
+    }
+    var picked = row.querySelector('a.fbtn[aria-pressed="true"]:not(.all)');
+    if (picked && row.scrollWidth > row.clientWidth)
+      row.scrollLeft = picked.offsetLeft - row.offsetLeft - row.clientWidth / 2 + picked.offsetWidth / 2;
+    edge();
+    row.addEventListener("scroll", edge, { passive: true });
+    window.addEventListener("resize", edge);
+  });
 })();
 
 // Account menu: click the initial to open, click anywhere else or Esc to close.

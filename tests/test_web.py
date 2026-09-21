@@ -184,6 +184,23 @@ def test_on_a_phone_the_panel_is_a_bottom_tab_bar_and_the_filters_one_row(site):
     assert "font-size:16px !important" in phone               # no iOS zoom into fields
 
 
+def test_on_a_phone_categories_and_statuses_are_two_rows(site):
+    """One row per kind of filter, each scrolling on its own. On a wider
+    screen the groups are display:contents, so the buttons flow as before."""
+    client, write = site
+    write(BL_MIX)
+    html = client.get("/").text
+    groups = header(html).split('<div class="fgroup">')[1:]
+    assert len(groups) == 2
+    cats, statuses = groups
+    assert "BL_COMPARISON" in cats and "SPAM" in cats and "Status: All" not in cats
+    assert "Status: All" in statuses and "MISMATCH" in statuses and "Reviewed" in statuses
+    assert ".fgroup { display:contents; }" in html
+    phone = phone_rules(html)
+    assert ".filters > .vr { display:none; }" in phone
+    assert "flex-direction:column" in phone
+
+
 def test_the_filter_row_shows_only_on_the_queue(site):
     client, _ = site
     assert '<header class="app" data-page="inbox">' in client.get("/").text
