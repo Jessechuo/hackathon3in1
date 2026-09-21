@@ -1,0 +1,29 @@
+BILL OF LADING (DRAFT - NOT NEGOTIABLE)
+
+B/L Number        : DRAFT-26067
+Vessel / Voyage   : MV NORDIC STAR / 0142E
+Place and Date    : SINGAPORE, 21 September 2026
+
+Shipper           : ACME LOGISTICS PTE LTD
+                    12 Keppel Road, #08-01
+                    Singapore 089057
+
+Consignee         : NORDIC IMPORTS AB
+                    Hamngatan 4
+                    411 06 Gothenburg, Sweden
+
+Notify Party      : NORDIC IMPORTS AB
+                    Hamngatan 4
+                    411 06 Gothenburg, Sweden
+
+Load Port         : SINGAPORE
+Discharge Port    : HAMBURG
+
+Container Count   : 5 x 40'HC
+Gross Weight      : 58,400 KGS
+Measurement       : 186.500 CBM
+
+Description       : COATED IVORY BOARD
+Marks and Numbers : PO 26067 / MADE IN SINGAPORE
+
+Freight Prepaid. Shipped on board in apparent good order and condition.

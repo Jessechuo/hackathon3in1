@@ -1,0 +1,29 @@
+SHIPPING INSTRUCTION
+
+Booking Reference : PO 26067 / OC 5ALT-01226
+Vessel / Voyage   : MV NORDIC STAR / 0142E
+Date              : 21 September 2026
+
+Shipper           : ACME LOGISTICS PTE LTD
+                    12 Keppel Road, #08-01
+                    Singapore 089057
+
+Consignee         : NORDIC IMPORTS AB
+                    Hamngatan 4
+                    411 06 Gothenburg, Sweden
+
+Notify Party      : NORDIC IMPORTS AB
+                    Hamngatan 4
+                    411 06 Gothenburg, Sweden
+
+Port of Loading   : SINGAPORE
+Port of Discharge : HAMBURG
+
+Container Count   : 3 x 40'HC
+Gross Weight      : 58,400 KGS
+Measurement       : 186.500 CBM
+
+Commodity         : COATED IVORY BOARD
+Marks and Numbers : PO 26067 / MADE IN SINGAPORE
+
+Please prepare the draft Bill of Lading from the details above.
