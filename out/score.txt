@@ -1,0 +1,38 @@
+==============================================================
+  SDOC HACKATHON SCORE  —  submission.json
+  520 emails
+==============================================================
+
+STAGE 1 · Email classification
+  accuracy      1.000  ████████████████████████
+  macro-F1      1.000  ████████████████████████
+
+  per-category  precision / recall / f1
+    BL_COMPARISON   1.00 / 1.00 / 1.00
+    SI_REQUEST      1.00 / 1.00 / 1.00
+    INVOICE_QUERY   1.00 / 1.00 / 1.00
+    GENERAL         1.00 / 1.00 / 1.00
+    SPAM            1.00 / 1.00 / 1.00
+
+STAGE 3 · BL-vs-SI comparison  (comparable doc emails)
+  defect recall     1.000  ████████████████████████
+  defect precision  1.000  ████████████████████████
+  field-level F1    1.000  ████████████████████████
+  exact-match rate  1.000
+
+RELIABILITY · escalate what you can't decide  (diagnostic)
+  escalation recall     1.000  ████████████████████████
+  escalation precision  1.000  ████████████████████████
+  gold NEEDS_REVIEW: 20   flagged: 20
+    wrong_doc_type       5/5 escalated
+    missing_attachment   5/5 escalated
+    unreadable           5/5 escalated
+    missing_value        5/5 escalated
+
+END-TO-END · the headline metric
+  46/46 defect emails caught end to end
+  rate  1.000  ████████████████████████
+
+--------------------------------------------------------------
+  FINAL SCORE  1.0000   (w: s1=0.3, s3=0.2, e2e=0.5)
+--------------------------------------------------------------
