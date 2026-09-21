@@ -176,7 +176,9 @@ def _shell(results: dict, active: str | None, active_status: str | None = None,
         "n_reviewed": sum(1 for r in results.values() if r.get("reviewed")),
         # Counted from the mail folder, not from results: an email that has
         # just arrived should show in the header before it has been processed.
-        "n_received": len(load_received()),
+        # Sent mail is stored in the same folder and is not "received" - it
+        # was being counted, so the chip said 17 when 6 had come in.
+        "n_received": sum(1 for e in load_received() if e.get("direction") != "sent"),
         # Read per request, not at import: the watcher may be started later.
         "mail_address": os.environ.get("SDOC_MAIL_USER") or None,
         "user": user,

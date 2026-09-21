@@ -175,9 +175,26 @@ def test_the_rail_links_to_the_form(site):
     assert 'href="/compose"' in client.get("/").text
 
 
-def test_the_header_names_the_account_the_queue_is_fed_from(site):
+def test_the_header_stays_uncluttered(site):
+    """The mailbox address in the header crowded the busiest row on the page;
+    it is shown where it matters instead, on the page that sends from it."""
     client, _, _, _ = site
-    assert 'class="acct"' in client.get("/").text
+    assert 'class="acct"' not in client.get("/").text
+    assert "hackathon3in1@gmail.com" in client.get("/compose").text
+
+
+def test_sent_mail_is_not_counted_as_received(site):
+    """Sent mail is stored beside received mail. Counting it made the header
+    say 17 received when 6 had come in."""
+    client, mail, _, _ = site
+    from sdoc.mail import store
+    store.save_email("ops@shipper.com", "came in", "b", [], root=mail)
+    post(client)                                  # one sent
+    post(client, subject="and another sent")
+    settle()
+    html = client.get("/").text
+    assert "1 received" in html
+    assert "3 received" not in html
 
 
 # --- the slow half runs off the request ----------------------------------
