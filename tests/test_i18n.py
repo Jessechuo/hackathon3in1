@@ -205,7 +205,7 @@ SOURCES = sorted(WEB.glob("templates/*.html")) + [WEB / "app.py", WEB / "auth.py
 _CALL = re.compile(r"(?<![\w.])(?:i18n\.)?(?:t|js_strings)\(")
 _LITERAL = re.compile(r"""(["'])((?:\\.|(?!\1).)*?)\1""", re.S)
 # Sentences chosen at run time from a table rather than written in a t() call.
-DYNAMIC = {*web.KINDS.values(), "File"}
+DYNAMIC = {*web.KINDS.values(), *web.UNREADABLE, "File"}
 
 
 def _keys(source: str) -> set[str]:

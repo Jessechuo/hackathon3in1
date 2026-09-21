@@ -83,6 +83,10 @@
   "ms": "Semua semakan lulus",
   "zh": "全部检查通过"
  },
+ "almost no readable text": {
+  "ms": "hampir tiada teks yang boleh dibaca",
+  "zh": "几乎没有可读的文字"
+ },
  "Already have an account?": {
   "ms": "Sudah mempunyai akaun?",
   "zh": "已有账户？"
@@ -207,6 +211,14 @@
   "ms": "Padam keputusan",
   "zh": "清除决定"
  },
+ "Close": {
+  "ms": "Tutup",
+  "zh": "关闭"
+ },
+ "Close (Esc)": {
+  "ms": "Tutup (Esc)",
+  "zh": "关闭（Esc）"
+ },
  "Collapse": {
   "ms": "Kecilkan",
   "zh": "收起"
@@ -214,6 +226,10 @@
  "Collapse panel": {
   "ms": "Kecilkan panel",
   "zh": "收起面板"
+ },
+ "Colour key": {
+  "ms": "Petunjuk warna",
+  "zh": "颜色说明"
  },
  "Comparison report": {
   "ms": "Laporan perbandingan",
@@ -242,6 +258,10 @@
  "Could not be decided — open the review queue": {
   "ms": "Tidak dapat diputuskan — buka baris gilir semakan",
   "zh": "无法判定——打开复核队列"
+ },
+ "Could not load this file.": {
+  "ms": "Fail ini tidak dapat dimuatkan.",
+  "zh": "无法加载此文件。"
  },
  "Could not reach the server - try again.": {
   "ms": "Tidak dapat menghubungi pelayan - cuba lagi.",
@@ -294,6 +314,10 @@
  "differs": {
   "ms": "berbeza",
   "zh": "不一致"
+ },
+ "Documents": {
+  "ms": "Dokumen",
+  "zh": "文件"
  },
  "Draft BL for confirmation - PO 26067": {
   "ms": "Draf BL untuk pengesahan - PO 26067",
@@ -407,6 +431,18 @@
   "ms": "Fail",
   "zh": "文件"
  },
+ "file is corrupt or cannot be opened ({error})": {
+  "ms": "fail rosak atau tidak dapat dibuka ({error})",
+  "zh": "文件已损坏或无法打开（{error}）"
+ },
+ "file is empty": {
+  "ms": "fail kosong",
+  "zh": "文件为空"
+ },
+ "file not found": {
+  "ms": "fail tidak dijumpai",
+  "zh": "找不到文件"
+ },
  "Filter subject, sender, or ID...": {
   "ms": "Tapis subjek, pengirim atau ID...",
   "zh": "按主题、发件人或编号筛选..."
@@ -491,6 +527,10 @@
   "ms": "Secara langsung di pelayan ini. Setiap petak di bawah ialah satu ujian, menyala apabila lulus.",
   "zh": "在此服务器上实时运行。下方每个方块是一项测试，通过时亮起。"
  },
+ "Loading…": {
+  "ms": "Memuatkan…",
+  "zh": "加载中…"
+ },
  "Macro-F1 — each category weighted equally": {
   "ms": "F1 makro — setiap kategori diberi wajaran sama",
   "zh": "宏平均 F1——每个类别权重相同"
@@ -567,6 +607,10 @@
   "ms": "Belum ada fail serahan.",
   "zh": "尚无提交文件。"
  },
+ "no text layer - looks like a scanned image": {
+  "ms": "tiada lapisan teks - kelihatan seperti imej imbasan",
+  "zh": "没有文字层，看起来是扫描图像"
+ },
  "NONE": {
   "ms": "TIADA",
   "zh": "无"
@@ -594,6 +638,10 @@
  "Not classified yet": {
   "ms": "Belum dikelaskan",
   "zh": "尚未分类"
+ },
+ "Not found in the text: {fields}": {
+  "ms": "Tidak dijumpai dalam teks: {fields}",
+  "zh": "文本中未找到：{fields}"
  },
  "Not started: {reason}.": {
   "ms": "Tidak dimulakan: {reason}.",
@@ -630,6 +678,10 @@
  "Open": {
   "ms": "Buka",
   "zh": "打开"
+ },
+ "Open original": {
+  "ms": "Buka fail asal",
+  "zh": "打开原件"
  },
  "OPERATIONAL": {
   "ms": "OPERASI",
@@ -1095,6 +1147,10 @@
   "ms": "Pemasangan ini tidak dapat menghubungi pelayan mel — penyedia hos menyekat SMTP keluar, seperti kebanyakan penyedia supaya alamat mereka tidak digunakan untuk spam. Penerimaan tidak terjejas: mel kepada {address} masih diambil dan disemak dalam masa dua puluh saat. Jalankan aplikasi secara setempat dan borang ini akan berfungsi.",
   "zh": "此部署无法连接邮件服务器——托管商屏蔽了外发 SMTP，大多数托管商都这样做，以免其地址被用于发送垃圾邮件。接收不受影响：发往 {address} 的邮件仍会在二十秒内被读取并核对。在本地运行本应用，此表单即可使用。"
  },
+ "This file cannot be read: {problem}.": {
+  "ms": "Fail ini tidak dapat dibaca: {problem}.",
+  "zh": "无法读取此文件：{problem}。"
+ },
  "This was scored against the same answer key used to find mistakes while building. Every fix was a general rule, never a special case for one email, and no code in the application reads the answer key — but it shows the system is right on these {n} emails, not that it would score the same on emails it has never seen.": {
   "ms": "Skor ini dikira berdasarkan kunci jawapan yang sama yang digunakan untuk mencari kesilapan semasa membina. Setiap pembetulan ialah peraturan umum, bukan kes khas untuk satu e-mel, dan tiada kod dalam aplikasi yang membaca kunci jawapan — tetapi ia menunjukkan sistem betul pada {n} e-mel ini, bukan bahawa ia akan mendapat skor yang sama pada e-mel yang belum pernah dilihatnya.",
   "zh": "此分数基于开发时用来查找错误的同一份答案计算。每次修正都是通用规则，从不针对某一封邮件，应用中也没有任何代码读取答案——但它只能说明系统在这 {n} 封邮件上是正确的，并不代表在从未见过的邮件上也能得到同样的分数。"
@@ -1126,6 +1182,10 @@
  "Triage Queue": {
   "ms": "Baris Gilir Triaj",
   "zh": "分拣队列"
+ },
+ "unsupported file type {suffix}": {
+  "ms": "jenis fail tidak disokong {suffix}",
+  "zh": "不支持的文件类型 {suffix}"
  },
  "Up to {n} files, {mb} MB each. Pick them one at a time or several at once - they add up.": {
   "ms": "Sehingga {n} fail, {mb} MB setiap satu. Pilih satu demi satu atau beberapa sekali gus - semuanya akan ditambah.",

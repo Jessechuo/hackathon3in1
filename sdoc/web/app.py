@@ -31,7 +31,7 @@ from sdoc.mail.send import send as send_mail
 from sdoc.mail.send import note_unreachable, reachable, valid_address
 from sdoc.mail.send import probe as probe_smtp
 from sdoc.mail.store import delete_sent
-from sdoc.pipeline import submission_csv
+from sdoc.pipeline import _assign, submission_csv
 from sdoc.review import apply_reviews
 from sdoc.web import auth, checks, i18n, watcher
 
@@ -194,6 +194,9 @@ def _human_size(n: int) -> str:
 
 
 def _attachment_meta(paths: list[str]) -> list[dict]:
+    # Which file is the SI and which the BL, decided the way the pipeline
+    # decides it, so the viewer puts each one on its side.
+    si, bl = _assign(paths)
     meta = []
     for rel in paths:
         p = attachment_path(rel)
@@ -203,8 +206,21 @@ def _attachment_meta(paths: list[str]) -> list[dict]:
             "name": p.name,
             "kind": KINDS.get(suffix, suffix.lstrip(".").upper() or "File"),
             "size": _human_size(p.stat().st_size) if p.exists() else "missing",
+            "role": "SI" if rel == si else "BL" if rel == bl else None,
         })
     return meta
+
+
+def _marks(cat: dict) -> list[dict]:
+    """The compared values, for the viewer to find and colour in each
+    document. Coloured by the final answer, as the comparison table is: a
+    reviewer's decision replaces the system's."""
+    if cat.get("category") != "BL_COMPARISON":
+        return []
+    wrong = cat.get("defect_fields") or []
+    return [{"name": f["name"], "si": f.get("si"), "bl": f.get("bl"),
+             "state": "bad" if f["name"] in wrong else "miss" if f.get("match") is None else "ok"}
+            for f in cat.get("fields") or []]
 
 
 def filter_href(category: str | None = None, status: str | None = None,
@@ -510,6 +526,7 @@ def email_detail(request: Request, email_id: str):
             "field_names": FIELDS,
             "preticked": preticked,
             "attachments": _attachment_meta(email["attachments"]),
+            "marks": _marks(cat),
             "prev_id": ordered[i - 1]["email_id"] if i > 0 else None,
             "next_id": ordered[i + 1]["email_id"] if i + 1 < len(ordered) else None,
             "position": i + 1,
@@ -735,22 +752,63 @@ async def compose_submit(request: Request, to: str = Form(""), subject: str = Fo
     return RedirectResponse("/compose", status_code=303)
 
 
+# The reasons sdoc.extract gives for a file it cannot read, word for word.
+# Two more carry a detail and are translated in say_problem.
+UNREADABLE = ("file not found", "file is empty",
+              "no text layer - looks like a scanned image", "almost no readable text")
+
+# The files a browser may show itself. Anything else is handed over as a
+# download: received attachments come from anyone who emails the inbox, and
+# an .html one shown by the browser would run as part of this site.
+SHOWN_INLINE = {".pdf": "application/pdf", ".txt": "text/plain; charset=utf-8"}
+
+
+def say_problem(problem: str) -> str:
+    """Why a file cannot be read, in the page language."""
+    if problem.startswith("unsupported file type "):
+        suffix = problem.rsplit(" ", 1)[1]
+        return i18n.t("unsupported file type {suffix}", suffix=suffix)
+    if problem.startswith("file is corrupt or cannot be opened ("):
+        error = problem.rsplit("(", 1)[1].rstrip(")")
+        return i18n.t("file is corrupt or cannot be opened ({error})", error=error)
+    return i18n.t(problem)
+
+
+def _original(path: str) -> FileResponse:
+    file = attachment_path(path)
+    if not file.is_file():
+        raise HTTPException(status_code=404, detail=f"missing file: {path}")
+    media = SHOWN_INLINE.get(file.suffix.lower())
+    return FileResponse(file, media_type=media or "application/octet-stream", filename=file.name,
+                        content_disposition_type="inline" if media else "attachment",
+                        headers={"X-Content-Type-Options": "nosniff"})
+
+
 @app.get("/attachment/{path:path}", response_class=HTMLResponse)
-def attachment(path: str):
+def attachment(path: str, view: str = ""):
+    """The text read from an attachment. ?view=json is what the email page's
+    viewer asks for; ?view=original is the file itself; with neither, a
+    plain page of the text - where a ctrl-click on a file still goes."""
     # Path traversal guard: only ever serve files from the two attachment
     # folders - the bundle's and the received-mail one. Nothing else under
     # either directory, and no traversal out of them.
     if ".." in path or not path.startswith(("attachments/", "mail/attachments/")):
         raise HTTPException(status_code=400, detail="bad attachment path")
+    if view == "original":
+        return _original(path)
 
     doc = read_document(path)
     if doc.problem == "file not found":
         raise HTTPException(status_code=404, detail=f"missing file: {path}")
-    text = doc.text if doc.readable else f"(This file cannot be read: {doc.problem}.)"
+    if view == "json":
+        return JSONResponse({"name": path.split("/")[-1], "text": doc.text, "readable": doc.readable,
+                             "problem": say_problem(doc.problem) if doc.problem else None})
+    text = doc.text if doc.readable else "(" + i18n.t(
+        "This file cannot be read: {problem}.", problem=say_problem(doc.problem)) + ")"
 
     name = escape(path.split("/")[-1])
     return HTMLResponse(
-        "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
+        f"<!doctype html><html lang='{i18n.HTML_LANG[i18n.current()]}'><head><meta charset='utf-8'>"
         f"<title>{name}</title>"
         "<style>:root{color-scheme:light dark}"
         "body{margin:0;font-family:ui-monospace,'JetBrains Mono',Menlo,Consolas,monospace}"
