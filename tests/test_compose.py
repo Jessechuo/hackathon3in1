@@ -183,18 +183,14 @@ def test_the_header_stays_uncluttered(site):
     assert "hackathon3in1@gmail.com" in client.get("/compose").text
 
 
-def test_sent_mail_is_not_counted_as_received(site):
-    """Sent mail is stored beside received mail. Counting it made the header
-    say 17 received when 6 had come in."""
-    client, mail, _, _ = site
-    from sdoc.mail import store
-    store.save_email("ops@shipper.com", "came in", "b", [], root=mail)
-    post(client)                                  # one sent
-    post(client, subject="and another sent")
-    settle()
-    html = client.get("/").text
-    assert "1 received" in html
-    assert "3 received" not in html
+def test_the_header_carries_no_counts(site):
+    """The totals live on the pages that are about them - the inbox's queue
+    size, the dashboard's tiles. Repeated in the header they were noise."""
+    client, _, _, _ = site
+    for path in ("/", "/dashboard", "/compose"):
+        header = client.get(path).text.split("<header", 1)[1].split("</header>", 1)[0]
+        assert "chip-count" not in header, path
+        assert " received<" not in header, path
 
 
 # --- the slow half runs off the request ----------------------------------

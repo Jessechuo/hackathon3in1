@@ -24,7 +24,7 @@ from sdoc.config import MAIL_DIR, OUT_DIR
 from sdoc.core.fields import FIELDS
 from sdoc.extract import read_document
 from sdoc.ingest import ingest, load_mail_results, mark_pending, update_result
-from sdoc.inbox import attachment_path, load_all_emails, load_received
+from sdoc.inbox import attachment_path, load_all_emails
 from sdoc.mail.send import send as send_mail
 from sdoc.mail.send import note_unreachable, reachable, valid_address
 from sdoc.mail.send import probe as probe_smtp
@@ -174,11 +174,6 @@ def _shell(results: dict, active: str | None, active_status: str | None = None,
         "n_mismatch": statuses.count("MISMATCH"),
         "n_review": statuses.count("NEEDS_REVIEW"),
         "n_reviewed": sum(1 for r in results.values() if r.get("reviewed")),
-        # Counted from the mail folder, not from results: an email that has
-        # just arrived should show in the header before it has been processed.
-        # Sent mail is stored in the same folder and is not "received" - it
-        # was being counted, so the chip said 17 when 6 had come in.
-        "n_received": sum(1 for e in load_received() if e.get("direction") != "sent"),
         # Read per request, not at import: the watcher may be started later.
         "mail_address": os.environ.get("SDOC_MAIL_USER") or None,
         "user": user,

@@ -77,8 +77,3 @@ def test_a_path_outside_the_two_attachment_folders_is_refused(site):
                 "/attachment/mail/inbox/mail_0001.json"):
         assert client.get(bad).status_code == 400
 
-
-def test_the_header_counts_what_arrived(site):
-    client, out, mail = site
-    store.save_email("a@b.com", "s", "b", [], root=mail)
-    assert "1 received" in client.get("/").text

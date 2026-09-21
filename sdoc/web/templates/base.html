@@ -153,11 +153,6 @@ header.app {
 .brand { display:flex; align-items:center; gap:var(--sm); color:var(--fg); }
 .brand svg { color:var(--primary); }
 .vr { width:1px; height:16px; background:var(--border-strong); flex:none; }
-.chip-count {
-  font-family:var(--mono); font-size:11px; line-height:14px;
-  background:var(--l3); color:var(--fg-muted);
-  padding:3px var(--md); border-radius:var(--r-ctl); white-space:nowrap;
-}
 .filters { display:flex; align-items:center; gap:3px; margin-left:auto; flex-wrap:wrap; }
 .head-right { display:flex; align-items:center; gap:var(--xs); }
 /* Who is signed in: an initial, not an address. The header is the most
@@ -354,9 +349,6 @@ html[data-rail="open"] .rail-lbl {
     <svg class="ico ico-lg"><use href="#i-anchor"/></svg>
     <span class="t-headline-sm">SDOC Inbox</span>
   </a>
-  <span class="vr"></span>
-  <span class="chip-count">{% block count %}{{ total }} emails{% endblock %}</span>
-  {% if n_received %}<span class="chip-count">{{ n_received }} received</span>{% endif %}
 
   <div class="filters">
     {% if has_categories %}
