@@ -25,6 +25,11 @@ import time
 
 import httpx
 
+# Loads .env / .env.txt. Without it, configured() depends on some other
+# module having imported config first - true inside the app, false in a
+# script or a shell that imports this directly, and silently so.
+import sdoc.config  # noqa: F401
+
 log = logging.getLogger(__name__)
 
 TOKEN_URL = "https://oauth2.googleapis.com/token"
