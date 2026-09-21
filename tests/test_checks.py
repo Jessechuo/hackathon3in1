@@ -1,3 +1,4 @@
+import io
 import json
 import threading
 from pathlib import Path
@@ -42,6 +43,42 @@ def settle():
 def test_the_summary_line_is_read_correctly(line, passed, failed, errors, duration):
     s = checks.parse_summary(line)
     assert (s["passed"], s["failed"], s["errors"], s["duration"]) == (passed, failed, errors, duration)
+
+
+# --- following the run test by test --------------------------------------
+
+FAILING_RUN = (
+    "SDOC-TOTAL 5\n"
+    "..F.s                                                          [100%]\n"
+    "=================================== FAILURES ===================================\n"
+    "..\\sdoc\\core\\compare.py:12: in compare\n"
+    "=========================== short test summary info ============================\n"
+    "FAILED tests/test_x.py::test_y - assert 1 == 2\n"
+    "1 failed, 3 passed, 1 skipped in 0.52s\n"
+)
+
+
+@pytest.mark.parametrize("newline", ["\n", "\r\n"])
+def test_each_result_is_reported_in_order_and_nothing_else_counts(newline):
+    """The traceback line starts with ".." and the summary with "FAILED" -
+    neither is a test result."""
+    updates = []
+    out = checks.read_results(io.BytesIO(FAILING_RUN.replace("\n", newline).encode()),
+                              lambda **kw: updates.append(kw))
+    assert out["total"] == 5 and updates[0] == {"total": 5}     # known before any result
+    seqs = [u["seq"] for u in updates if "seq" in u]
+    assert seqs == [".", "..", "..F", "..F.", "..F.s"]          # one update per test
+    assert out["counts"] == {"passed": 3, "failed": 1, "errors": 0, "skipped": 1}
+    assert out["summary"] == "1 failed, 3 passed, 1 skipped in 0.52s"
+
+
+def test_results_across_several_lines_are_all_counted():
+    run = "SDOC-TOTAL 150\n" + "." * 72 + " [ 48%]\n" + "." * 72 + " [ 96%]\n" + "......  [100%]\n" + \
+          "150 passed in 3.10s\n"
+    updates = []
+    out = checks.read_results(io.BytesIO(run.encode()), lambda **kw: updates.append(kw))
+    assert updates[-1]["done"] == 150 and updates[-1]["progress"] == 100
+    assert out["counts"]["passed"] == 150
 
 
 # --- isolation from the live system --------------------------------------
@@ -219,3 +256,13 @@ def test_the_page_has_the_button_and_the_three_figures(client):
     assert 'id="run-checks"' in html
     for figure in ("accuracy", "tests passed", "emails checked"):
         assert figure in html
+
+
+def test_nothing_is_shown_until_a_run_finishes(client):
+    """Even with a finished run in memory, the page opens on the button: the
+    results appear when the visitor's own run completes."""
+    client.post("/tests/run")
+    settle()
+    html = client.get("/tests").text
+    assert '<div class="results" id="results" hidden>' in html
+    assert '<div class="figs" id="figs" hidden>' in html

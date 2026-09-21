@@ -32,8 +32,8 @@ from sdoc.config import OUT_DIR, ROOT
 from sdoc.core.fields import FIELDS
 from sdoc.inbox import load_emails
 
-TIMEOUT = 240          # seconds; ~18 locally, a shared server can be slower
-COOLDOWN = 30          # seconds between runs - it is a public page
+TIMEOUT = 240          # seconds; ~18 locally, ~7 on the deployed server
+COOLDOWN = 10          # seconds between runs - it is a public page, but a run is short
 
 STATUSES = {"OK", "MISMATCH", "NEEDS_REVIEW"}
 REASONS = {"missing_attachment", "unreadable", "wrong_doc_type", "missing_value"}
@@ -45,7 +45,12 @@ SECRETS = ("ANTHROPIC_API_KEY", "SDOC_MAIL_USER", "SDOC_MAIL_PASSWORD",
            "SDOC_GMAIL_CLIENT_ID", "SDOC_GMAIL_CLIENT_SECRET", "SDOC_GMAIL_REFRESH_TOKEN",
            "SDOC_SENDGRID_KEY", "SDOC_BREVO_KEY", "SDOC_SECRET_KEY", "SDOC_SIGNUP_CODE")
 
-PROGRESS = re.compile(r"\[\s*(\d+)%\]")
+TOTAL = re.compile(r"SDOC-TOTAL (\d+)")                  # printed by pytest_total.py
+# What pytest -q prints for each finished test, one character per test,
+# and what a whole line of them looks like: "........F...  [ 22%]".
+RESULT = {".": "passed", "F": "failed", "E": "errors", "s": "skipped",
+          "x": "skipped", "X": "passed"}
+RESULT_LINE = re.compile(r"[.FEsxX]+\s*(\[\s*\d+%\])?")
 COUNTS = re.compile(r"(\d+) (passed|failed|errors?|skipped)")
 DURATION = re.compile(r" in ([\d.]+)s")
 
@@ -144,32 +149,69 @@ def check_score_matches(sub: dict, score: dict) -> dict:
 
 # --- the test run --------------------------------------------------------
 
+def read_results(stream, update) -> dict:
+    """Follow pytest -q output as it is written, one test at a time.
+
+    Read byte by byte: pytest ends a line only every 72 tests, and the page
+    should move with each one. A character counts as a result only at the
+    start of a line made of nothing else, and only inside the leading block
+    of such lines - a traceback further down can begin with "..".
+    """
+    counts = {"passed": 0, "failed": 0, "errors": 0, "skipped": 0}
+    seq, tail, buf = [], [], bytearray()
+    summary, total = "", None
+    clean, counting = True, True
+    while True:
+        b = stream.read(1)
+        if not b:
+            break
+        if b == b"\n":
+            line = buf.decode("utf-8", "replace").strip()
+            buf.clear()
+            clean = True
+            if (m := TOTAL.fullmatch(line)) and total is None:
+                total = int(m.group(1))
+                update(total=total)
+                continue
+            if COUNTS.search(line) and DURATION.search(line):
+                summary = line.strip("= ")
+            elif seq and not RESULT_LINE.fullmatch(line):
+                counting = False                      # past the block of results
+            tail = (tail + [line])[-12:]
+            continue
+        buf += b
+        ch = chr(b[0])
+        if clean and counting and ch in RESULT:
+            seq.append(ch)
+            counts[RESULT[ch]] += 1
+            update(seq="".join(seq), done=len(seq), **counts,
+                   progress=min(100, len(seq) * 100 // total) if total else 0)
+        else:
+            clean = False
+    return {"summary": summary, "tail": tail, "counts": counts, "total": total}
+
+
 def _run_tests(update) -> dict:
     with tempfile.TemporaryDirectory(prefix="sdoc-checks-") as scratch:
+        env = isolated_env(Path(scratch))
+        env["PYTHONUNBUFFERED"] = "1"
+        update(phase="tests", total=None, seq="", done=0)
         proc = subprocess.Popen(
-            [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider"],
-            cwd=str(ROOT), env=isolated_env(Path(scratch)),
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-            encoding="utf-8", errors="replace", bufsize=1)
+            [sys.executable, "-u", "-m", "pytest", "-q", "-p", "no:cacheprovider",
+             "-p", "sdoc.web.pytest_total"],
+            cwd=str(ROOT), env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0)
         killer = threading.Timer(TIMEOUT, proc.kill)
         killer.start()
-        summary, tail = "", []
         try:
-            for line in proc.stdout:
-                m = PROGRESS.search(line)
-                if m:
-                    update(progress=int(m.group(1)))
-                if COUNTS.search(line) and DURATION.search(line):
-                    summary = line.strip().strip("= ").strip()
-                tail = (tail + [line.rstrip()])[-12:]
+            out = read_results(proc.stdout, update)
             proc.wait()
         finally:
             killer.cancel()
-    if not summary:
-        return {"ok": False, "summary": "the test run did not finish", "tail": tail,
-                "passed": 0, "failed": 0, "errors": 0, "skipped": 0, "duration": None}
-    result = parse_summary(summary)
-    result.update(summary=summary, tail=tail if proc.returncode else [],
+    if not out["summary"]:
+        return {"ok": False, "summary": "the test run did not finish", "tail": out["tail"],
+                **out["counts"], "duration": None}
+    result = parse_summary(out["summary"])
+    result.update(summary=out["summary"], tail=out["tail"] if proc.returncode else [],
                   ok=proc.returncode == 0 and result["failed"] == 0 and result["errors"] == 0)
     return result
 
@@ -193,7 +235,7 @@ def start(load_score, runner=None) -> tuple[bool, str]:
         if done and time.time() - done < COOLDOWN:
             return False, f"wait {int(COOLDOWN - (time.time() - done)) + 1}s before running again"
         _state.clear()
-        _state.update(state="running", progress=0, started_at=_now())
+        _state.update(state="running", phase="submission", progress=0, started_at=_now())
     threading.Thread(target=_work, args=(load_score, runner or _run_tests),
                      daemon=True, name="sdoc-checks").start()
     return True, ""
@@ -204,12 +246,12 @@ def _work(load_score, runner) -> None:
         sub_path = _graded_file("submission.json")
         sub = json.loads(sub_path.read_text(encoding="utf-8")) if sub_path else {}
         expected = {e["email_id"] for e in load_emails()}
-        _update(submission=check_submission(sub, expected))
+        _update(submission=check_submission(sub, expected), phase="score")
         score = load_score()
         _update(score=check_score_matches(sub, score) if score else None)
 
         tests = runner(_update)
-        _update(tests=tests, progress=100)
+        _update(tests=tests, progress=100, phase="done")
         everything = [tests.get("ok"), _state["submission"]["ok"],
                       (_state.get("score") or {}).get("ok", False)]
         _update(state="passed" if all(everything) else "failed",

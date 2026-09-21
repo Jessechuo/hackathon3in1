@@ -13,27 +13,137 @@
     <div class="m-track" role="meter" aria-label="{{ label }}"
          aria-valuemin="0" aria-valuemax="1" aria-valuenow="{{ value }}"
          title="{{ label }}: {{ "%.3f"|format(value) }}{% if note %} · {{ note }}{% endif %}">
-      <span class="m-fill" style="width:{{ (value * 100)|round(1) }}%"></span>
+      <span class="m-fill" style="--w:{{ (value * 100)|round(1) }}%"></span>
     </div>
   </div>
 {%- endmacro %}
 
 <style>
   .tests { padding:var(--xl) var(--lg) 48px; }
+  /* The attribute alone loses to any class that sets display (.figs is a
+     grid), and this page's whole idea is that hidden means not there yet. */
+  .tests [hidden] { display:none !important; }
   .t-head { display:flex; align-items:baseline; gap:var(--md); flex-wrap:wrap; margin-bottom:var(--xl); }
   .t-head h1 { margin:0; font-size:20px; line-height:28px; font-weight:600; letter-spacing:-.01em; }
   .t-head .src { font-size:12px; color:var(--fg-muted); }
-  .t-head .src code { font-family:var(--mono); font-size:11px; color:var(--fg); }
 
-  /* ── Hero: the one number this page leads with ─────────────────────── */
+  /* ══ The stage: the live run, from one button to the verdict ══════════
+     Idle shows only what will run. Nothing measured appears until it has
+     been measured - the page used to open on the previous run's numbers,
+     so pressing the button changed nothing anyone could see. */
+  .stage { padding:24px; background:var(--l1); border:1px solid var(--border);
+           border-radius:var(--r-ctl); margin-bottom:var(--lg); }
+  .stage-top { display:flex; align-items:flex-start; justify-content:space-between;
+               gap:var(--lg) 24px; flex-wrap:wrap; }
+  .stage h2 { margin:0; display:flex; align-items:center; gap:var(--md);
+              font-size:18px; line-height:24px; font-weight:600; letter-spacing:-.01em; }
+  .stage .lede { margin:4px 0 0; font-size:13px; line-height:19px; color:var(--fg-muted); max-width:66ch; }
+  .verdict-ico { display:none; }
+  .stage[data-state="passed"] .verdict-ico { display:block; color:var(--ok); }
+  .stage[data-state="failed"] .verdict-ico,
+  .stage[data-state="error"] .verdict-ico { display:block; color:var(--mismatch); }
+
+  .stage-act { display:flex; align-items:center; gap:var(--lg); }
+  .timer { font-family:var(--mono); font-size:12px; color:var(--fg-muted); min-width:5ch; text-align:right; }
+  .run {
+    flex:none; display:inline-flex; align-items:center; gap:var(--md);
+    height:36px; padding:0 18px; border:0; border-radius:var(--r-ctl);
+    background:var(--primary); color:var(--on-primary);
+    font:inherit; font-size:13px; font-weight:600; cursor:pointer; transition:filter var(--t);
+  }
+  .run:hover { filter:brightness(1.08); }
+  .run[disabled] { opacity:.6; cursor:progress; }
+  .spin { animation:spin 1s linear infinite; transform-origin:50% 50%; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* The three figures the run ends on. Values in ink; proportional figures
+     at rest, tabular while counting so the digits don't shuffle sideways. */
+  .figs { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:var(--xl) 0;
+          margin:24px 0 0; }
+  .fig { display:flex; flex-direction:column; padding:0 20px; border-left:1px solid var(--border); }
+  .fig:first-child { padding-left:0; border-left:0; }
+  .fig .n { font-size:60px; line-height:64px; font-weight:500; letter-spacing:-.03em; color:var(--fg);
+            font-variant-numeric:proportional-nums; white-space:nowrap; }
+  .fig .n.counting { font-variant-numeric:tabular-nums; }
+  /* line-height:1 - at the inherited 64px the smaller text sat on its own
+     taller line box and pushed this one figure's label below the others. */
+  .fig .of { font-size:24px; line-height:1; font-weight:500; letter-spacing:-.01em;
+             color:var(--fg-muted); margin-left:6px; }
+  .fig .k { font-size:13px; line-height:18px; color:var(--fg-muted); }
+  @media (max-width:720px) {
+    .figs { grid-template-columns:1fr; }
+    .fig, .fig:first-child { padding:0; border:0; }
+    .fig .n { font-size:44px; line-height:48px; }
+  }
+
+  /* The three checks, in the order the server runs them. */
+  .steps { list-style:none; margin:24px 0 0; padding:0; display:flex; flex-direction:column; gap:10px; }
+  .step { display:grid; grid-template-columns:22px 128px minmax(0, 1fr); gap:0 12px;
+          align-items:start; font-size:13px; line-height:22px; }
+  .step .dot { width:22px; height:22px; border-radius:50%; border:1px solid var(--border-strong);
+               display:flex; align-items:center; justify-content:center;
+               font-family:var(--mono); font-size:11px; color:var(--fg-muted); }
+  .step .name { font-weight:600; color:var(--fg); }
+  .step .detail { color:var(--fg-muted); min-width:0; }
+  .step.active .dot { border-color:var(--primary); color:var(--primary); }
+  .step.pass .dot { border-color:var(--ok); background:var(--ok); color:var(--l1); }
+  .step.fail .dot { border-color:var(--mismatch); background:var(--mismatch); color:var(--l1); }
+  .step.wait .name, .step.wait .detail { color:var(--fg-subtle); }
+  @media (max-width:600px) {
+    .step { grid-template-columns:22px minmax(0, 1fr); }
+    .step .detail { grid-column:2; }
+  }
+  .tail { margin:var(--sm) 0 0; padding:var(--md); background:var(--l2); border-radius:var(--r-ctl);
+          font-family:var(--mono); font-size:11px; line-height:16px; color:var(--fg);
+          white-space:pre-wrap; overflow-x:auto; max-height:180px; }
+
+  /* The wall: one square per test, lit the moment that test finishes on the
+     server. Status colour, with the count beside it in words. */
+  .wall-wrap { margin-top:20px; padding-top:var(--xl); border-top:1px solid var(--border); }
+  .wall-head { display:flex; justify-content:space-between; align-items:baseline; gap:var(--lg);
+               margin-bottom:10px; font-size:12px; color:var(--fg-muted); }
+  .wall-head .count { font-family:var(--mono); font-size:13px; font-weight:600; color:var(--fg);
+                      white-space:nowrap; }
+  .wall { display:grid; grid-template-columns:repeat(auto-fill, 12px); gap:3px; }
+  .wall i { width:12px; height:12px; border-radius:2px;
+            background:color-mix(in srgb, var(--fg) 8%, var(--l1)); }
+  .wall i.p { background:var(--ok); animation:lit 240ms cubic-bezier(.2,.8,.2,1.4); }
+  .wall i.f { background:var(--mismatch); animation:lit 240ms cubic-bezier(.2,.8,.2,1.4); }
+  .wall i.s { background:var(--fg-subtle); }
+  @keyframes lit { from { transform:scale(.3); } }
+  @media (max-width:600px) {
+    .wall { grid-template-columns:repeat(auto-fill, 9px); gap:2px; }
+    .wall i { width:9px; height:9px; }
+  }
+
+  .foot { margin:var(--xl) 0 0; font-size:12px; line-height:17px; color:var(--fg-subtle); max-width:90ch; }
+  .foot:empty { display:none; }
+
+  /* ══ The results, revealed once the run ends ═════════════════════════
+     One orchestrated moment: the block rises in, every meter fills from
+     empty, and the confusion matrix lights along its diagonal. */
+  .results { transition:opacity 450ms ease, transform 450ms cubic-bezier(.2,.7,.2,1); }
+  .results:not(.on) { opacity:0; transform:translateY(12px); }
+  .results .m-fill { width:var(--w); transition:width 900ms cubic-bezier(.2,.7,.2,1) 250ms; }
+  .results:not(.on) .m-fill { width:0; }
+  .meters .m:nth-child(2) .m-fill { transition-delay:350ms; }
+  .meters .m:nth-child(3) .m-fill { transition-delay:450ms; }
+  .meters .m:nth-child(4) .m-fill { transition-delay:550ms; }
+  .results .cm td { transition:opacity 300ms ease calc(300ms + var(--d, 0ms)); }
+  .results:not(.on) .cm td { opacity:0; }
+  @media (prefers-reduced-motion: reduce) {
+    .spin, .wall i.p, .wall i.f { animation:none; }
+    .results, .results .m-fill, .results .cm td { transition-delay:0s !important; }
+  }
+
+  /* ── Hero: the final score ─────────────────────────────────────────── */
   .hero {
     display:flex; align-items:center; gap:var(--xl) 40px; flex-wrap:wrap;
     padding:var(--xl) 24px; background:var(--l1);
     border:1px solid var(--border); border-left:3px solid var(--primary);
     border-radius:var(--r-ctl); margin-bottom:var(--lg);
   }
-  .hero .lbl { font-size:11px; line-height:14px; font-weight:600; letter-spacing:.05em;
-               text-transform:uppercase; color:var(--fg-muted); }
+  .hero .lbl { font-size:12px; line-height:16px; font-weight:600; color:var(--fg-muted); }
   /* Proportional figures: tabular (the app's default) spaces a big number loosely. */
   .hero .big { font-size:56px; line-height:60px; font-weight:600; letter-spacing:-.02em;
                color:var(--fg); font-variant-numeric:normal; margin-top:4px; }
@@ -53,8 +163,7 @@
     border-radius:var(--r-ctl);
   }
   .stat-tile .top { display:flex; align-items:baseline; justify-content:space-between; gap:var(--md); }
-  .stat-tile .lbl { font-size:11px; line-height:14px; font-weight:600; letter-spacing:.05em;
-                    text-transform:uppercase; color:var(--fg-muted); }
+  .stat-tile .lbl { font-size:12px; line-height:16px; font-weight:600; color:var(--fg-muted); }
   .stat-tile .w { font-family:var(--mono); font-size:11px; color:var(--fg-subtle); }
   .stat-tile .val { display:flex; align-items:baseline; gap:6px;
                     font-size:32px; line-height:38px; font-weight:600; color:var(--fg);
@@ -72,9 +181,11 @@
   .panel h2 { margin:0; font-size:14px; line-height:20px; font-weight:600; }
   .panel .desc { margin:2px 0 var(--lg); font-size:12px; line-height:17px; color:var(--fg-muted); }
   .split { display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:28px; align-items:start; }
-  @media (max-width:1000px) { .split { grid-template-columns:1fr; } }
-  .h3 { margin:var(--lg) 0 var(--md); font-size:11px; line-height:14px; font-weight:600;
-        letter-spacing:.05em; text-transform:uppercase; color:var(--fg-muted); }
+  /* minmax(0, ...) and a scrolling wrapper: a bare 1fr column grows to the
+     table's natural width, and on a phone that pushed the page sideways. */
+  @media (max-width:1000px) { .split { grid-template-columns:minmax(0, 1fr); } }
+  .scroll-x { overflow-x:auto; }
+  .h3 { margin:var(--lg) 0 var(--md); font-size:12px; line-height:16px; font-weight:600; color:var(--fg-muted); }
 
   /* ── Meters: one ratio against a limit of 1.
      The track is a lighter step of the fill's own hue, so the empty part
@@ -96,7 +207,8 @@
             padding:0 var(--sm) var(--sm); border-bottom:1px solid var(--border); white-space:nowrap; }
   .tbl th:first-child, .tbl td:first-child { text-align:left; }
   .tbl td { padding:7px var(--sm); border-bottom:1px solid var(--border);
-            font-family:var(--mono); font-size:12px; color:var(--fg); text-align:right; }
+            font-family:var(--mono); font-size:12px; color:var(--fg); text-align:right;
+            white-space:nowrap; }
   .tbl tbody tr:last-child td { border-bottom:0; }
   .tbl tbody tr:hover { background:var(--l2); }
   .tbl td.cat { font-size:11px; color:var(--fg-muted); }
@@ -132,99 +244,77 @@
   .caveat p { margin:0; font-size:12px; line-height:18px; color:var(--fg-muted); max-width:78ch; }
 
   .repro { margin-top:var(--lg); }
-  .repro pre {
+  .repro pre, .none pre {
     margin:var(--sm) 0 0; padding:var(--md) var(--lg); overflow-x:auto;
     background:var(--l2); border:1px solid var(--border); border-radius:var(--r-ctl);
     font-family:var(--mono); font-size:12px; color:var(--fg);
   }
-
-  /* ── Live checks ─────────────────────────────────────────────────── */
-  .live { padding:var(--xl); background:var(--l1); border:1px solid var(--border);
-          border-radius:var(--r-ctl); margin-bottom:var(--lg); }
-  .live-top { display:flex; align-items:flex-start; justify-content:space-between; gap:var(--lg); }
-  .live h2 { margin:0; font-size:14px; line-height:20px; font-weight:600; }
-  .live .desc { margin:2px 0 0; font-size:12px; line-height:17px; color:var(--fg-muted); }
-  .run {
-    flex:none; display:inline-flex; align-items:center; gap:var(--md);
-    height:34px; padding:0 var(--xl); border:0; border-radius:var(--r-ctl);
-    background:var(--primary); color:var(--on-primary);
-    font:inherit; font-size:13px; font-weight:600; cursor:pointer; transition:filter var(--t);
-  }
-  .run:hover { filter:brightness(1.08); }
-  .run[disabled] { opacity:.5; cursor:progress; }
-  .live-progress { margin-top:var(--lg); }
-
-  /* The three headline figures, once a run has finished. */
-  .strip { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:var(--lg);
-           margin-top:var(--lg); padding-top:var(--lg); border-top:1px solid var(--border); }
-  @media (max-width:600px) { .strip { grid-template-columns:1fr; } }
-  .fig { display:flex; flex-direction:column; gap:2px; }
-  .fig .n { font-size:30px; line-height:36px; font-weight:600; color:var(--fg);
-            font-variant-numeric:normal; letter-spacing:-.01em; }
-  .fig .k { font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase;
-            color:var(--fg-muted); }
-
-  /* One row per check. Status colour sits on the icon only, and always
-     alongside a word - never colour alone. */
-  .rows { list-style:none; margin:var(--lg) 0 0; padding:0; display:flex; flex-direction:column; gap:var(--sm); }
-  .rows li { display:flex; align-items:flex-start; gap:var(--md); font-size:13px; line-height:18px; }
-  .rows svg { flex:none; margin-top:1px; }
-  .rows .pass svg { color:var(--ok); }
-  .rows .fail svg { color:var(--mismatch); }
-  .rows .what { flex:none; width:96px; font-weight:600; color:var(--fg); }
-  .rows .verdict { flex:none; width:44px; font-family:var(--mono); font-size:11px; font-weight:600;
-                   letter-spacing:.04em; text-transform:uppercase; color:var(--fg-muted); padding-top:1px; }
-  .rows .detail { color:var(--fg-muted); min-width:0; }
-  .rows .detail code { font-family:var(--mono); font-size:11px; color:var(--fg); }
-  .tail { margin:var(--sm) 0 0; padding:var(--md); background:var(--l2); border-radius:var(--r-ctl);
-          font-family:var(--mono); font-size:11px; line-height:16px; color:var(--fg);
-          white-space:pre-wrap; overflow-x:auto; max-height:180px; }
-  .live-foot { margin:var(--md) 0 0; font-size:11px; color:var(--fg-subtle); font-family:var(--mono); }
-  .live-foot:empty { display:none; }
-
   .none { padding:var(--xl); background:var(--l1); border:1px solid var(--border);
           border-radius:var(--r-ctl); font-size:13px; color:var(--fg-muted); }
-  .none code { font-family:var(--mono); font-size:12px; color:var(--fg); }
+  .none p { margin:0; }
 </style>
 
 <div class="tests">
   <div class="t-head">
     <h1>Test results</h1>
-    <span class="src">From the organizers' own scorer, run against <code>out/submission.json</code></span>
+    <span class="src">Checked live on this server, and scored by the organizers' own scorer</span>
   </div>
 
-  <section class="live" aria-labelledby="live-h">
-    <div class="live-top">
+  <section class="stage" id="stage" data-state="idle" aria-labelledby="verdict">
+    <div class="stage-top">
       <div>
-        <h2 id="live-h">Live checks</h2>
-        <p class="desc">Runs the automated test suite and checks the submission file right now, on this server.</p>
+        <h2>
+          <span class="verdict-ico"><svg class="ico ico-lg" aria-hidden="true"><use id="verdict-use" href="#i-check"/></svg></span>
+          <span id="verdict" aria-live="polite">Check it live, on this server</span>
+        </h2>
+        <p class="lede" id="lede">Three checks run in order, right now. Their results, and the full
+        score breakdown, appear when they finish.</p>
       </div>
-      <button class="run" id="run-checks" type="button">
-        <svg class="ico ico-sm" aria-hidden="true"><use href="#i-play"/></svg>
-        <span>Run checks</span>
-      </button>
-    </div>
-
-    <div class="live-progress" id="live-progress" hidden>
-      <div class="m-top">
-        <span class="m-lbl" id="live-label">Running the automated tests…</span>
-        <span class="m-val" id="live-pct">0%</span>
+      <div class="stage-act">
+        <span class="timer" id="timer" hidden></span>
+        <button class="run" id="run-checks" type="button">
+          <svg class="ico ico-sm" aria-hidden="true"><use href="#i-play"/></svg>
+          <span>Run live checks</span>
+        </button>
       </div>
-      <div class="m-track" role="progressbar" aria-valuemin="0" aria-valuemax="100"
-           aria-valuenow="0" id="live-bar"><span class="m-fill" id="live-fill" style="width:0%"></span></div>
     </div>
 
-    <div class="strip" id="live-strip" hidden>
-      <div class="fig"><span class="n" id="f-acc">–</span><span class="k">accuracy</span></div>
-      <div class="fig"><span class="n" id="f-tests">–</span><span class="k">tests passed</span></div>
-      <div class="fig"><span class="n" id="f-mails">–</span><span class="k">emails checked</span></div>
+    <div class="figs" id="figs" hidden>
+      <div class="fig"><span class="n" id="f-acc">0%</span><span class="k">accuracy</span></div>
+      <div class="fig"><span class="n"><span id="f-tests">0</span><span class="of" id="f-tests-of"></span></span><span class="k">tests passed</span></div>
+      <div class="fig"><span class="n" id="f-mails">0</span><span class="k">emails checked</span></div>
     </div>
 
-    <ul class="rows" id="live-rows" hidden></ul>
+    <ol class="steps" id="steps">
+      <li class="step" data-step="submission" data-n="1"
+          data-idle="every graded email present, every field valid">
+        <span class="dot">1</span><span class="name">Submission file</span>
+        <span class="detail">every graded email present, every field valid</span>
+      </li>
+      <li class="step" data-step="score" data-n="2"
+          data-idle="belongs to this exact submission, not an older one">
+        <span class="dot">2</span><span class="name">Saved score</span>
+        <span class="detail">belongs to this exact submission, not an older one</span>
+      </li>
+      <li class="step" data-step="tests" data-n="3"
+          data-idle="every automated test, run now in a sandbox with no live data or keys">
+        <span class="dot">3</span><span class="name">Test suite</span>
+        <span class="detail">every automated test, run now in a sandbox with no live data or keys</span>
+      </li>
+    </ol>
 
-    <p class="live-foot" id="live-foot"></p>
+    <div class="wall-wrap" id="wall-wrap" hidden>
+      <div class="wall-head">
+        <span id="wall-label">One square per test, lit the moment it passes on the server</span>
+        <span class="count" id="wall-count"></span>
+      </div>
+      <div class="wall" id="wall" role="img" aria-label="Test results, one square per test"></div>
+    </div>
+
+    <p class="foot" id="foot"></p>
   </section>
 
+  <div class="results" id="results" hidden>
   {% if not score %}
   <div class="none">
     <p>No scorer output yet. From the project folder, run:</p>
@@ -235,7 +325,7 @@
   <section class="hero" aria-label="Final score">
     <div>
       <div class="lbl">Final score</div>
-      <div class="big">{{ "%.4f"|format(score.final) }}<span class="pct">{{ (score.final * 100)|round|int }}%</span></div>
+      <div class="big"><span id="final-num" data-value="{{ score.final }}">{{ "%.4f"|format(score.final) }}</span><span class="pct">{{ (score.final * 100)|round|int }}%</span></div>
     </div>
     <div class="formula">
       {% for p in score.parts -%}
@@ -279,7 +369,7 @@
             {{ meter("Macro-F1 — each category weighted equally", score.raw.stage1.macro_f1) }}
           </div>
           <div class="h3">Per category</div>
-          <table class="tbl">
+          <div class="scroll-x"><table class="tbl">
             <thead><tr><th>Category</th><th>Precision</th><th>Recall</th><th>F1</th><th>Correct</th></tr></thead>
             <tbody>
               {% for c in score.categories %}
@@ -292,30 +382,30 @@
               </tr>
               {% endfor %}
             </tbody>
-          </table>
+          </table></div>
         </div>
         <div>
           <div class="h3" style="margin-top:0">Confusion matrix</div>
           <div class="cm-axis"><span>Actual category ↓</span><span>Predicted →</span></div>
-          <table class="cm">
+          <div class="scroll-x"><table class="cm">
             <thead>
               <tr><th></th>
                 {% for c in score.categories %}<th><abbr title="{{ c.name }}">{{ short[c.name] }}</abbr></th>{% endfor %}
               </tr>
             </thead>
             <tbody>
-              {% for row in score.matrix %}
+              {% for row in score.matrix %}{% set r = loop.index0 %}
               <tr>
                 <th scope="row">{{ row.actual }}</th>
                 {% for cell in row.cells %}
                 <td class="{{ 'on' if cell.share > 0.55 else ('mid' if cell.n else '') }}"
-                    style="background:color-mix(in srgb, var(--primary) {{ (cell.share * 100)|round(1) }}%, var(--l2))"
+                    style="--d:{{ (r + loop.index0) * 45 }}ms; background:color-mix(in srgb, var(--primary) {{ (cell.share * 100)|round(1) }}%, var(--l2))"
                     title="Actually {{ row.actual }}, predicted {{ cell.predicted }}: {{ cell.n }} of {{ row.total }}">{{ cell.n }}</td>
                 {% endfor %}
               </tr>
               {% endfor %}
             </tbody>
-          </table>
+          </table></div>
           <p class="cm-note">
             {% if score.off_diagonal == 0 %}Every email sits on the diagonal — nothing was put in the wrong category.
             {% else %}{{ score.off_diagonal }} email{{ 's' if score.off_diagonal != 1 }} off the diagonal were put in the wrong category.{% endif %}
@@ -388,22 +478,24 @@
   </div>
 
   {% endif %}
+  </div>
 </div>
 {% endblock %}
 
 {% block script %}
 <script>
 (function () {
-  var btn = document.getElementById("run-checks"),
-      progress = document.getElementById("live-progress"),
-      fill = document.getElementById("live-fill"),
-      bar = document.getElementById("live-bar"),
-      pct = document.getElementById("live-pct"),
-      label = document.getElementById("live-label"),
-      strip = document.getElementById("live-strip"),
-      rows = document.getElementById("live-rows"),
-      foot = document.getElementById("live-foot"),
-      polling = false;
+  function $(id) { return document.getElementById(id); }
+  var stage = $("stage"), btn = $("run-checks"), verdict = $("verdict"), lede = $("lede"),
+      timer = $("timer"), figs = $("figs"), wallWrap = $("wall-wrap"), wall = $("wall"),
+      wallLabel = $("wall-label"), wallCount = $("wall-count"), foot = $("foot"),
+      results = $("results");
+  var reduce = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+  // The two instant checks are shown one after the other, not all in the
+  // first frame - they did run in that order, and a step that ticks too fast
+  // to see might as well not be on the page.
+  var STEP_GAP = reduce ? 0 : 450;
+  var run = null;
 
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -412,125 +504,243 @@
     return n;
   }
 
-  function icon(name) {
+  function icon(name, cls) {
     var ns = "http://www.w3.org/2000/svg",
         svg = document.createElementNS(ns, "svg"), use = document.createElementNS(ns, "use");
-    svg.setAttribute("class", "ico ico-sm"); svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("class", cls || "ico ico-sm"); svg.setAttribute("aria-hidden", "true");
     use.setAttribute("href", "#" + name); svg.appendChild(use);
     return svg;
   }
 
-  function row(ok, what, detail, tail) {
-    var li = el("li", ok ? "pass" : "fail");
-    li.appendChild(icon(ok ? "i-check" : "i-alert"));
-    li.appendChild(el("span", "what", what));
-    li.appendChild(el("span", "verdict", ok ? "pass" : "fail"));
-    var d = el("span", "detail", detail);
+  function step(name, state, detail, tail) {
+    var li = stage.querySelector('[data-step="' + name + '"]'),
+        dot = li.querySelector(".dot"), d = li.querySelector(".detail");
+    li.className = "step " + (state || "");
+    dot.textContent = "";
+    if (state === "active") dot.appendChild(icon("i-spin", "ico ico-sm spin"));
+    else if (state === "pass") dot.appendChild(icon("i-check"));
+    else if (state === "fail") dot.appendChild(icon("i-alert"));
+    else dot.textContent = li.dataset.n;
+    d.textContent = detail != null ? detail : li.dataset.idle;
     if (tail && tail.length) d.appendChild(el("pre", "tail", tail.join("\n")));
-    li.appendChild(d);
-    rows.appendChild(li);
   }
 
-  function when(iso) {
-    if (!iso) return "";
-    var d = new Date(iso);
-    return isNaN(d) ? iso : d.toLocaleString();
+  function button(mode) {
+    btn.disabled = mode === "running";
+    btn.querySelector("svg").setAttribute("class", "ico ico-sm" + (mode === "running" ? " spin" : ""));
+    btn.querySelector("use").setAttribute("href", mode === "running" ? "#i-spin" : "#i-play");
+    btn.querySelector("span").textContent =
+      mode === "running" ? "Running…" : mode === "again" ? "Run again" : "Run live checks";
   }
 
-  function render(s) {
-    var running = s.state === "running";
-    btn.disabled = running;
-    btn.querySelector("span").textContent = running ? "Running…" : "Run checks";
+  // --- what each check found, in words ---------------------------------
 
-    progress.hidden = !running;
-    if (running) {
-      var p = s.progress || 0;
-      fill.style.width = p + "%";
-      bar.setAttribute("aria-valuenow", p);
-      pct.textContent = p + "%";
-      label.textContent = p ? "Running the automated tests…" : "Checking the submission, starting the tests…";
-    }
+  function submissionSays(sub) {
+    var bits = [sub.total + " of " + sub.expected + " graded emails"];
+    if (sub.missing) bits.push(sub.missing + " missing");
+    if (sub.extra) bits.push(sub.extra + " that are not graded emails" +
+                             (sub.live_mail_leaked ? " (" + sub.live_mail_leaked + " from the live mailbox)" : ""));
+    if (sub.invalid) bits.push(sub.invalid + " invalid, e.g. " + sub.first_problem.join(": "));
+    if (sub.ok) bits.push("every field valid", "no live mail mixed in");
+    return [!!sub.ok, bits.join(", ")];
+  }
 
-    var finished = s.state === "passed" || s.state === "failed";
-    strip.hidden = rows.hidden = !finished;
-    rows.textContent = "";
+  function scoreSays(sc) {
+    if (!sc) return [false, "no saved scorer output - run the scorer locally to produce out/score.json"];
+    if (sc.ok) return [true, "the saved " + Math.round((sc.final || 0) * 100) +
+                             "% score belongs to this submission: same emails, categories and escalations"];
+    var off = Object.keys(sc.checks).filter(function (k) { return !sc.checks[k]; });
+    return [false, "the saved score is from a different submission (" + off.join(", ") +
+                   " differ) - re-run the scorer"];
+  }
 
-    if (finished) {
-      var t = s.tests || {}, sub = s.submission || {}, sc = s.score;
-      var total = (t.passed || 0) + (t.failed || 0) + (t.errors || 0);
+  // --- the wall ----------------------------------------------------------
 
-      document.getElementById("f-acc").textContent =
-        sc && sc.accuracy != null ? Math.round(sc.accuracy * 100) + "%" : "–";
-      document.getElementById("f-tests").textContent = total ? t.passed + " / " + total : "–";
-      document.getElementById("f-mails").textContent = sub.total != null ? sub.total : "–";
+  function cells(n) {
+    while (wall.children.length < n) wall.appendChild(document.createElement("i"));
+  }
 
-      row(!!t.ok, "Tests",
-          t.ok ? t.passed + " of " + total + " passed" + (t.duration ? " in " + t.duration.toFixed(1) + "s" : "")
-               : (t.summary || "the run did not finish"),
-          t.ok ? null : t.tail);
+  function light(i, ch) {
+    cells(i + 1);
+    var c = wall.children[i];
+    c.className = ch === "F" || ch === "E" ? "f" : ch === "s" || ch === "x" ? "s" : "p";
+    c.title = "Test " + (i + 1) + ": " + (c.className === "f" ? "failed" : c.className === "s" ? "skipped" : "passed");
+  }
 
-      var subBits = [sub.total + " of " + sub.expected + " graded emails"];
-      if (sub.missing) subBits.push(sub.missing + " missing");
-      if (sub.extra) subBits.push(sub.extra + " that are not graded emails" +
-                                  (sub.live_mail_leaked ? " (" + sub.live_mail_leaked + " from the live mailbox)" : ""));
-      if (sub.invalid) subBits.push(sub.invalid + " invalid, e.g. " + sub.first_problem.join(": "));
-      if (sub.ok) subBits.push("every field valid", "no live mail mixed in");
-      row(!!sub.ok, "Submission", subBits.join(" · "));
+  // --- one run, from the click to the verdict ----------------------------
 
-      if (!sc) {
-        row(false, "Score", "no saved scorer output - run the scorer locally to produce out/score.json");
-      } else if (sc.ok) {
-        row(true, "Score", "the saved " + Math.round((sc.final || 0) * 100) +
-            "% score belongs to this submission - same email count, same categories, same escalations");
-      } else {
-        var off = Object.keys(sc.checks).filter(function (k) { return !sc.checks[k]; });
-        row(false, "Score", "the saved score is from a different submission (" + off.join(", ") +
-            " differ) - re-run the scorer");
+  function begin(s, note) {
+    run = { latest: s, t0: performance.now(), shown: 0, next: 0, lit: 0, note: note || "" };
+    run.next = run.t0 + STEP_GAP;
+    stage.dataset.state = "running";
+    verdict.textContent = "Running the checks…";
+    lede.textContent = "Live on this server. Each square below is one test, lit as it passes.";
+    foot.textContent = "";
+    figs.hidden = true;
+    results.hidden = true;
+    results.classList.remove("on");
+    wall.textContent = "";
+    wallWrap.hidden = true;
+    wallLabel.textContent = "One square per test, lit the moment it passes on the server";
+    wallCount.textContent = "";
+    step("submission", "active", "checking…");
+    step("score", "wait");
+    step("tests", "wait");
+    timer.hidden = false;
+    button("running");
+    requestAnimationFrame(frame);
+    if (s.state === "running") poll(run);
+  }
+
+  function frame(now) {
+    if (!run) return;
+    var s = run.latest;
+    timer.textContent = ((now - run.t0) / 1000).toFixed(1) + " s";
+
+    if (s.state === "error") return finish();
+
+    if (run.shown < 2 && now >= run.next) {
+      var has = run.shown === 0 ? !!s.submission : ("score" in s);
+      if (has) {
+        var said = run.shown === 0 ? submissionSays(s.submission) : scoreSays(s.score);
+        step(run.shown === 0 ? "submission" : "score", said[0] ? "pass" : "fail", said[1]);
+        run.shown += 1;
+        run.next = now + STEP_GAP;
+        if (run.shown === 1) step("score", "active", "checking…");
+        else step("tests", "active", "starting the test suite…");
       }
     }
 
-    if (s.state === "error") {
-      foot.textContent = "The checks could not run: " + s.error;
-    } else if (finished) {
-      foot.textContent = "Last run " + when(s.finished_at) +
-        ". Accuracy comes from the organizers' scorer, which needs the answer key - deliberately not on this server.";
-    } else if (!running) {
-      foot.textContent = "Not run since the server last started.";
-    } else {
-      foot.textContent = "";
+    if (run.shown === 2 && now >= run.next) {
+      var seq = s.seq || "", total = s.total;
+      if (total || seq.length) {
+        wallWrap.hidden = false;
+        cells(total || 0);
+      }
+      var behind = seq.length - run.lit;
+      if (behind > 0) {
+        // Catch up smoothly: the server reports in bursts between polls,
+        // the wall still lights one square after another.
+        var k = reduce ? behind : Math.max(1, Math.ceil(behind / 6));
+        for (var j = 0; j < k; j++) { light(run.lit, seq.charAt(run.lit)); run.lit += 1; }
+      }
+      if (run.lit) {
+        wallCount.textContent = run.lit + " / " + (total || "…");
+        step("tests", "active", run.lit + " of " + (total || "…") + " finished");
+      }
+      var ended = s.state === "passed" || s.state === "failed";
+      if (ended && run.lit >= seq.length) return finish();
     }
+    requestAnimationFrame(frame);
   }
 
-  function poll() {
-    if (polling) return;
-    polling = true;
+  function countUp(node, to, fmt, ms) {
+    if (to == null) { node.textContent = "–"; return; }
+    if (reduce) { node.textContent = fmt(to); return; }
+    var t0 = performance.now();
+    node.classList.add("counting");
+    (function tick(now) {
+      var k = Math.min(1, (now - t0) / ms), eased = 1 - Math.pow(1 - k, 3);
+      node.textContent = fmt(to * eased);
+      if (k < 1) requestAnimationFrame(tick);
+      else node.classList.remove("counting");
+    })(t0);
+  }
+
+  function whole(v) { return String(Math.round(v)); }
+
+  function finish() {
+    var s = run.latest, note = run.note, t = s.tests || {}, sub = s.submission || {}, sc = s.score;
+    run = null;
+    timer.hidden = true;
+    button("again");
+
+    if (s.state === "error") {
+      var stuck = stage.querySelector(".step.active");
+      if (stuck) step(stuck.dataset.step, "fail", "could not run");
+      stage.dataset.state = "error";
+      $("verdict-use").setAttribute("href", "#i-alert");
+      verdict.textContent = "The checks could not run";
+      lede.textContent = s.error || "The server stopped the run.";
+      return;
+    }
+
+    var total = (t.passed || 0) + (t.failed || 0) + (t.errors || 0);
+    step("tests", t.ok ? "pass" : "fail",
+         t.ok ? t.passed + " of " + total + " passed" + (t.duration ? " in " + t.duration.toFixed(1) + " s" : "")
+              : (t.summary || "the run did not finish"),
+         t.ok ? null : t.tail);
+
+    var passed = s.state === "passed";
+    stage.dataset.state = s.state;
+    $("verdict-use").setAttribute("href", passed ? "#i-check" : "#i-alert");
+    verdict.textContent = passed ? "All checks passed" : "Some checks failed";
+    var at = new Date(s.finished_at);
+    lede.textContent = "Ran on this server" + (isNaN(at) ? "" : " at " + at.toLocaleTimeString()) +
+      (t.duration ? ". The test suite took " + t.duration.toFixed(1) + " seconds." : ".");
+    wallLabel.textContent = passed ? "Every square is a test that passed" : "Red squares are tests that failed";
+    wallCount.textContent = t.passed + " / " + total + " passed";
+    wall.setAttribute("aria-label", t.passed + " of " + total + " tests passed");
+
+    figs.hidden = false;
+    countUp($("f-acc"), sc && sc.accuracy != null ? sc.accuracy * 100 : null,
+            function (v) { return Math.round(v) + "%"; }, 1000);
+    countUp($("f-tests"), total ? t.passed : null, whole, 1000);
+    $("f-tests-of").textContent = total ? "/ " + total : "";
+    countUp($("f-mails"), sub.total, whole, 1000);
+
+    foot.textContent = (note ? note + " " : "") + "Accuracy is the organizers' scorer's result. " +
+      "It needs the answer key, which is deliberately not on this server - what ran here proves " +
+      "the saved score belongs to this submission.";
+
+    setTimeout(reveal, reduce ? 0 : 650);
+  }
+
+  function reveal() {
+    results.hidden = false;
+    void results.offsetWidth;           // start the transitions from the hidden state
+    results.classList.add("on");
+    var fin = $("final-num");
+    if (fin) countUp(fin, parseFloat(fin.dataset.value), function (v) { return v.toFixed(4); }, 1100);
+  }
+
+  function poll(mine) {
     (function tick() {
-      fetch("/tests/status", { credentials: "same-origin" })
+      if (run !== mine) return;
+      fetch("/tests/status", { credentials: "same-origin", cache: "no-store" })
         .then(function (r) { return r.json(); })
         .then(function (s) {
-          render(s);
-          if (s.state === "running") setTimeout(tick, 700);
-          else polling = false;
+          if (run !== mine) return;
+          mine.latest = s;
+          if (s.state === "running") setTimeout(tick, 250);
         })
-        .catch(function () { polling = false; });
+        .catch(function () { if (run === mine) setTimeout(tick, 1000); });
     })();
   }
 
   btn.addEventListener("click", function () {
+    if (run) return;
     btn.disabled = true;
     fetch("/tests/run", { method: "POST", credentials: "same-origin" })
       .then(function (r) { return r.json(); })
       .then(function (s) {
-        render(s);
-        if (s.started || s.state === "running") poll();
-        else if (s.reason) foot.textContent = "Not started: " + s.reason + ".";
+        if (s.started || s.state === "running") return begin(s);
+        if (s.state === "passed" || s.state === "failed") {
+          // Refused only because a run ended seconds ago: show that one.
+          var wait = ((s.reason || "").match(/\d+/) || ["a few "])[0];
+          return begin(s, "These results are from a run that finished seconds ago; " +
+                          "a fresh one can start in " + wait + "s.");
+        }
+        btn.disabled = false;
+        foot.textContent = "Not started: " + (s.reason || "the server refused") + ".";
       })
-      .catch(function () { btn.disabled = false; foot.textContent = "Could not reach the server."; });
+      .catch(function () { btn.disabled = false; foot.textContent = "Could not reach the server - try again."; });
   });
 
+  // Opening the page never shows an old run. Only one still in progress
+  // is picked up, so a reload mid-run keeps watching it.
   var initial = {{ checks|tojson }};
-  render(initial);
-  if (initial.state === "running") poll();
+  if (initial.state === "running") begin(initial);
 })();
 </script>
 {% endblock %}
