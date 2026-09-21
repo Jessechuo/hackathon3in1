@@ -53,26 +53,32 @@ def _encode(attachments: list[tuple[str, bytes]]) -> list[tuple[str, str, str]]:
     return out
 
 
-def _brevo_payload(sender, to, subject, body, attachments) -> dict:
+def _brevo_payload(sender, to, subject, body, attachments,
+                   reply_to=None, name=None) -> dict:
     payload = {
-        "sender": {"email": sender, "name": "SDOC Inbox"},
+        "sender": {"email": sender, "name": name or "SDOC Inbox"},
         "to": [{"email": to}],
         "subject": subject,
         "textContent": body or " ",     # it rejects an empty body
     }
+    if reply_to:
+        payload["replyTo"] = {"email": reply_to}
     files = _encode(attachments)
     if files:
         payload["attachment"] = [{"name": n, "content": c} for n, c, _ in files]
     return payload
 
 
-def _sendgrid_payload(sender, to, subject, body, attachments) -> dict:
+def _sendgrid_payload(sender, to, subject, body, attachments,
+                      reply_to=None, name=None) -> dict:
     payload = {
         "personalizations": [{"to": [{"email": to}]}],
-        "from": {"email": sender, "name": "SDOC Inbox"},
+        "from": {"email": sender, "name": name or "SDOC Inbox"},
         "subject": subject,
         "content": [{"type": "text/plain", "value": body or " "}],
     }
+    if reply_to:
+        payload["reply_to"] = {"email": reply_to}
     files = _encode(attachments)
     if files:
         payload["attachments"] = [
@@ -83,7 +89,8 @@ def _sendgrid_payload(sender, to, subject, body, attachments) -> dict:
 
 
 def send_via_api(sender: str, to: str, subject: str, body: str,
-                 attachments: list[tuple[str, bytes]], client=None) -> str:
+                 attachments: list[tuple[str, bytes]], client=None,
+                 reply_to: str | None = None, name: str | None = None) -> str:
     """Deliver through whichever provider is configured. Returns its name.
 
     `client` is the seam the tests use, so nothing here touches the network.
@@ -93,12 +100,12 @@ def send_via_api(sender: str, to: str, subject: str, body: str,
         url = BREVO_URL
         headers = {"api-key": os.environ["SDOC_BREVO_KEY"],
                    "content-type": "application/json", "accept": "application/json"}
-        payload = _brevo_payload(sender, to, subject, body, attachments)
+        payload = _brevo_payload(sender, to, subject, body, attachments, reply_to, name)
     elif which == "sendgrid":
         url = SENDGRID_URL
         headers = {"Authorization": "Bearer " + os.environ["SDOC_SENDGRID_KEY"],
                    "Content-Type": "application/json"}
-        payload = _sendgrid_payload(sender, to, subject, body, attachments)
+        payload = _sendgrid_payload(sender, to, subject, body, attachments, reply_to, name)
     else:
         raise RuntimeError("no mail API key set (SDOC_BREVO_KEY or SDOC_SENDGRID_KEY)")
 

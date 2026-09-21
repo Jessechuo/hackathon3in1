@@ -121,7 +121,7 @@ def test_an_http_provider_is_used_instead_of_smtp(monkeypatch):
     monkeypatch.setenv("SDOC_BREVO_KEY", "secret")
     used = {}
     monkeypatch.setattr(snd, "send_via_api",
-                        lambda s, to, subj, body, att: used.setdefault("api", to))
+                        lambda s, to, subj, body, att, **kw: used.setdefault("api", to))
     monkeypatch.setattr(snd, "deliver",
                         lambda *a: used.setdefault("smtp", True))
 
@@ -144,3 +144,31 @@ def test_a_configured_provider_means_mail_can_always_leave(monkeypatch):
     monkeypatch.setattr(snd, "_REACHABLE", False)   # SMTP was found blocked
     assert snd.reachable() is True
     assert snd.probe(timeout=0.01) is True
+
+
+# --- named for the person, from the desk ---------------------------------
+
+def test_the_sender_is_named_via_the_desk():
+    msg = snd.build_message("hackathon3in1@gmail.com", "ops@shipper.com", "s", "b", [],
+                            sender_name="Chuo Jesse")
+    addr = msg["From"].addresses[0]
+    assert addr.display_name == "Chuo Jesse via SDOC Inbox"
+    assert addr.addr_spec == "hackathon3in1@gmail.com"     # still the desk's address
+
+
+def test_replies_go_to_the_person_who_sent_it():
+    msg = snd.build_message("hackathon3in1@gmail.com", "ops@shipper.com", "s", "b", [],
+                            reply_to="chuojesse@gmail.com")
+    assert msg["Reply-To"] == "chuojesse@gmail.com"
+
+
+def test_no_reply_to_when_it_would_only_repeat_the_sender():
+    msg = snd.build_message("hackathon3in1@gmail.com", "ops@shipper.com", "s", "b", [],
+                            reply_to="Hackathon3in1@Gmail.com")
+    assert msg["Reply-To"] is None
+
+
+def test_with_nobody_named_it_is_just_the_desk():
+    msg = snd.build_message("hackathon3in1@gmail.com", "ops@shipper.com", "s", "b", [])
+    assert msg["From"].addresses[0].display_name == "SDOC Inbox"
+    assert msg["Reply-To"] is None

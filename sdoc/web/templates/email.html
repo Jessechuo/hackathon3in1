@@ -268,6 +268,8 @@
     <h1>{{ email.subject }}</h1>
     <div class="meta"><b>{{ email.email_id }}</b> &middot;
       {% if email.get('direction') == 'sent' %}sent to {{ email.to }}
+        {%- set by = email.get('sent_by') or {} %}
+        {%- if by.get('email') %} &middot; sent by <span class="by-who" title="{{ by.email }}">{{ by.get('name') or by.email }}</span>{% endif %}
       {% else %}from {{ email['from'] }}{% endif %}
       &middot; {{ position }} of {{ total }}</div>
   </div>

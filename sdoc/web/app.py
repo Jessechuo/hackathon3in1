@@ -461,7 +461,8 @@ def compose_form(request: Request):
 
 
 def _check_then_send(email: dict, to: str, subject: str, body: str,
-                     attachments: list[tuple[str, bytes]]) -> None:
+                     attachments: list[tuple[str, bytes]],
+                     reply_to: str | None = None, sender_name: str | None = None) -> None:
     """The slow half of sending, off the request.
 
     Reading two documents with Opus and opening an SMTP connection together
@@ -474,7 +475,8 @@ def _check_then_send(email: dict, to: str, subject: str, body: str,
     """
     ingest(email, out_dir=OUT_DIR)          # never raises; records its own failure
     try:
-        send_mail(to, subject, body, attachments)
+        send_mail(to, subject, body, attachments,
+                  reply_to=reply_to, sender_name=sender_name)
         update_result(email["email_id"], OUT_DIR, sent=True, send_error=None,
                       sent_at=datetime.now(timezone.utc).isoformat(timespec="seconds"))
     except Exception as e:
@@ -525,11 +527,16 @@ async def compose_submit(request: Request, to: str = Form(""), subject: str = Fo
         attachments.append((f.filename, data))
 
     account = os.environ.get("SDOC_MAIL_USER") or "sdoc@localhost"
+    who = auth.current_user(request)
+    who_name = (auth.get_user(who, OUT_DIR) or {}).get("name") or None
     email = save_email(account, subject, body, attachments, root=MAIL_DIR,
-                       recipient=to, direction="sent")
+                       recipient=to, direction="sent",
+                       sent_by={"email": who, "name": who_name})
     mark_pending(email, out_dir=OUT_DIR)
+    # Sent from the desk's shared address, which is the only account the app
+    # may send as - but named for the person, and replies go back to them.
     threading.Thread(target=_check_then_send, daemon=True,
-                     args=(email, to, subject, body, attachments),
+                     args=(email, to, subject, body, attachments, who, who_name),
                      name=f"send-{email['email_id']}").start()
     return RedirectResponse(f"/email/{email['email_id']}", status_code=303)
 

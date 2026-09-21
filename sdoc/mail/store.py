@@ -46,7 +46,8 @@ def safe_name(email_id: str, filename: str) -> str:
 def save_email(sender: str, subject: str, body: str,
                attachments: list[tuple[str, bytes]],
                root: Path | None = None, email_id: str | None = None,
-               recipient: str | None = None, direction: str = "received") -> dict:
+               recipient: str | None = None, direction: str = "received",
+               sent_by: dict | None = None) -> dict:
     """Write one email and its files. Returns the email dict, in exactly the
     shape load_emails() yields for a bundle email.
 
@@ -76,6 +77,9 @@ def save_email(sender: str, subject: str, body: str,
         # keys, and the UI uses them to show which way a message went.
         "to": recipient,
         "direction": direction,
+        # Which person on the desk sent it. The shared address is on every
+        # message, so this is the only record of who actually pressed Send.
+        "sent_by": sent_by,
         "received_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
     (base / "inbox" / f"{eid}.json").write_text(json.dumps(email, indent=2), encoding="utf-8")

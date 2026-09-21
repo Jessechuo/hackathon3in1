@@ -121,3 +121,20 @@ def test_the_key_is_never_put_in_the_error(monkeypatch):
     with pytest.raises(RuntimeError) as e:
         api.send_via_api("a@b.com", "c@d.com", "s", "b", [], client=client)
     assert "xkeysib-verysecret" not in str(e.value)
+
+
+@pytest.mark.parametrize("key,provider", [("SDOC_BREVO_KEY", "brevo"),
+                                          ("SDOC_SENDGRID_KEY", "sendgrid")])
+def test_the_relays_carry_the_name_and_reply_to_as_well(monkeypatch, key, provider):
+    """Otherwise who-sent-it would depend on which provider happened to send."""
+    monkeypatch.setenv(key, "secret")
+    client = FakeClient()
+    api.send_via_api("desk@line.com", "ops@shipper.com", "s", "b", [], client=client,
+                     reply_to="clerk@line.com", name="Chuo Jesse via SDOC Inbox")
+    payload = client.calls[0]["json"]
+    if provider == "brevo":
+        assert payload["sender"]["name"] == "Chuo Jesse via SDOC Inbox"
+        assert payload["replyTo"] == {"email": "clerk@line.com"}
+    else:
+        assert payload["from"]["name"] == "Chuo Jesse via SDOC Inbox"
+        assert payload["reply_to"] == {"email": "clerk@line.com"}

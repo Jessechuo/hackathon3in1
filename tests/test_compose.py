@@ -35,12 +35,16 @@ def site(tmp_path, monkeypatch):
                              defect_fields=[], has_defect=False, note=None)
 
     monkeypatch.setattr(web, "ingest", fake_ingest)
-    monkeypatch.setattr(web, "send_mail",
-                        lambda to, subject, body, attachments: sent.append(
-                            (to, subject, body, attachments)))
+    def fake_send(to, subject, body, attachments, **kwargs):
+        sent.append((to, subject, body, attachments))
+        sent_kwargs.append(kwargs)
+
+    sent_kwargs = []
+    monkeypatch.setattr(web, "send_mail", fake_send)
     client = TestClient(web.app)
     client.post("/login", data={"email": EMAIL, "password": PASSWORD},
                 follow_redirects=False)
+    client.sent_kwargs = sent_kwargs       # what the send was told about its sender
     return client, mail, checked, sent
 
 
@@ -242,7 +246,7 @@ def test_a_successful_send_is_recorded(site):
 def test_a_failed_send_is_reported_and_the_check_is_kept(site, monkeypatch):
     client, _, checked, _ = site
 
-    def refuse(to, subject, body, attachments):
+    def refuse(to, subject, body, attachments, **kwargs):
         raise OSError("smtp is unreachable")
 
     monkeypatch.setattr(web, "send_mail", refuse)
@@ -345,7 +349,7 @@ def test_a_network_failure_turns_the_form_off_by_itself(site, monkeypatch):
     client, _, _, _ = site
     monkeypatch.setattr(snd, "_REACHABLE", True)
 
-    def unreachable(to, subject, body, attachments):
+    def unreachable(to, subject, body, attachments, **kwargs):
         raise RuntimeError("could not reach smtp.gmail.com ... Network is unreachable")
 
     monkeypatch.setattr(web, "send_mail", unreachable)
@@ -361,3 +365,30 @@ def test_the_address_in_the_menu_is_named_not_a_bare_span(site):
     html = client.get("/").text
     assert 'class="addr"' in html
     assert 'class="avatar lg"' in html
+
+
+# --- who sent it ---------------------------------------------------------
+
+def test_a_sent_email_records_which_person_sent_it(site):
+    """Every message leaves from the desk's shared address, so this is the
+    only record of who actually pressed Send."""
+    client, _, _, _ = site
+    post(client)
+    settle()
+    stored = inbox.load_received()[0]
+    assert stored["sent_by"] == {"email": EMAIL, "name": "Test Clerk"}
+
+
+def test_the_send_is_named_for_the_person_and_replies_go_to_them(site):
+    client, _, _, _ = site
+    post(client)
+    settle()
+    assert client.sent_kwargs[-1] == {"reply_to": EMAIL, "sender_name": "Test Clerk"}
+
+
+def test_the_email_page_says_who_sent_it(site):
+    client, _, _, _ = site
+    post(client)
+    settle()
+    page = client.get("/email/mail_0001").text
+    assert "sent by" in page and "Test Clerk" in page

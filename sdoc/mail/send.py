@@ -109,12 +109,32 @@ def valid_address(address: str) -> bool:
     return bool(ADDRESS.match((address or "").strip()))
 
 
+def from_name(sender_name: str | None = None) -> str:
+    """"Chuo Jesse via SDOC Inbox", or just "SDOC Inbox" when nobody is named.
+
+    The desk's shared address sends every message - it is the only account
+    the app has permission to send as - so the name is what tells the
+    recipient which person on the desk it came from.
+    """
+    name = (sender_name or "").strip()
+    if name and DISPLAY_NAME:
+        return f"{name} via {DISPLAY_NAME}"
+    return name or DISPLAY_NAME
+
+
 def build_message(sender: str, to: str, subject: str, body: str,
-                  attachments: list[tuple[str, bytes]]) -> EmailMessage:
+                  attachments: list[tuple[str, bytes]],
+                  reply_to: str | None = None,
+                  sender_name: str | None = None) -> EmailMessage:
     msg = EmailMessage()
-    msg["From"] = formataddr((DISPLAY_NAME, sender)) if DISPLAY_NAME else sender
+    shown = from_name(sender_name)
+    msg["From"] = formataddr((shown, sender)) if shown else sender
     msg["To"] = to
     msg["Subject"] = subject
+    if reply_to and reply_to.strip().lower() != sender.lower():
+        # A reply reaches the person who sent it, not the shared inbox they
+        # sent it from. Left off when it would only repeat the From address.
+        msg["Reply-To"] = reply_to.strip()
     # Filters treat a message with no Message-ID as suspect. Gmail's API adds
     # one if missing, SMTP relays do not always; setting it keeps every path
     # the same.
@@ -129,7 +149,8 @@ def build_message(sender: str, to: str, subject: str, body: str,
 
 def send(to: str, subject: str, body: str, attachments: list[tuple[str, bytes]],
          user: str | None = None, password: str | None = None,
-         transport=None) -> EmailMessage:
+         transport=None, reply_to: str | None = None,
+         sender_name: str | None = None) -> EmailMessage:
     """Deliver one message. `transport` is the seam the tests use: given one,
     nothing touches the network."""
     user = user or os.environ.get("SDOC_MAIL_USER")
@@ -137,7 +158,8 @@ def send(to: str, subject: str, body: str, attachments: list[tuple[str, bytes]],
     if not user or not password:
         raise RuntimeError("set SDOC_MAIL_USER and SDOC_MAIL_PASSWORD to send mail")
 
-    msg = build_message(user, to, subject, body, attachments)
+    msg = build_message(user, to, subject, body, attachments,
+                        reply_to=reply_to, sender_name=sender_name)
     if transport is not None:
         transport(msg)
         return msg
@@ -149,7 +171,8 @@ def send(to: str, subject: str, body: str, attachments: list[tuple[str, bytes]],
     if gmail_send.configured():
         gmail_send.send_message(msg)
     elif api_provider():
-        send_via_api(user, to, subject, body, attachments)
+        send_via_api(user, to, subject, body, attachments,
+                     reply_to=msg.get("Reply-To"), name=from_name(sender_name))
     else:
         deliver(msg, user, password)
     return msg
