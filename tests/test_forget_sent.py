@@ -43,8 +43,10 @@ def test_old_sent_mail_is_deleted_for_good_and_received_mail_is_kept(mailbox):
     assert web.forget_sent_mail() == []        # it runs at every start; nothing the second time
 
 
-def test_the_deploy_deletes_them_when_it_starts(mailbox):
+def test_the_deploy_deletes_them_when_it_starts(mailbox, monkeypatch):
     mail, _, _ = mailbox
+    # A deploy that has already started clean; this is about the sent mail.
+    monkeypatch.setattr(web, "start_clean", lambda tag=None: False)
     with TestClient(web.app):                  # startup runs here
         pass
     assert not (mail / "inbox" / "mail_0002.json").exists()

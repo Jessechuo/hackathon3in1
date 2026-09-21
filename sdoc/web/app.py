@@ -6,6 +6,7 @@ emails, with the category and verification columns reserved but empty.
 import json
 import logging
 import os
+import shutil
 import threading
 from collections import Counter
 from contextlib import asynccontextmanager
@@ -45,6 +46,7 @@ async def lifespan(app: FastAPI):
     with no mail credentials set it simply never starts.
     """
     watcher.seed_output()       # a mounted volume starts empty
+    start_clean()               # once per tag: only the 520, as the organizers sent them
     forget_sent_mail()          # sent mail is no longer kept; clear what was
     # Whether mail can leave this host at all. Off the startup path so a
     # blocked route delays nothing; the compose page reads the answer.
@@ -674,6 +676,36 @@ def forget_sent_mail() -> list[str]:
             save_review({eid: d for eid, d in review.items() if eid not in gone})
         log.info("deleted %d sent emails: %s", len(gone), ", ".join(gone))
     return gone
+
+
+# Everything typed in while testing - received mail, what the AI made of it,
+# reviewer decisions - is cleared once per tag, so the site shows the
+# organizers' 520 emails and nothing else. Set SDOC_RESET to a new value on
+# the host to clear again; a restart with the same value leaves it alone.
+RESET = os.environ.get("SDOC_RESET", "2026-09-21-recording")
+
+
+def start_clean(tag: str | None = None) -> bool:
+    """Clear the deploy's volume back to the 520. True if it cleared.
+
+    The results for the 520, the graded submission and the accounts are
+    kept. Only ever a deploy's own volume: the repo's out/ and mail/ are
+    never cleared, so a local run or a test cannot wipe them."""
+    out, mail = Path(OUT_DIR), Path(MAIL_DIR)
+    if Path(ROOT).resolve() in (out.resolve().parent, mail.resolve().parent):
+        return False
+    tag = "".join(c if c.isalnum() or c in "-_." else "_" for c in (tag or RESET))
+    marker = out / f".reset-{tag}"
+    if marker.exists():
+        return False
+    for folder in ("inbox", "attachments"):
+        shutil.rmtree(mail / folder, ignore_errors=True)
+    for name in ("mail_results.json", "review.json"):
+        (out / name).unlink(missing_ok=True)
+    out.mkdir(parents=True, exist_ok=True)
+    marker.write_text(datetime.now(timezone.utc).isoformat(), encoding="utf-8")
+    log.info("started clean (%s): received mail, its results and review decisions cleared", tag)
+    return True
 
 
 def _compose_page(request: Request, status: int = 200, **extra):

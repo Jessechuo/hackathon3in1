@@ -398,6 +398,7 @@ or path written anywhere else.
 | `SDOC_MAIL_USER` | — | Gmail address the watcher polls |
 | `SDOC_MAIL_PASSWORD` | — | Gmail App Password for that address |
 | `SDOC_SECRET_KEY` | generated | Signs session cookies; unset means sign-ins reset on restart |
+| `SDOC_RESET` | `2026-09-21-recording` | Set a new value on the host to clear received mail and reviewer decisions once, back to the 520 (accounts are kept) |
 | `SDOC_SIGNUP_CODE` | — | Set it to require a code at registration; unset means signup is open |
 | `SDOC_BREVO_KEY` | — | Send over HTTPS via Brevo instead of SMTP |
 | `SDOC_SENDGRID_KEY` | — | Send over HTTPS via SendGrid instead of SMTP |
