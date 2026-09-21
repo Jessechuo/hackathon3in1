@@ -11,10 +11,6 @@
   "ms": ", ",
   "zh": "，"
  },
- ", which is what the bars below add up to": {
-  "ms": ", iaitu jumlah bar di bawah",
-  "zh": "，即下方各条的总和"
- },
  "/ {total} total": {
   "ms": "/ {total} jumlah",
   "zh": "/ 共 {total} 封"
@@ -518,10 +514,6 @@
  "Min. {n} characters, uppercase, number & operational symbol": {
   "ms": "Min. {n} aksara, huruf besar, nombor & simbol operasi",
   "zh": "至少 {n} 个字符，包含大写字母、数字和符号"
- },
- "mismatch emails =": {
-  "ms": "e-mel tidak sepadan =",
-  "zh": "封不符邮件 ="
  },
  "Mismatched emails": {
   "ms": "E-mel tidak sepadan",
@@ -1183,17 +1175,13 @@
   "ms": "Medan mana yang salah?",
   "zh": "哪些字段有误？"
  },
- "Which of the seven fields differ between SI and BL most often. Each bar counts the emails where that field is wrong.": {
-  "ms": "Medan yang paling kerap berbeza antara SI dan BL, daripada tujuh medan. Setiap bar mengira e-mel yang medan itu salah.",
-  "zh": "七个字段中，SI 与 BL 最常不一致的是哪些。每一条统计该字段有误的邮件数。"
+ "Which of the seven fields differ between SI and BL most often.": {
+  "ms": "Medan yang paling kerap berbeza antara SI dan BL, daripada tujuh medan.",
+  "zh": "七个字段中，SI 与 BL 最常不一致的是哪些。"
  },
  "Word document": {
   "ms": "Dokumen Word",
   "zh": "Word 文档"
- },
- "wrong fields =": {
-  "ms": "medan salah =",
-  "zh": "个错误字段 ="
  },
  "You need to acknowledge the audit logging policy.": {
   "ms": "Anda perlu mengakui dasar log audit.",
@@ -1202,30 +1190,6 @@
  "your name is required": {
   "ms": "nama anda diperlukan",
   "zh": "请填写您的姓名"
- },
- "{e} email wrong in {k} field": {
-  "ms": "{e} e-mel salah pada {k} medan",
-  "zh": "{e} 封邮件有 {k} 个字段错误"
- },
- "{e} email wrong in {k} fields": {
-  "ms": "{e} e-mel salah pada {k} medan",
-  "zh": "{e} 封邮件有 {k} 个字段错误"
- },
- "{e} emails wrong in {k} field": {
-  "ms": "{e} e-mel salah pada {k} medan",
-  "zh": "{e} 封邮件有 {k} 个字段错误"
- },
- "{e} emails wrong in {k} fields": {
-  "ms": "{e} e-mel salah pada {k} medan",
-  "zh": "{e} 封邮件有 {k} 个字段错误"
- },
- "{e} with 1 wrong field": {
-  "ms": "{e} dengan 1 medan salah",
-  "zh": "{e} 封有 1 个字段错误"
- },
- "{e} with {k} wrong fields": {
-  "ms": "{e} dengan {k} medan salah",
-  "zh": "{e} 封有 {k} 个字段错误"
  },
  "{label}: wrong in {n} email, {share}% of all field mismatches": {
   "ms": "{label}: salah dalam {n} e-mel, {share}% daripada semua ketidaksepadanan medan",
@@ -1286,10 +1250,6 @@
  "{n} invalid, e.g. {problem}": {
   "ms": "{n} tidak sah, cth. {problem}",
   "zh": "{n} 项无效，例如 {problem}"
- },
- "{n} mismatch emails split by how many fields are wrong": {
-  "ms": "{n} e-mel tidak sepadan dibahagikan mengikut bilangan medan yang salah",
-  "zh": "{n} 封不符邮件，按错误字段数量划分"
  },
  "{n} mismatches": {
   "ms": "{n} tidak sepadan",
