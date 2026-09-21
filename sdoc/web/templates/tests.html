@@ -53,6 +53,13 @@
   }
   .run:hover { filter:brightness(1.08); }
   .run[disabled] { opacity:.6; cursor:progress; }
+  /* The download beside it: same size, quieter - a secondary action. */
+  .export {
+    flex:none; display:inline-flex; align-items:center; gap:var(--md);
+    height:36px; padding:0 16px; border:1px solid var(--border-strong); border-radius:var(--r-ctl);
+    background:var(--l1); color:var(--fg); font-size:13px; font-weight:600; transition:background var(--t);
+  }
+  .export:hover { background:var(--l2); }
   .spin { animation:spin 1s linear infinite; transform-origin:50% 50%; }
   @keyframes spin { to { transform:rotate(360deg); } }
 
@@ -280,6 +287,11 @@
           <svg class="ico ico-sm" aria-hidden="true"><use href="#i-play"/></svg>
           <span>{{ t("Run live checks") }}</span>
         </button>
+        <a class="export" href="/tests/export.csv" download
+           title="{{ t('The graded answers for every email, as a CSV file') }}">
+          <svg class="ico ico-sm" aria-hidden="true"><use href="#i-download"/></svg>
+          <span>{{ t("Export CSV") }}</span>
+        </a>
       </div>
     </div>
 

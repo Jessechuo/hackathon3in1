@@ -399,6 +399,10 @@
   "ms": "Kembangkan panel",
   "zh": "展开面板"
  },
+ "Export CSV": {
+  "ms": "Eksport CSV",
+  "zh": "导出 CSV"
+ },
  "failed": {
   "ms": "gagal",
   "zh": "未通过"
@@ -570,6 +574,10 @@
  "No scorer output yet. From the project folder, run:": {
   "ms": "Belum ada output pemarkah. Dari folder projek, jalankan:",
   "zh": "尚无评分结果。请在项目文件夹中运行："
+ },
+ "No submission file yet.": {
+  "ms": "Belum ada fail serahan.",
+  "zh": "尚无提交文件。"
  },
  "NONE": {
   "ms": "TIADA",
@@ -1050,6 +1058,10 @@
  "The documents were checked, but the message could not be sent:": {
   "ms": "Dokumen telah disemak, tetapi mesej tidak dapat dihantar:",
   "zh": "文件已核对，但邮件无法发送："
+ },
+ "The graded answers for every email, as a CSV file": {
+  "ms": "Jawapan bergred bagi setiap e-mel, sebagai fail CSV",
+  "zh": "所有评分邮件的答案，导出为 CSV 文件"
  },
  "the run did not finish": {
   "ms": "larian tidak selesai",

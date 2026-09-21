@@ -1,6 +1,8 @@
 """One email in, one decision out. The checks run in a fixed order and the
 first one that fails decides the review reason — the most specific failure
 is always reported, never a symptom of it (spec, section 4)."""
+import csv
+import io
 from dataclasses import asdict
 
 from sdoc.ai.extract_pair import extract_pair
@@ -104,3 +106,20 @@ def to_submission(results: dict, all_ids: list[str]) -> dict:
             "defect_fields": list(r.get("defect_fields") or []),
         }
     return sub
+
+
+CSV_COLUMNS = ["email_id", "category", "status", "review_reason", "has_defect", "defect_fields"]
+
+
+def submission_csv(submission: dict) -> str:
+    """submission.json as CSV: one row per email, in email_id order, the same
+    five fields. Two wrong fields share one cell, joined by ";" - 26 emails
+    have two - and true/false stay lowercase, as in the JSON."""
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(CSV_COLUMNS)
+    for eid in sorted(submission):
+        v = submission[eid]
+        writer.writerow([eid, v["category"], v["status"], v["review_reason"] or "",
+                         "true" if v["has_defect"] else "false", ";".join(v["defect_fields"])])
+    return out.getvalue()

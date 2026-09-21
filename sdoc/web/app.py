@@ -15,7 +15,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -29,6 +29,7 @@ from sdoc.mail.send import send as send_mail
 from sdoc.mail.send import note_unreachable, reachable, valid_address
 from sdoc.mail.send import probe as probe_smtp
 from sdoc.mail.store import save_email
+from sdoc.pipeline import submission_csv
 from sdoc.review import apply_reviews
 from sdoc.web import auth, checks, i18n, watcher
 
@@ -282,23 +283,28 @@ def dashboard_stats(results: dict, review: dict) -> dict:
     }
 
 
-def load_score() -> dict | None:
-    """The organizers' scorer output, saved as out/score.json.
-
-    Read from the copy that ships with the code first. On a deploy OUT_DIR is
-    a volume seeded once and never overwritten, so a re-scored file committed
-    later would never reach it - and this is a build result, not runtime state.
-    The answer key itself never ships; only these metrics do.
-    """
+def graded_file(name: str) -> Path | None:
+    """A graded result - score.json, submission.json - from the copy that
+    ships with the code first. On a deploy OUT_DIR is a volume seeded once
+    and never overwritten, so a file committed later would never reach it,
+    and these are build results, not runtime state."""
     for base in (Path(ROOT) / "out", Path(OUT_DIR)):
-        path = base / "score.json"
-        if path.exists():
-            try:
-                return json.loads(path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                log.warning("%s is not readable JSON", path)
-                return None
+        if (base / name).exists():
+            return base / name
     return None
+
+
+def load_score() -> dict | None:
+    """The organizers' scorer output, saved as out/score.json. The answer
+    key itself never ships; only these metrics do."""
+    path = graded_file("score.json")
+    if path is None:
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        log.warning("%s is not readable JSON", path)
+        return None
 
 
 def _ratio(num: float, den: float) -> float:
@@ -412,6 +418,19 @@ def tests_run():
         return JSONResponse({"started": False, "reason": reason, **checks.status()},
                             status_code=code)
     return JSONResponse({"started": True, **checks.status()}, status_code=202)
+
+
+@app.get("/tests/export.csv")
+def tests_export():
+    """The graded answers for the 520 emails - submission.json - as a CSV
+    file, the format the organizers asked for. Built from the JSON on every
+    request, so the two can never disagree."""
+    path = graded_file("submission.json")
+    if path is None:
+        raise HTTPException(status_code=404, detail=i18n.t("No submission file yet."))
+    sub = json.loads(path.read_text(encoding="utf-8"))
+    return Response(submission_csv(sub), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": 'attachment; filename="mailops_submission.csv"'})
 
 
 @app.get("/tests/status")
