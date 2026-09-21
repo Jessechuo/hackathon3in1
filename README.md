@@ -1,7 +1,21 @@
-# SDOC — Shipping Document Verification
+# MailOps — Shipping Document Verification
 
 **Live: [hackathon3in1.up.railway.app](https://hackathon3in1.up.railway.app)** ·
 send it a real email at **hackathon3in1@gmail.com** and watch it get triaged
+
+> ### Try it — sign in with this account
+>
+> | | |
+> |---|---|
+> | Website | **https://hackathon3in1.up.railway.app** |
+> | Email | `hackathon3in1@gmail.com` |
+> | Password | `Hackathon3in1*` |
+>
+> This login is for the MailOps website above. To watch a live check, email
+> **hackathon3in1@gmail.com** with an SI and a draft BL attached —
+> [`demo/SI.txt`](demo/SI.txt) and [`demo/BL.txt`](demo/BL.txt) are a
+> ready-made pair with one planted container-count mismatch. Press **Latest
+> first** in the Triage Queue: it appears at the top within about 30 seconds.
 
 Reads a shipping operations inbox, classifies each email, and for document-check
 requests compares the Shipping Instruction (SI) against the draft Bill of Lading
@@ -39,9 +53,12 @@ telling a real discrepancy apart from a formatting difference.
 | ✅ Document reading | txt, xlsx, docx, pdf; scanned or broken files flagged as unreadable |
 | ✅ Field comparison + escalation | Claude reads both documents, Python decides; the four review reasons |
 | ✅ Comparison report in the UI | SI and BL side by side, status filter, overview dashboard |
+| ✅ Document viewer | Click an attachment: the SI and BL open side by side, with the seven compared values marked — mismatches in red |
 | ✅ Human review loop | A reviewer's Mark Verified / Flag Mismatch becomes the final answer in the app: the email leaves the review queue, the report says what the system had said, and `submission.json` stays the system's own answers |
 | ✅ Live mailbox | Email `hackathon3in1@gmail.com` and it is classified and compared within 20 seconds |
-| ✅ Sending, with the documents checked first | Send from the app and the attachments are compared before the message leaves |
+| ✅ Sending | Send a real email, attachments included, from the app; sent mail is not stored or checked |
+| ✅ Three languages | The interface in English, Bahasa Melayu and 中文; Malay and Chinese emails and documents are classified and compared as well |
+| ✅ Export CSV | The graded answers for all 520 emails as a CSV file, from the Test results page |
 | ✅ Accounts | Sign-in screen in front of the queue; anyone can register their own operator account |
 | ✅ Deployed | One process serves the UI and polls the mailbox |
 | 🚧 Vision for scanned PDFs | Deferred — those emails escalate to a human either way |
@@ -52,20 +69,64 @@ be read dependably.
 
 ---
 
-## Requirements
+## Set it up on your own computer
 
-- **Python 3.11+** (developed on 3.13)
-- **An Anthropic API key** — needed to classify and compare. The web UI and the
-  whole test suite run without one.
+The 520 emails **and their results** come with the repo, so the website is
+fully populated the moment it starts — no API key, no mail account needed.
 
-The dataset is included, so the UI has something to show the moment you start it.
+**1. Install Python 3.11 or newer** (developed on 3.13) from
+[python.org](https://www.python.org/downloads/). On Windows, tick *Add Python to
+PATH* in the installer. Check it:
 
-## Install
+```bash
+python --version          # macOS/Linux may need: python3 --version
+```
+
+**2. Download the code and install what it needs**
 
 ```bash
 git clone https://github.com/Jessechuo/hackathon3in1.git
 cd hackathon3in1
 python -m pip install -r requirements.txt
+```
+
+**3. Start the website**
+
+```bash
+python -m uvicorn sdoc.web.app:app --port 8000
+```
+
+**4. Open http://localhost:8000 and create an account.** Your computer keeps
+its own accounts, so the login above works on the live site only: click
+**Register**, fill in a name, an email and a password (12+ characters, with an
+uppercase letter, a number and a symbol), and you are in. To skip signing in
+on your own computer, start it this way instead:
+
+```bash
+SDOC_REQUIRE_LOGIN=0 python -m uvicorn sdoc.web.app:app --port 8000       # macOS / Linux / Git Bash
+$env:SDOC_REQUIRE_LOGIN="0"; python -m uvicorn sdoc.web.app:app --port 8000   # PowerShell
+```
+
+**5. Check everything works** (optional, about 30 seconds, no key needed):
+
+```bash
+python -m pytest -q
+```
+
+That is all the website needs. Two things are optional:
+
+- **Re-running the AI** on the 520 emails needs an Anthropic API key — see
+  [Run the classifier](#run-the-classifier).
+- **Receiving and sending real mail** needs a Gmail account — see
+  [Mail in and out](#mail-in-and-out).
+
+Keys go in a file named `.env` in the project folder. It is gitignored, so
+keys never reach GitHub:
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+SDOC_MAIL_USER=you@gmail.com
+SDOC_MAIL_PASSWORD=your-gmail-app-password
 ```
 
 ## The dataset
@@ -139,7 +200,9 @@ Open **http://localhost:8000**
   per category and the most commonly mismatched fields
 - **Inbox** — all 520 emails, dense triage grid, category and verification columns
 - **Click a subject** — full email, metadata, attachments
-- **Click an attachment** — the raw SI or BL content
+- **Click an attachment** — the SI and BL open side by side in a window over
+  the email, the seven compared values marked (red differs, amber blank, green
+  matches); **Open original** shows the real file
 - **Mark Verified / Flag Mismatch** (document-check emails only) — record a
   person's decision; Flag Mismatch asks which of the seven fields are wrong.
   Decided emails leave the Review queue and appear under **Reviewed**
@@ -151,7 +214,10 @@ Open **http://localhost:8000**
   **Run checks** runs the whole test suite on the server there and then, and
   checks the submission: every graded email present and valid, and the saved
   score belonging to this exact submission. The scorer itself cannot re-run on
-  the server — it needs the answer key, which is deliberately not deployed
+  the server — it needs the answer key, which is deliberately not deployed.
+  **Export CSV** downloads the graded answers for the 520 emails
+- **EN / BM / 中文** beside the logo switches the language; **Latest first**
+  beside the search puts newly received mail at the top
 - `/` search · `J`/`K` navigate · `Enter` open · `Esc` back · theme toggle top-right
 
 Category and verification columns stay empty until the classifier has run; a
@@ -378,7 +444,7 @@ ground truth.
 python -m pytest -v
 ```
 
-327 tests, no API key required, no network. Every LLM call is replaced by a test
+445 tests, no API key required, no network. Every LLM call is replaced by a test
 double, so the entire pipeline is verifiable offline.
 
 ---
@@ -457,7 +523,7 @@ tools/
 ├── make_submission.py categories.json -> submission.json
 ├── gmail_auth.py     one-time: get the Gmail API refresh token
 └── diff_errors.py     which emails did we get wrong? (dev tool)
-tests/                 mirrors the sdoc/ layout — 327 tests, no API key needed
+tests/                 mirrors the sdoc/ layout — 445 tests, no API key needed
 docs/superpowers/      design spec and implementation plan
 design/                UI design system and mockups
 ```
