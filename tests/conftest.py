@@ -14,3 +14,8 @@ def _test_defaults(monkeypatch):
     monkeypatch.setenv("SDOC_WATCH", "0")
     # Most tests exercise pages directly; the wall is tested on its own.
     monkeypatch.setenv("SDOC_REQUIRE_LOGIN", "0")
+    # A real sending key in a developer's .env would otherwise decide how the
+    # app behaves here - whether mail can leave is a thing tests state, not a
+    # thing they inherit from whoever is running them.
+    for key in ("SDOC_BREVO_KEY", "SDOC_SENDGRID_KEY"):
+        monkeypatch.delenv(key, raising=False)

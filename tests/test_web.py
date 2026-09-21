@@ -52,3 +52,12 @@ def test_the_content_is_pushed_down_by_the_headers_real_height(site):
     assert "min-height:var(--head)" in html      # the header may grow
     assert 'setProperty("--head"' in html        # and the offset follows it
     assert "ResizeObserver" in html
+
+
+def test_no_bare_element_selector_can_clobber_the_avatar(site):
+    """`.acct-id span` also matched the avatar beside the address and beat
+    .avatar on specificity, so the initial fell out of its circle."""
+    client, _ = site
+    html = client.get("/").text
+    assert ".acct-id span" not in html          # the selector that did it
+    assert ".acct-id .addr" in html             # named, so it hits one thing

@@ -340,3 +340,11 @@ def test_a_network_failure_turns_the_form_off_by_itself(site, monkeypatch):
     settle()
     assert snd.reachable() is False
     assert "Sending is unavailable on this host" in client.get("/compose").text
+
+
+def test_the_address_in_the_menu_is_named_not_a_bare_span(site):
+    """It sits next to the avatar, and a bare `span` selector styled both."""
+    client, _, _, _ = site
+    html = client.get("/").text
+    assert 'class="addr"' in html
+    assert 'class="avatar lg"' in html

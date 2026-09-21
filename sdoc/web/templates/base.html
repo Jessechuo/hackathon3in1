@@ -183,7 +183,11 @@ header.app {
 .acct-pop[hidden] { display:none; }
 .acct-id { display:flex; align-items:center; gap:var(--lg); padding-bottom:var(--lg); }
 .acct-id b { display:block; font-size:14px; font-weight:600; color:var(--fg); }
-.acct-id span { display:block; font-size:12px; color:var(--fg-muted);
+/* Named on purpose. A bare element selector here also matched the avatar
+   sitting beside the address, and beat .avatar on specificity - turning its
+   flex centering into display:block and dropping the initial out of the
+   circle. Style the one thing meant, not everything of that shape. */
+.acct-id .addr { display:block; font-size:12px; color:var(--fg-muted);
   overflow-wrap:anywhere; }
 .acct-out {
   width:100%; height:34px; margin-top:var(--md);
@@ -376,7 +380,7 @@ aside.rail {
             <span class="avatar lg" aria-hidden="true">{{ initial }}</span>
             <div>
               <b>{{ user_name or user.split('@')[0] }}</b>
-              <span>{{ user }}</span>
+              <span class="addr">{{ user }}</span>
             </div>
           </div>
           <form method="post" action="/logout">
