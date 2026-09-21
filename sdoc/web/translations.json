@@ -499,6 +499,10 @@
   "ms": "Kali terakhir dijalankan {when}",
   "zh": "最近运行：{when}"
  },
+ "Latest first": {
+  "ms": "Terkini dahulu",
+  "zh": "最新优先"
+ },
  "Live on this server. Each square below is one test, lit as it passes.": {
   "ms": "Secara langsung di pelayan ini. Setiap petak di bawah ialah satu ujian, menyala apabila lulus.",
   "zh": "在此服务器上实时运行。下方每个方块是一项测试，通过时亮起。"
@@ -914,6 +918,10 @@
  "Show password": {
   "ms": "Tunjukkan kata laluan",
   "zh": "显示密码"
+ },
+ "Show the mail you sent and received here at the top, newest first": {
+  "ms": "Paparkan mel yang anda hantar dan terima di sini di bahagian atas, yang terbaharu dahulu",
+  "zh": "将在此发送和接收的邮件显示在顶部，最新的排在最前"
  },
  "SI (reference)": {
   "ms": "SI (rujukan)",

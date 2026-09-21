@@ -270,3 +270,44 @@ def test_a_non_english_value_shows_its_english_form(site):
     html = client.get("/email/email_043").text
     assert '巴生港<span class="en">PORT KLANG</span>' in html
     assert 'PORT KLANG<span class="en">' not in html        # English already: nothing added
+
+
+# --- latest first ------------------------------------------------------------
+
+QUEUE = [
+    {"email_id": "email_001", "from": "a@x.com", "subject": "First in the dataset", "body": "", "attachments": []},
+    {"email_id": "email_002", "from": "b@x.com", "subject": "Second in the dataset", "body": "", "attachments": []},
+    {"email_id": "mail_0001", "from": "c@x.com", "subject": "Arrived first", "body": "", "attachments": [],
+     "received_at": "2026-09-21T10:00:00+00:00"},
+    {"email_id": "mail_0002", "from": "me@x.com", "subject": "Sent later", "body": "", "attachments": [],
+     "received_at": "2026-09-21T11:00:00+00:00", "direction": "sent", "to": "d@x.com"},
+]
+
+
+def test_a_latest_first_button_sits_beside_the_search(site, monkeypatch):
+    client, _ = site
+    monkeypatch.setattr(web, "load_all_emails", lambda: QUEUE)
+    html = client.get("/").text
+    find = html.split('<div class="find">', 1)[1].split("</button>", 1)[0]
+    assert 'id="q"' in find                                    # the search box
+    assert 'id="latest"' in find and 'aria-pressed="false"' in find and "Latest first" in find
+
+
+def test_rows_carry_the_order_mail_arrived_in(site, monkeypatch):
+    """Mail sent or received here is numbered as it comes: mail_0002 is newer
+    than mail_0001. The dataset emails have no date, so no number."""
+    client, _ = site
+    monkeypatch.setattr(web, "load_all_emails", lambda: QUEUE)
+    html = client.get("/").text
+    row = lambda eid: html.split(f'data-id="{eid}"', 1)[1].split(">", 1)[0]
+    assert 'data-seq="1"' in row("mail_0001") and 'data-seq="2"' in row("mail_0002")
+    assert "data-seq" not in row("email_001")
+    # the server keeps the usual order; the button reorders on the page
+    assert html.index('data-id="email_001"') < html.index('data-id="mail_0002"')
+
+
+def test_latest_first_puts_the_newest_mail_on_top_and_remembers(site):
+    client, _ = site
+    script = client.get("/").text.split("{% block script %}", 1)[-1]
+    assert "Number(b.dataset.seq) - Number(a.dataset.seq)" in script   # newest mail first
+    assert 'localStorage.setItem("sdoc-latest"' in script              # stays on after reload

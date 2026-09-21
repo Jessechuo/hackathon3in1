@@ -12,9 +12,9 @@
   .metric .big { font-family:var(--mono); font-size:13px; font-weight:600; color:var(--fg); }
   .metric .sub { font-family:var(--mono); font-size:11px; color:var(--fg-subtle); }
   .metric .pend { font-family:var(--mono); font-size:11px; color:var(--fg-subtle); }
-  .search {
-    margin-left:auto; position:relative; display:flex; align-items:center;
-  }
+  /* The search box and the Latest first button, together at the right. */
+  .find { margin-left:auto; display:flex; align-items:center; gap:var(--sm); }
+  .search { position:relative; display:flex; align-items:center; }
   .search svg { position:absolute; left:8px; color:var(--fg-subtle); pointer-events:none; }
   .search input {
     height:28px; width:280px; max-width:46vw;
@@ -31,6 +31,16 @@
     border-radius:3px; padding:0 4px; pointer-events:none;
   }
   .search input:focus + kbd { display:none; }
+  .latest {
+    height:28px; padding:0 var(--md); flex:none;
+    display:inline-flex; align-items:center; gap:5px; white-space:nowrap;
+    border:1px solid var(--border-strong); border-radius:var(--r-ctl);
+    background:transparent; color:var(--fg-muted);
+    font-family:var(--mono); font-size:11px; font-weight:600;
+    transition:background var(--t), color var(--t), border-color var(--t);
+  }
+  .latest:hover { background:var(--l2); color:var(--fg); }
+  .latest[aria-pressed="true"] { background:var(--primary); color:var(--on-primary); border-color:var(--primary); }
 
   /* ── Dense triage grid ──────────────────────────────────────────── */
   .grid { width:100%; overflow-x:auto; }
@@ -121,8 +131,10 @@
   @media (max-width:720px) {
     .ribbon { gap:var(--sm) var(--lg); padding:var(--md) var(--lg); }
     .ribbon > .vr { display:none; }
-    .search { order:-1; flex:1 0 100%; margin-left:0; }
+    .find { order:-1; flex:1 0 100%; margin-left:0; }
+    .find .search { flex:1; }
     .search input { width:100%; max-width:none; height:38px; }
+    .latest { height:38px; }
     .search kbd { display:none; }
     .shortcuts { display:none; }          /* keyboard shortcuts, on a touch screen */
 
@@ -169,10 +181,16 @@
       <span class="pend">{{ t("awaiting comparison") }}</span>
     {% endif %}
   </div>
-  <div class="search">
-    <svg class="ico ico-sm"><use href="#i-search"/></svg>
-    <input id="q" type="search" autocomplete="off" placeholder="{{ t('Filter subject, sender, or ID...') }}">
-    <kbd>/</kbd>
+  <div class="find">
+    <div class="search">
+      <svg class="ico ico-sm"><use href="#i-search"/></svg>
+      <input id="q" type="search" autocomplete="off" placeholder="{{ t('Filter subject, sender, or ID...') }}">
+      <kbd>/</kbd>
+    </div>
+    <button class="latest" id="latest" type="button" aria-pressed="false"
+            title="{{ t('Show the mail you sent and received here at the top, newest first') }}">
+      <svg class="ico ico-sm" aria-hidden="true"><use href="#i-clock"/></svg>{{ t("Latest first") }}
+    </button>
   </div>
 </section>
 
@@ -192,6 +210,7 @@
       {% for e in emails %}
       {% set r = cats.get(e.email_id, {}) %}
       <tr data-id="{{ e.email_id }}"
+          {%- if e.email_id.startswith('mail_') %} data-seq="{{ e.email_id[5:]|int }}"{% endif %}
           data-q="{{ (e.email_id ~ ' ' ~ e.subject ~ ' ' ~ e['from'])|lower }}"
           class="{{ 'spam' if r.get('category') == 'SPAM' else '' }}">
         <td class="id"><a href="/email/{{ e.email_id }}" tabindex="-1">{{ e.email_id.replace('email_','') }}</a></td>
@@ -239,6 +258,9 @@
 <script>
 (function () {
   var rows = Array.prototype.slice.call(document.querySelectorAll("#rows tr"));
+  var usual = rows.slice();                        // the server's order
+  var body = document.getElementById("rows");
+  var latest = document.getElementById("latest");
   var q = document.getElementById("q");
   var shown = document.getElementById("shown");
   var cur = -1;
@@ -268,6 +290,30 @@
   }
 
   q.addEventListener("input", filter);
+
+  // Latest first: mail sent or received here, newest on top, then the
+  // dataset in its usual order. The dataset emails carry no date; mail here
+  // is numbered as it comes (mail_0002 after mail_0001), so data-seq is the
+  // order it arrived in. The rows are moved, not re-rendered, so the search,
+  // the filters above and J/K all keep working on what is on screen.
+  function order(on) {
+    var mail = usual.filter(function (r) { return r.dataset.seq; });
+    var rest = usual.filter(function (r) { return !r.dataset.seq; });
+    mail.sort(function (a, b) { return Number(b.dataset.seq) - Number(a.dataset.seq); });
+    rows = on ? mail.concat(rest) : usual.slice();
+    rows.forEach(function (r) { body.appendChild(r); });
+    rows.forEach(function (r) { r.classList.remove("on"); });
+    cur = -1;
+    latest.setAttribute("aria-pressed", on ? "true" : "false");
+  }
+
+  latest.addEventListener("click", function () {
+    var on = latest.getAttribute("aria-pressed") !== "true";
+    order(on);
+    try { localStorage.setItem("sdoc-latest", on ? "1" : "0"); } catch (e) {}
+    if (on) window.scrollTo(0, 0);
+  });
+  try { if (localStorage.getItem("sdoc-latest") === "1") order(true); } catch (e) {}
 
   document.addEventListener("keydown", function (ev) {
     if (ev.target === q) {
