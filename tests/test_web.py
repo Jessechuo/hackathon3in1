@@ -49,9 +49,21 @@ def test_the_content_is_pushed_down_by_the_headers_real_height(site):
     48px there. A constant offset hid whatever sat at the top of the page."""
     client, _ = site
     html = client.get("/").text
-    assert "min-height:var(--head)" in html      # the header may grow
-    assert 'setProperty("--head"' in html        # and the offset follows it
+    assert 'setProperty("--head"' in html        # the offset follows the header
     assert "ResizeObserver" in html
+
+
+def test_the_header_height_cannot_feed_back_into_itself(site):
+    """With min-height:var(--head) and --head set from the header's own height,
+    each held the other up: once the header grew it could never shrink, and it
+    was found stuck at 339px around 28px of content. The floor is a constant."""
+    client, _ = site
+    html = client.get("/").text
+    import re
+    header_rule = html.split("header.app {", 1)[1].split("}", 1)[0]
+    header_rule = re.sub(r"/\*.*?\*/", "", header_rule, flags=re.S)   # rules, not comments
+    assert "min-height:var(--head)" not in header_rule
+    assert "min-height:48px" in header_rule
 
 
 def test_no_bare_element_selector_can_clobber_the_avatar(site):

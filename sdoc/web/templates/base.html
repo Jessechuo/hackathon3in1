@@ -144,8 +144,16 @@ button { font:inherit; cursor:pointer; }
 header.app {
   /* min-height, not height: the filter pills wrap on a narrow window and a
      fixed height would crop them. The rail and the content below read
-     --head, which a script keeps equal to what this actually measures. */
-  position:fixed; inset:0 0 auto 0; z-index:50; min-height:var(--head);
+     --head, which a script keeps equal to what this actually measures.
+
+     The floor is a constant, never var(--head). With min-height:var(--head)
+     and --head set from this element's own height, the two fed each other:
+     once anything made the header taller - pills wrapping on a narrow
+     window, a resize - --head recorded it, the minimum then held the header
+     there, and it could never shrink back. It was found stuck at 339px
+     around 28px of content. --head follows this element; nothing flows the
+     other way. */
+  position:fixed; inset:0 0 auto 0; z-index:50; min-height:48px;
   background:var(--l1); border-bottom:1px solid var(--border);
   display:flex; align-items:center; gap:var(--lg);
   padding:0 var(--lg);

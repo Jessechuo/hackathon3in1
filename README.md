@@ -373,7 +373,7 @@ ground truth.
 python -m pytest -v
 ```
 
-301 tests, no API key required, no network. Every LLM call is replaced by a test
+302 tests, no API key required, no network. Every LLM call is replaced by a test
 double, so the entire pipeline is verifiable offline.
 
 ---
@@ -451,7 +451,7 @@ tools/
 ├── make_submission.py categories.json -> submission.json
 ├── gmail_auth.py     one-time: get the Gmail API refresh token
 └── diff_errors.py     which emails did we get wrong? (dev tool)
-tests/                 mirrors the sdoc/ layout — 301 tests, no API key needed
+tests/                 mirrors the sdoc/ layout — 302 tests, no API key needed
 docs/superpowers/      design spec and implementation plan
 design/                UI design system and mockups
 ```
