@@ -97,6 +97,22 @@
     .step { grid-template-columns:22px minmax(0, 1fr); }
     .step .detail { grid-column:2; }
   }
+  /* The blocks: one per automated check, lit the moment it passes on the
+     server. No count beside them - next to the 520 emails a number of
+     checks read as a number of emails. */
+  .wall-wrap { margin-top:20px; padding-top:var(--xl); border-top:1px solid var(--border); }
+  .wall-head { margin-bottom:10px; font-size:12px; color:var(--fg-muted); }
+  .wall { display:grid; grid-template-columns:repeat(auto-fill, 12px); gap:3px; }
+  .wall i { width:12px; height:12px; border-radius:2px;
+            background:color-mix(in srgb, var(--fg) 8%, var(--l1)); }
+  .wall i.p { background:var(--ok); animation:lit 240ms cubic-bezier(.2,.8,.2,1.4); }
+  .wall i.f { background:var(--mismatch); animation:lit 240ms cubic-bezier(.2,.8,.2,1.4); }
+  .wall i.s { background:var(--fg-subtle); }
+  @keyframes lit { from { transform:scale(.3); } }
+  @media (max-width:600px) {
+    .wall { grid-template-columns:repeat(auto-fill, 9px); gap:2px; }
+    .wall i { width:9px; height:9px; }
+  }
   .tail { margin:var(--sm) 0 0; padding:var(--md); background:var(--l2); border-radius:var(--r-ctl);
           font-family:var(--mono); font-size:11px; line-height:16px; color:var(--fg);
           white-space:pre-wrap; overflow-x:auto; max-height:180px; }
@@ -118,7 +134,7 @@
   .results .cm td { transition:opacity 300ms ease calc(300ms + var(--d, 0ms)); }
   .results:not(.on) .cm td { opacity:0; }
   @media (prefers-reduced-motion: reduce) {
-    .spin { animation:none; }
+    .spin, .wall i.p, .wall i.f { animation:none; }
     .results, .results .m-fill, .results .cm td { transition-delay:0s !important; }
   }
 
@@ -298,6 +314,11 @@
         <span class="detail">{{ t("every automated test, run now in a sandbox with no live data or keys") }}</span>
       </li>
     </ol>
+
+    <div class="wall-wrap" id="wall-wrap" hidden>
+      <div class="wall-head" id="wall-label">{{ t("Each block is one automated check, lit as it passes") }}</div>
+      <div class="wall" id="wall" role="img" aria-label="{{ t('Automated checks, one block each') }}"></div>
+    </div>
 
     <p class="foot" id="foot"></p>
   </section>
@@ -482,7 +503,8 @@
 (function () {
   function $(id) { return document.getElementById(id); }
   var stage = $("stage"), btn = $("run-checks"), verdict = $("verdict"), lede = $("lede"),
-      timer = $("timer"), figs = $("figs"), foot = $("foot"), results = $("results");
+      timer = $("timer"), figs = $("figs"), wallWrap = $("wall-wrap"), wall = $("wall"),
+      wallLabel = $("wall-label"), foot = $("foot"), results = $("results");
   var reduce = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
   // The two instant checks are shown one after the other, not all in the
   // first frame - they did run in that order, and a step that ticks too fast
@@ -496,7 +518,9 @@
     "no live mail mixed in", "no saved scorer output - run the scorer locally to produce out/score.json",
     "the saved {pct}% score belongs to this submission: same emails, categories and escalations",
     "the saved score is from a different submission ({which} differ) - re-run the scorer",
-    "Running the checks…", "Live on this server. The results appear when every check has finished.",
+    "Running the checks…", "Live on this server. Each block below is one automated check, lit as it passes.",
+    "Each block is one automated check, lit as it passes",
+    "Every block is a check that passed", "Red blocks are checks that failed",
     "could not run", "The checks could not run", "The server stopped the run.",
     "the run did not finish",
     "All checks passed", "Some checks failed", "Ran on this server.", "Ran on this server at {time}.", ", ",
@@ -568,19 +592,33 @@
                       {which: off.join(tr(", "))})];
   }
 
+  // --- the blocks --------------------------------------------------------
+
+  function cells(n) {
+    while (wall.children.length < n) wall.appendChild(document.createElement("i"));
+  }
+
+  function light(i, ch) {
+    cells(i + 1);
+    wall.children[i].className = ch === "F" || ch === "E" ? "f" : ch === "s" || ch === "x" ? "s" : "p";
+  }
+
   // --- one run, from the click to the verdict ----------------------------
 
   function begin(s, note) {
-    run = { latest: s, t0: performance.now(), shown: 0, next: 0, note: note || "" };
+    run = { latest: s, t0: performance.now(), shown: 0, next: 0, lit: 0, note: note || "" };
     run.next = run.t0 + STEP_GAP;
     stage.dataset.state = "running";
     verdict.textContent = tr("Running the checks…");
-    lede.textContent = tr("Live on this server. The results appear when every check has finished.");
+    lede.textContent = tr("Live on this server. Each block below is one automated check, lit as it passes.");
     foot.textContent = "";
     figs.hidden = true;
     results.hidden = true;
     results.classList.remove("on");
     stage.querySelector('[data-step="tests"]').hidden = true;
+    wall.textContent = "";
+    wallWrap.hidden = true;
+    wallLabel.textContent = tr("Each block is one automated check, lit as it passes");
     step("submission", "active", tr("checking…"));
     step("score", "wait");
     timer.hidden = false;
@@ -607,9 +645,23 @@
       }
     }
 
-    // The test suite runs on after the two checks; the verdict waits for it.
-    if (run.shown === 2 && now >= run.next && (s.state === "passed" || s.state === "failed")) {
-      return finish();
+    // The test suite runs on after the two checks: one block lights per
+    // check as it passes, and the verdict waits for the last of them.
+    if (run.shown === 2 && now >= run.next) {
+      var seq = s.seq || "";
+      if (s.total || seq.length) {
+        wallWrap.hidden = false;
+        cells(s.total || 0);
+      }
+      var behind = seq.length - run.lit;
+      if (behind > 0) {
+        // Catch up smoothly: the server reports in bursts between polls,
+        // the blocks still light one after another.
+        var k = reduce ? behind : Math.max(1, Math.ceil(behind / 6));
+        for (var j = 0; j < k; j++) { light(run.lit, seq.charAt(run.lit)); run.lit += 1; }
+      }
+      var ended = s.state === "passed" || s.state === "failed";
+      if (ended && run.lit >= seq.length) return finish();
     }
     requestAnimationFrame(frame);
   }
@@ -657,6 +709,7 @@
     var at = new Date(s.finished_at);
     var when = isNaN(at) ? "" : at.toLocaleTimeString(document.documentElement.lang);
     lede.textContent = when ? tr("Ran on this server at {time}.", {time: when}) : tr("Ran on this server.");
+    wallLabel.textContent = t.ok ? tr("Every block is a check that passed") : tr("Red blocks are checks that failed");
 
     figs.hidden = false;
     countUp($("f-acc"), sc && sc.accuracy != null ? sc.accuracy * 100 : null,

@@ -139,6 +139,10 @@
   "ms": "Domain dibenarkan",
   "zh": "授权域名"
  },
+ "Automated checks, one block each": {
+  "ms": "Semakan automatik, satu blok setiap satu",
+  "zh": "自动检查，每项一个方块"
+ },
  "Available once classification has run": {
   "ms": "Tersedia selepas pengelasan dijalankan",
   "zh": "分类运行后可用"
@@ -327,6 +331,10 @@
   "ms": "cth., Aziz T. / Ketua Dokumentasi",
   "zh": "例如：Aziz T. / 单证主管"
  },
+ "Each block is one automated check, lit as it passes": {
+  "ms": "Setiap blok ialah satu semakan automatik, menyala apabila lulus",
+  "zh": "每个方块代表一项自动检查，通过时亮起"
+ },
  "Each email sorted into one of five categories. Precision: of the emails it put in a category, how many belonged there. Recall: of the emails that belonged there, how many it found.": {
   "ms": "Setiap e-mel dikelaskan ke dalam satu daripada lima kategori. Kejituan: daripada e-mel yang dimasukkan ke sesuatu kategori, berapa banyak yang memang tergolong di situ. Dapatan semula: daripada e-mel yang tergolong di situ, berapa banyak yang ditemui.",
   "zh": "每封邮件被归入五个类别之一。精确率：被归入某类别的邮件中，有多少确实属于该类别。召回率：属于该类别的邮件中，有多少被找出。"
@@ -378,6 +386,10 @@
  "every automated test, run now in a sandbox with no live data or keys": {
   "ms": "setiap ujian automatik, dijalankan sekarang dalam kotak pasir tanpa data langsung atau kunci",
   "zh": "所有自动化测试，现在在沙盒中运行，不使用实时数据或密钥"
+ },
+ "Every block is a check that passed": {
+  "ms": "Setiap blok ialah semakan yang lulus",
+  "zh": "每个方块都是一项已通过的检查"
  },
  "Every email sits on the diagonal — nothing was put in the wrong category.": {
   "ms": "Setiap e-mel berada di pepenjuru — tiada yang dimasukkan ke kategori yang salah.",
@@ -515,9 +527,9 @@
   "ms": "Terkini dahulu",
   "zh": "最新优先"
  },
- "Live on this server. The results appear when every check has finished.": {
-  "ms": "Secara langsung di pelayan ini. Keputusan dipaparkan apabila semua semakan selesai.",
-  "zh": "正在此服务器上实时运行。所有检查完成后将显示结果。"
+ "Live on this server. Each block below is one automated check, lit as it passes.": {
+  "ms": "Secara langsung di pelayan ini. Setiap blok di bawah ialah satu semakan automatik, menyala apabila lulus.",
+  "zh": "正在此服务器上实时运行。下方每个方块代表一项自动检查，通过时亮起。"
  },
  "Loading…": {
   "ms": "Memuatkan…",
@@ -782,6 +794,10 @@
  "Recall": {
   "ms": "Dapatan semula",
   "zh": "召回率"
+ },
+ "Red blocks are checks that failed": {
+  "ms": "Blok merah ialah semakan yang gagal",
+  "zh": "红色方块是未通过的检查"
  },
  "Regards": {
   "ms": "Sekian, terima kasih",
