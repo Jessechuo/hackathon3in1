@@ -391,10 +391,6 @@
   "ms": "setiap e-mel bergred ada, setiap medan sah",
   "zh": "所有评分邮件齐全，所有字段有效"
  },
- "Every square is a test that passed": {
-  "ms": "Setiap petak ialah ujian yang lulus",
-  "zh": "每个方块都是一项通过的测试"
- },
  "Exact match — every field right": {
   "ms": "Padanan tepat — setiap medan betul",
   "zh": "完全匹配——所有字段都正确"
@@ -410,10 +406,6 @@
  "Export CSV": {
   "ms": "Eksport CSV",
   "zh": "导出 CSV"
- },
- "failed": {
-  "ms": "gagal",
-  "zh": "未通过"
  },
  "FAIR": {
   "ms": "SEDERHANA",
@@ -523,9 +515,9 @@
   "ms": "Terkini dahulu",
   "zh": "最新优先"
  },
- "Live on this server. Each square below is one test, lit as it passes.": {
-  "ms": "Secara langsung di pelayan ini. Setiap petak di bawah ialah satu ujian, menyala apabila lulus.",
-  "zh": "在此服务器上实时运行。下方每个方块是一项测试，通过时亮起。"
+ "Live on this server. The results appear when every check has finished.": {
+  "ms": "Secara langsung di pelayan ini. Keputusan dipaparkan apabila semua semakan selesai.",
+  "zh": "正在此服务器上实时运行。所有检查完成后将显示结果。"
  },
  "Loading…": {
   "ms": "Memuatkan…",
@@ -659,10 +651,6 @@
   "ms": "daripada {n}",
   "zh": "/ {n}"
  },
- "One square per test, lit the moment it passes on the server": {
-  "ms": "Satu petak bagi setiap ujian, menyala sebaik sahaja ia lulus di pelayan",
-  "zh": "每项测试一个方块，在服务器上通过时立即亮起"
- },
  "Only BL_COMPARISON emails are reviewed": {
   "ms": "Hanya e-mel BL_COMPARISON yang disemak",
   "zh": "只有 BL_COMPARISON 邮件会被复核"
@@ -710,10 +698,6 @@
  "Overview": {
   "ms": "Gambaran keseluruhan",
   "zh": "概览"
- },
- "passed": {
-  "ms": "lulus",
-  "zh": "通过"
  },
  "Password": {
   "ms": "Kata laluan",
@@ -779,17 +763,9 @@
   "ms": "Dijalankan di pelayan ini pada {time}.",
   "zh": "于 {time} 在此服务器上运行。"
  },
- "Ran on this server at {time}. The test suite took {s} seconds.": {
-  "ms": "Dijalankan di pelayan ini pada {time}. Set ujian mengambil masa {s} saat.",
-  "zh": "于 {time} 在此服务器上运行。测试套件用时 {s} 秒。"
- },
  "Ran on this server.": {
   "ms": "Dijalankan di pelayan ini.",
   "zh": "已在此服务器上运行。"
- },
- "Ran on this server. The test suite took {s} seconds.": {
-  "ms": "Dijalankan di pelayan ini. Set ujian mengambil masa {s} saat.",
-  "zh": "已在此服务器上运行。测试套件用时 {s} 秒。"
  },
  "Rate": {
   "ms": "Kadar",
@@ -806,10 +782,6 @@
  "Recall": {
   "ms": "Dapatan semula",
   "zh": "召回率"
- },
- "Red squares are tests that failed": {
-  "ms": "Petak merah ialah ujian yang gagal",
-  "zh": "红色方块是未通过的测试"
  },
  "Regards": {
   "ms": "Sekian, terima kasih",
@@ -987,10 +959,6 @@
   "ms": "Langkau ke kandungan",
   "zh": "跳到内容"
  },
- "skipped": {
-  "ms": "dilangkau",
-  "zh": "已跳过"
- },
  "Some checks failed": {
   "ms": "Sebahagian semakan gagal",
   "zh": "部分检查未通过"
@@ -1014,10 +982,6 @@
  "Stage 3 · SI vs BL comparison": {
   "ms": "Peringkat 3 · Perbandingan SI dengan BL",
   "zh": "第三阶段 · SI 与 BL 比对"
- },
- "starting the test suite…": {
-  "ms": "memulakan set ujian…",
-  "zh": "正在启动测试套件…"
  },
  "Status: All": {
   "ms": "Status: Semua",
@@ -1055,21 +1019,9 @@
   "ms": "Keputusan ujian",
   "zh": "测试结果"
  },
- "Test results, one square per test": {
-  "ms": "Keputusan ujian, satu petak bagi setiap ujian",
-  "zh": "测试结果，每项测试一个方块"
- },
  "Test suite": {
   "ms": "Set ujian",
   "zh": "测试套件"
- },
- "Test {n}: {state}": {
-  "ms": "Ujian {n}: {state}",
-  "zh": "测试 {n}：{state}"
- },
- "tests passed": {
-  "ms": "ujian lulus",
-  "zh": "项测试通过"
  },
  "That access code is not right.": {
   "ms": "Kod akses itu tidak betul.",
@@ -1090,6 +1042,10 @@
  "The checks could not run": {
   "ms": "Semakan tidak dapat dijalankan",
   "zh": "检查无法运行"
+ },
+ "The checks run right now, on this server. Their results, and the full score breakdown, appear when they finish.": {
+  "ms": "Semakan dijalankan sekarang, di pelayan ini. Keputusannya, dan pecahan skor penuh, dipaparkan apabila selesai.",
+  "zh": "检查现在就在此服务器上运行。结果和完整的分数明细会在完成后显示。"
  },
  "The graded answers for every email, as a CSV file": {
   "ms": "Jawapan bergred bagi setiap e-mel, sebagai fail CSV",
@@ -1154,10 +1110,6 @@
  "This was scored against the same answer key used to find mistakes while building. Every fix was a general rule, never a special case for one email, and no code in the application reads the answer key — but it shows the system is right on these {n} emails, not that it would score the same on emails it has never seen.": {
   "ms": "Skor ini dikira berdasarkan kunci jawapan yang sama yang digunakan untuk mencari kesilapan semasa membina. Setiap pembetulan ialah peraturan umum, bukan kes khas untuk satu e-mel, dan tiada kod dalam aplikasi yang membaca kunci jawapan — tetapi ia menunjukkan sistem betul pada {n} e-mel ini, bukan bahawa ia akan mendapat skor yang sama pada e-mel yang belum pernah dilihatnya.",
   "zh": "此分数基于开发时用来查找错误的同一份答案计算。每次修正都是通用规则，从不针对某一封邮件，应用中也没有任何代码读取答案——但它只能说明系统在这 {n} 封邮件上是正确的，并不代表在从未见过的邮件上也能得到同样的分数。"
- },
- "Three checks run in order, right now. Their results, and the full score breakdown, appear when they finish.": {
-  "ms": "Tiga semakan dijalankan mengikut turutan, sekarang juga. Keputusannya, dan pecahan skor penuh, dipaparkan apabila selesai.",
-  "zh": "三项检查按顺序立即运行。完成后会显示结果和完整的分数明细。"
  },
  "Tick at least one field.": {
   "ms": "Tandakan sekurang-kurangnya satu medan.",
@@ -1271,10 +1223,6 @@
   "ms": "{name} terlalu besar (had {mb} MB).",
   "zh": "{name} 太大（上限 {mb} MB）。"
  },
- "{n} / {total} passed": {
-  "ms": "{n} / {total} lulus",
-  "zh": "{n} / {total} 通过"
- },
  "{n} email has a reviewer decision that differs from the system.": {
   "ms": "{n} e-mel mempunyai keputusan penyemak yang berbeza daripada sistem.",
   "zh": "{n} 封邮件的复核决定与系统不同。"
@@ -1322,22 +1270,6 @@
  "{n} of {total} defect emails caught all the way through": {
   "ms": "{n} daripada {total} e-mel cacat dikesan sepenuhnya",
   "zh": "{total} 封缺陷邮件中有 {n} 封被全流程检出"
- },
- "{n} of {total} finished": {
-  "ms": "{n} daripada {total} selesai",
-  "zh": "已完成 {n} / {total}"
- },
- "{n} of {total} passed": {
-  "ms": "{n} daripada {total} lulus",
-  "zh": "{total} 项中 {n} 项通过"
- },
- "{n} of {total} passed in {s} s": {
-  "ms": "{n} daripada {total} lulus dalam {s} s",
-  "zh": "{total} 项中 {n} 项通过，用时 {s} 秒"
- },
- "{n} of {total} tests passed": {
-  "ms": "{n} daripada {total} ujian lulus",
-  "zh": "{total} 项测试中 {n} 项通过"
  },
  "{n} that are not graded emails": {
   "ms": "{n} yang bukan e-mel bergred",

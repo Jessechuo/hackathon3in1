@@ -63,19 +63,15 @@
   .spin { animation:spin 1s linear infinite; transform-origin:50% 50%; }
   @keyframes spin { to { transform:rotate(360deg); } }
 
-  /* The three figures the run ends on. Values in ink; proportional figures
+  /* The two figures the run ends on. Values in ink; proportional figures
      at rest, tabular while counting so the digits don't shuffle sideways. */
-  .figs { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:var(--xl) 0;
+  .figs { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:var(--xl) 0;
           margin:24px 0 0; }
   .fig { display:flex; flex-direction:column; padding:0 20px; border-left:1px solid var(--border); }
   .fig:first-child { padding-left:0; border-left:0; }
   .fig .n { font-size:60px; line-height:64px; font-weight:500; letter-spacing:-.03em; color:var(--fg);
             font-variant-numeric:proportional-nums; white-space:nowrap; }
   .fig .n.counting { font-variant-numeric:tabular-nums; }
-  /* line-height:1 - at the inherited 64px the smaller text sat on its own
-     taller line box and pushed this one figure's label below the others. */
-  .fig .of { font-size:24px; line-height:1; font-weight:500; letter-spacing:-.01em;
-             color:var(--fg-muted); margin-left:6px; }
   .fig .k { font-size:13px; line-height:18px; color:var(--fg-muted); }
   @media (max-width:720px) {
     .stage { padding:var(--xl); }
@@ -105,24 +101,6 @@
           font-family:var(--mono); font-size:11px; line-height:16px; color:var(--fg);
           white-space:pre-wrap; overflow-x:auto; max-height:180px; }
 
-  /* The wall: one square per test, lit the moment that test finishes on the
-     server. Status colour, with the count beside it in words. */
-  .wall-wrap { margin-top:20px; padding-top:var(--xl); border-top:1px solid var(--border); }
-  .wall-head { display:flex; justify-content:space-between; align-items:baseline; gap:var(--lg);
-               margin-bottom:10px; font-size:12px; color:var(--fg-muted); }
-  .wall-head .count { font-family:var(--mono); font-size:13px; font-weight:600; color:var(--fg);
-                      white-space:nowrap; }
-  .wall { display:grid; grid-template-columns:repeat(auto-fill, 12px); gap:3px; }
-  .wall i { width:12px; height:12px; border-radius:2px;
-            background:color-mix(in srgb, var(--fg) 8%, var(--l1)); }
-  .wall i.p { background:var(--ok); animation:lit 240ms cubic-bezier(.2,.8,.2,1.4); }
-  .wall i.f { background:var(--mismatch); animation:lit 240ms cubic-bezier(.2,.8,.2,1.4); }
-  .wall i.s { background:var(--fg-subtle); }
-  @keyframes lit { from { transform:scale(.3); } }
-  @media (max-width:600px) {
-    .wall { grid-template-columns:repeat(auto-fill, 9px); gap:2px; }
-    .wall i { width:9px; height:9px; }
-  }
 
   .foot { margin:var(--xl) 0 0; font-size:12px; line-height:17px; color:var(--fg-subtle); max-width:90ch; }
   .foot:empty { display:none; }
@@ -140,7 +118,7 @@
   .results .cm td { transition:opacity 300ms ease calc(300ms + var(--d, 0ms)); }
   .results:not(.on) .cm td { opacity:0; }
   @media (prefers-reduced-motion: reduce) {
-    .spin, .wall i.p, .wall i.f { animation:none; }
+    .spin { animation:none; }
     .results, .results .m-fill, .results .cm td { transition-delay:0s !important; }
   }
 
@@ -279,7 +257,7 @@
           <span class="verdict-ico"><svg class="ico ico-lg" aria-hidden="true"><use id="verdict-use" href="#i-check"/></svg></span>
           <span id="verdict" aria-live="polite">{{ t("Check it live, on this server") }}</span>
         </h2>
-        <p class="lede" id="lede">{{ t("Three checks run in order, right now. Their results, and the full score breakdown, appear when they finish.") }}</p>
+        <p class="lede" id="lede">{{ t("The checks run right now, on this server. Their results, and the full score breakdown, appear when they finish.") }}</p>
       </div>
       <div class="stage-act">
         <span class="timer" id="timer" hidden></span>
@@ -297,7 +275,6 @@
 
     <div class="figs" id="figs" hidden>
       <div class="fig"><span class="n" id="f-acc">0%</span><span class="k">{{ t("accuracy") }}</span></div>
-      <div class="fig"><span class="n"><span id="f-tests">0</span><span class="of" id="f-tests-of"></span></span><span class="k">{{ t("tests passed") }}</span></div>
       <div class="fig"><span class="n" id="f-mails">0</span><span class="k">{{ t("emails checked") }}</span></div>
     </div>
 
@@ -312,20 +289,15 @@
         <span class="dot">2</span><span class="name">{{ t("Saved score") }}</span>
         <span class="detail">{{ t("belongs to this exact submission, not an older one") }}</span>
       </li>
-      <li class="step" data-step="tests" data-n="3"
+      {# The automated tests still run with every check, but their count is not
+         shown - next to the 520 emails it read as a number of emails. This row
+         appears only if a test fails, so a failure is never left unexplained. #}
+      <li class="step" data-step="tests" data-n="3" hidden
           data-idle="{{ t('every automated test, run now in a sandbox with no live data or keys') }}">
         <span class="dot">3</span><span class="name">{{ t("Test suite") }}</span>
         <span class="detail">{{ t("every automated test, run now in a sandbox with no live data or keys") }}</span>
       </li>
     </ol>
-
-    <div class="wall-wrap" id="wall-wrap" hidden>
-      <div class="wall-head">
-        <span id="wall-label">{{ t("One square per test, lit the moment it passes on the server") }}</span>
-        <span class="count" id="wall-count"></span>
-      </div>
-      <div class="wall" id="wall" role="img" aria-label="{{ t('Test results, one square per test') }}"></div>
-    </div>
 
     <p class="foot" id="foot"></p>
   </section>
@@ -510,9 +482,7 @@
 (function () {
   function $(id) { return document.getElementById(id); }
   var stage = $("stage"), btn = $("run-checks"), verdict = $("verdict"), lede = $("lede"),
-      timer = $("timer"), figs = $("figs"), wallWrap = $("wall-wrap"), wall = $("wall"),
-      wallLabel = $("wall-label"), wallCount = $("wall-count"), foot = $("foot"),
-      results = $("results");
+      timer = $("timer"), figs = $("figs"), foot = $("foot"), results = $("results");
   var reduce = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
   // The two instant checks are shown one after the other, not all in the
   // first frame - they did run in that order, and a step that ticks too fast
@@ -520,22 +490,16 @@
   var STEP_GAP = reduce ? 0 : 450;
   var run = null;
   var T = {{ js_strings(
-    "Running…", "Run again", "Run live checks", "checking…", "starting the test suite…",
+    "Running…", "Run again", "Run live checks", "checking…",
     "{total} of {expected} graded emails", "{n} missing", "{n} that are not graded emails",
     "({n} from the live mailbox)", "{n} invalid, e.g. {problem}", "every field valid",
     "no live mail mixed in", "no saved scorer output - run the scorer locally to produce out/score.json",
     "the saved {pct}% score belongs to this submission: same emails, categories and escalations",
     "the saved score is from a different submission ({which} differ) - re-run the scorer",
-    "Test {n}: {state}", "passed", "failed", "skipped",
-    "Running the checks…", "Live on this server. Each square below is one test, lit as it passes.",
-    "One square per test, lit the moment it passes on the server", "{n} of {total} finished",
+    "Running the checks…", "Live on this server. The results appear when every check has finished.",
     "could not run", "The checks could not run", "The server stopped the run.",
-    "{n} of {total} passed", "{n} of {total} passed in {s} s", "the run did not finish",
-    "All checks passed", "Some checks failed", "Ran on this server.", "Ran on this server at {time}.",
-    "Ran on this server. The test suite took {s} seconds.",
-    "Ran on this server at {time}. The test suite took {s} seconds.", ", ",
-    "Every square is a test that passed",
-    "Red squares are tests that failed", "{n} / {total} passed", "{n} of {total} tests passed",
+    "the run did not finish",
+    "All checks passed", "Some checks failed", "Ran on this server.", "Ran on this server at {time}.", ", ",
     "Accuracy is the organizers' scorer's result. It needs the answer key, which is deliberately not on this server - what ran here proves the saved score belongs to this submission.",
     "These results are from a run that finished seconds ago; a fresh one can start in {s}s.",
     "Not started: {reason}.", "the server refused", "the checks are already running",
@@ -604,39 +568,21 @@
                       {which: off.join(tr(", "))})];
   }
 
-  // --- the wall ----------------------------------------------------------
-
-  function cells(n) {
-    while (wall.children.length < n) wall.appendChild(document.createElement("i"));
-  }
-
-  function light(i, ch) {
-    cells(i + 1);
-    var c = wall.children[i];
-    c.className = ch === "F" || ch === "E" ? "f" : ch === "s" || ch === "x" ? "s" : "p";
-    c.title = tr("Test {n}: {state}", {n: i + 1,
-                 state: tr(c.className === "f" ? "failed" : c.className === "s" ? "skipped" : "passed")});
-  }
-
   // --- one run, from the click to the verdict ----------------------------
 
   function begin(s, note) {
-    run = { latest: s, t0: performance.now(), shown: 0, next: 0, lit: 0, note: note || "" };
+    run = { latest: s, t0: performance.now(), shown: 0, next: 0, note: note || "" };
     run.next = run.t0 + STEP_GAP;
     stage.dataset.state = "running";
     verdict.textContent = tr("Running the checks…");
-    lede.textContent = tr("Live on this server. Each square below is one test, lit as it passes.");
+    lede.textContent = tr("Live on this server. The results appear when every check has finished.");
     foot.textContent = "";
     figs.hidden = true;
     results.hidden = true;
     results.classList.remove("on");
-    wall.textContent = "";
-    wallWrap.hidden = true;
-    wallLabel.textContent = tr("One square per test, lit the moment it passes on the server");
-    wallCount.textContent = "";
+    stage.querySelector('[data-step="tests"]').hidden = true;
     step("submission", "active", tr("checking…"));
     step("score", "wait");
-    step("tests", "wait");
     timer.hidden = false;
     button("running");
     requestAnimationFrame(frame);
@@ -658,29 +604,12 @@
         run.shown += 1;
         run.next = now + STEP_GAP;
         if (run.shown === 1) step("score", "active", tr("checking…"));
-        else step("tests", "active", tr("starting the test suite…"));
       }
     }
 
-    if (run.shown === 2 && now >= run.next) {
-      var seq = s.seq || "", total = s.total;
-      if (total || seq.length) {
-        wallWrap.hidden = false;
-        cells(total || 0);
-      }
-      var behind = seq.length - run.lit;
-      if (behind > 0) {
-        // Catch up smoothly: the server reports in bursts between polls,
-        // the wall still lights one square after another.
-        var k = reduce ? behind : Math.max(1, Math.ceil(behind / 6));
-        for (var j = 0; j < k; j++) { light(run.lit, seq.charAt(run.lit)); run.lit += 1; }
-      }
-      if (run.lit) {
-        wallCount.textContent = run.lit + " / " + (total || "…");
-        step("tests", "active", tr("{n} of {total} finished", {n: run.lit, total: total || "…"}));
-      }
-      var ended = s.state === "passed" || s.state === "failed";
-      if (ended && run.lit >= seq.length) return finish();
+    // The test suite runs on after the two checks; the verdict waits for it.
+    if (run.shown === 2 && now >= run.next && (s.state === "passed" || s.state === "failed")) {
+      return finish();
     }
     requestAnimationFrame(frame);
   }
@@ -716,35 +645,22 @@
       return;
     }
 
-    var total = (t.passed || 0) + (t.failed || 0) + (t.errors || 0);
-    step("tests", t.ok ? "pass" : "fail",
-         t.ok ? (t.duration ? tr("{n} of {total} passed in {s} s", {n: t.passed, total: total, s: t.duration.toFixed(1)})
-                            : tr("{n} of {total} passed", {n: t.passed, total: total}))
-              : (t.summary || tr("the run did not finish")),
-         t.ok ? null : t.tail);
+    if (!t.ok) {
+      stage.querySelector('[data-step="tests"]').hidden = false;
+      step("tests", "fail", t.summary || tr("the run did not finish"), t.tail);
+    }
 
     var passed = s.state === "passed";
     stage.dataset.state = s.state;
     $("verdict-use").setAttribute("href", passed ? "#i-check" : "#i-alert");
     verdict.textContent = passed ? tr("All checks passed") : tr("Some checks failed");
     var at = new Date(s.finished_at);
-    // One whole sentence per case: joined halves put an English space
-    // between two Chinese sentences.
-    var when = isNaN(at) ? "" : at.toLocaleTimeString(document.documentElement.lang),
-        took = t.duration ? t.duration.toFixed(1) : "";
-    lede.textContent = took
-      ? (when ? tr("Ran on this server at {time}. The test suite took {s} seconds.", {time: when, s: took})
-              : tr("Ran on this server. The test suite took {s} seconds.", {s: took}))
-      : (when ? tr("Ran on this server at {time}.", {time: when}) : tr("Ran on this server."));
-    wallLabel.textContent = passed ? tr("Every square is a test that passed") : tr("Red squares are tests that failed");
-    wallCount.textContent = tr("{n} / {total} passed", {n: t.passed, total: total});
-    wall.setAttribute("aria-label", tr("{n} of {total} tests passed", {n: t.passed, total: total}));
+    var when = isNaN(at) ? "" : at.toLocaleTimeString(document.documentElement.lang);
+    lede.textContent = when ? tr("Ran on this server at {time}.", {time: when}) : tr("Ran on this server.");
 
     figs.hidden = false;
     countUp($("f-acc"), sc && sc.accuracy != null ? sc.accuracy * 100 : null,
             function (v) { return Math.round(v) + "%"; }, 1000);
-    countUp($("f-tests"), total ? t.passed : null, whole, 1000);
-    $("f-tests-of").textContent = total ? "/ " + total : "";
     countUp($("f-mails"), sub.total, whole, 1000);
 
     foot.textContent = (note ? note + " " : "") + tr("Accuracy is the organizers' scorer's result. It needs the answer key, which is deliberately not on this server - what ran here proves the saved score belongs to this submission.");

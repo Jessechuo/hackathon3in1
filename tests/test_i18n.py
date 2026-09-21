@@ -190,7 +190,7 @@ def test_the_run_checks_script_gets_its_sentences_in_the_page_language(site):
     tables = [json.loads(part.split(";\n", 1)[0]) for part in html.split("var T = ")[1:]]
     strings = next(s for s in tables if "All checks passed" in s)
     assert strings["All checks passed"] != "All checks passed"
-    assert "{n}" in strings["{n} of {total} finished"]        # placeholders survive for the script
+    assert "{total}" in strings["{total} of {expected} graded emails"]   # placeholders survive for the script
 
 
 # --- every sentence in the code has both translations ----------------------

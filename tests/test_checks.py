@@ -251,11 +251,25 @@ def test_a_second_run_during_the_cooldown_is_refused(client):
     assert r.status_code == 429 and r.json()["reason"].startswith("wait")
 
 
-def test_the_page_has_the_button_and_the_three_figures(client):
+def test_the_page_has_the_button_and_the_two_figures(client):
     html = client.get("/tests").text
     assert 'id="run-checks"' in html
-    for figure in ("accuracy", "tests passed", "emails checked"):
+    for figure in ("accuracy", "emails checked"):
         assert figure in html
+
+
+def test_the_test_suite_runs_but_its_count_is_not_shown(client):
+    """The count of automated tests read as a count of emails next to the
+    520, so the page no longer shows it: no figure, no square per test, no
+    time taken. The suite still runs with every check."""
+    html = client.get("/tests").text
+    for gone in ("tests passed", 'id="wall"', "square", "test suite took", 'id="f-tests"'):
+        assert gone not in html, gone
+    # The row stays in the page, hidden, for the one case it must speak: a failure.
+    assert '<li class="step" data-step="tests" data-n="3" hidden' in html
+    client.post("/tests/run")
+    settle()
+    assert client.get("/tests/status").json()["tests"]["passed"] == 302
 
 
 def test_nothing_is_shown_until_a_run_finishes(client):
