@@ -267,10 +267,11 @@ server.
 ### Mail leaving
 
 **Send an email** in the left rail (`/compose`) sends a real message from the
-watched account. The attached documents are **checked before it goes out** — a
-discrepancy is worth catching before a draft leaves, not after the customer
-finds it. The sent message is stored alongside received mail with its own
-category and verdict, marked `TO` in the queue.
+watched account, attachments included, named for the person who sent it with
+replies going back to them. It goes out as it is: sent mail is **not stored
+and not checked** — the Triage Queue is for mail that arrives. The page waits
+the second or two the provider takes to accept it and says whether it went,
+with the exact error if it did not.
 
 **Sending needs an account**, like everything else behind the sign-in.
 
@@ -331,11 +332,11 @@ SDOC_SECRET_KEY=a-long-random-string      # or sign-ins reset on every deploy
 
 ### Where it all lives
 
-Received and sent mail are kept apart from the organizers' data on purpose:
+Received mail is kept apart from the organizers' data on purpose:
 
 | | |
 |---|---|
-| `mail/inbox/mail_NNNN.json` | mail received and sent |
+| `mail/inbox/mail_NNNN.json` | mail received |
 | `mail/attachments/` | their files |
 | `out/mail_results.json` | their categories and verdicts |
 

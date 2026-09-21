@@ -94,23 +94,6 @@
   }
   .head .meta b { color:var(--primary); font-weight:500; }
 
-  /* Progress and outcome of a send. */
-  .working {
-    display:flex; align-items:flex-start; gap:var(--md);
-    margin:0 0 var(--lg); padding:var(--md) var(--lg);
-    border:1px solid var(--border); border-left:3px solid var(--primary);
-    border-radius:var(--r-ctl); background:var(--l1);
-    font-size:13px; line-height:18px; color:var(--fg-muted);
-  }
-  .working b { color:var(--fg); font-weight:600; }
-  .working svg { flex:none; margin-top:1px; color:var(--primary); }
-  .working.ok { border-left-color:var(--ok); }
-  .working.ok svg { color:var(--ok); }
-  .working.bad { border-left-color:var(--mismatch); }
-  .working.bad svg { color:var(--mismatch); }
-  .spin { animation:spin 1s linear infinite; transform-origin:50% 50%; }
-  @keyframes spin { to { transform:rotate(360deg); } }
-  @media (prefers-reduced-motion:reduce) { .spin { animation:none; } }
 
   .body {
     margin-top:var(--lg); padding:var(--xl);
@@ -320,31 +303,9 @@
     </button>
     <h1 translate="no">{{ email.subject }}</h1>
     <div class="meta"><b>{{ email.email_id }}</b> &middot;
-      {% if email.get('direction') == 'sent' %}{{ t("sent to {address}", address=email.to) }}
-        {%- set by = email.get('sent_by') or {} %}
-        {%- if by.get('email') %} &middot; {{ t("sent by") }} <span class="by-who" title="{{ by.email }}" translate="no">{{ by.get('name') or by.email }}</span>{% endif %}
-      {% else %}{{ t("from {address}", address=email['from']) }}{% endif %}
+      {{ t("from {address}", address=email['from']) }}
       &middot; {{ t("{n} of {total}", n=position, total=total) }}</div>
   </div>
-
-  {% if cat and cat.get('pending') %}
-  <p class="working" role="status">
-    <svg class="ico spin" aria-hidden="true"><use href="#i-spin"/></svg>
-    <span><b>{{ t("Checking the documents, then sending.") }}</b>
-    {{ t("Reading both files takes a few seconds; this page refreshes itself when it is done.") }}</span>
-  </p>
-  {% elif cat and cat.get('sent') %}
-  <p class="working ok" role="status">
-    <svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>
-    <span>{{ t("Checked and sent to {address}.", address="<b>" ~ (email.to|e) ~ "</b>")|safe }}</span>
-  </p>
-  {% elif cat and cat.get('send_error') %}
-  <p class="working bad" role="status">
-    <svg class="ico" aria-hidden="true"><use href="#i-alert"/></svg>
-    <span>{{ t("The documents were checked, but the message could not be sent:") }}
-    <b translate="no">{{ cat.send_error }}</b></span>
-  </p>
-  {% endif %}
 
   <pre class="body">{{ email.body }}</pre>
 
@@ -420,12 +381,6 @@
 {% endblock %}
 
 {% block script %}
-{% if cat and cat.get('pending') %}
-<script>
-  // The check and the send run off the request; come back for the result.
-  setTimeout(function () { location.reload(); }, 3000);
-</script>
-{% endif %}
 <script>
 (function () {
   var T = {{ js_strings("save failed")|tojson }};

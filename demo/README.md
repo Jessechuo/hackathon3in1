@@ -28,13 +28,11 @@ miss and it is the whole argument for using a model here at all.
 
 ## Two ways to run it
 
-**Receiving** — email both files to the watched address from any mail client.
+**Receiving** — email both files to the watched address from any mail client,
+or from the app's **Send an email** page addressed to that same watched address.
 The watcher picks it up within twenty seconds.
 
-**Sending** — the app's **Send an email** page, with both files attached. The
-documents are checked before the message goes out.
-
-Either way the email lands in the queue as `mail_NNNN`, classified
+It lands in the queue as `mail_NNNN`, classified
 `BL_COMPARISON`, with the comparison table showing six matching fields and one
 red one.
 

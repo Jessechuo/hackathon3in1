@@ -17,18 +17,20 @@ from urllib.parse import quote
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
+from markupsafe import Markup
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.sessions import SessionMiddleware
 
 from sdoc.ai.classify import CATEGORIES
 from sdoc.config import MAIL_DIR, OUT_DIR, ROOT
 from sdoc.core.fields import FIELDS
 from sdoc.extract import read_document
-from sdoc.ingest import ingest, load_mail_results, mark_pending, update_result
+from sdoc.ingest import forget, load_mail_results
 from sdoc.inbox import attachment_path, load_all_emails
 from sdoc.mail.send import send as send_mail
 from sdoc.mail.send import note_unreachable, reachable, valid_address
 from sdoc.mail.send import probe as probe_smtp
-from sdoc.mail.store import save_email
+from sdoc.mail.store import delete_sent
 from sdoc.pipeline import submission_csv
 from sdoc.review import apply_reviews
 from sdoc.web import auth, checks, i18n, watcher
@@ -43,6 +45,7 @@ async def lifespan(app: FastAPI):
     with no mail credentials set it simply never starts.
     """
     watcher.seed_output()       # a mounted volume starts empty
+    forget_sent_mail()          # sent mail is no longer kept; clear what was
     # Whether mail can leave this host at all. Off the startup path so a
     # blocked route delays nothing; the compose page reads the answer.
     threading.Thread(target=probe_smtp, daemon=True, name="smtp-probe").start()
@@ -118,6 +121,17 @@ log = logging.getLogger(__name__)
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.globals.update(t=i18n.t, lang=i18n.current, LANGS=i18n.LANGS,
                              HTML_LANG=i18n.HTML_LANG, js_strings=i18n.strings)
+
+
+def bold(value) -> Markup:
+    """<b>value</b>, the value escaped: a bold word inside a translated
+    sentence. Built as "<b>" ~ (value|e) ~ "</b>" instead, the escaped value
+    turned the whole string into escaped markup and the page showed the
+    tags as text - "From <b>hackathon3in1@gmail.com</b>"."""
+    return Markup("<b>{}</b>").format(value)
+
+
+templates.env.globals["bold"] = bold
 
 KINDS = {
     ".txt": "Plain text",
@@ -631,57 +645,49 @@ def register_submit(request: Request, name: str = Form(""), email: str = Form(""
     return RedirectResponse("/", status_code=303)
 
 
-@app.get("/compose", response_class=HTMLResponse)
-def compose_form(request: Request):
-    results = load_view()
+def forget_sent_mail() -> list[str]:
+    """Delete the mail the app used to keep when it sent something, with its
+    results and any review decision on it. Run at startup: the first start
+    after this change clears a deploy's volume, and later ones find nothing."""
+    gone = delete_sent(MAIL_DIR)
+    if gone:
+        forget(gone, OUT_DIR)
+        review = load_review()
+        if any(eid in review for eid in gone):
+            save_review({eid: d for eid, d in review.items() if eid not in gone})
+        log.info("deleted %d sent emails: %s", len(gone), ", ".join(gone))
+    return gone
+
+
+def _compose_page(request: Request, status: int = 200, **extra):
     return templates.TemplateResponse(
         request=request,
         name="compose.html",
-        context={"page": "compose", "total": len(load_all_emails()),
+        status_code=status,
+        context={"page": "compose",
                  "max_attachments": MAX_ATTACHMENTS,
                  "max_mb": MAX_ATTACHMENT_BYTES // 1024 // 1024,
                  "can_send": bool(auth.current_user(request)),
                  "smtp_reachable": reachable(),
-                 **_shell(results, None, user=auth.current_user(request))},
+                 **extra,
+                 **_shell(load_view(), None, user=auth.current_user(request))},
     )
 
 
-def _check_then_send(email: dict, to: str, subject: str, body: str,
-                     attachments: list[tuple[str, bytes]],
-                     reply_to: str | None = None, sender_name: str | None = None) -> None:
-    """The slow half of sending, off the request.
-
-    Reading two documents with Opus and opening an SMTP connection together
-    take the better part of half a minute. Doing that before responding left
-    a person watching a spinner, so the page comes back immediately and this
-    fills in behind it.
-
-    The check still runs before the send: catching a discrepancy after the
-    draft has gone is worth much less.
-    """
-    ingest(email, out_dir=OUT_DIR)          # never raises; records its own failure
-    try:
-        send_mail(to, subject, body, attachments,
-                  reply_to=reply_to, sender_name=sender_name)
-        update_result(email["email_id"], OUT_DIR, sent=True, send_error=None,
-                      sent_at=datetime.now(timezone.utc).isoformat(timespec="seconds"))
-    except Exception as e:
-        log.warning("could not send %s: %s", email["email_id"], e)
-        if "unreachable" in str(e).lower() or "outbound SMTP" in str(e):
-            note_unreachable()      # stop offering what cannot work
-        update_result(email["email_id"], OUT_DIR, sent=False,
-                      send_error=f"{type(e).__name__}: {e}")
+@app.get("/compose", response_class=HTMLResponse)
+def compose_form(request: Request):
+    # Said once, after the redirect that follows a send, then gone.
+    return _compose_page(request, sent_to=request.session.pop("sent_to", None))
 
 
 @app.post("/compose")
 async def compose_submit(request: Request, to: str = Form(""), subject: str = Form(""),
                          body: str = Form(""),
                          files: list[UploadFile] = File(default=[])):
-    """Check the attached documents, then send the email.
-
-    The check runs first on purpose: a discrepancy is worth catching before
-    a draft leaves rather than after the customer finds it. The verdict is
-    recorded either way and shown on the email's page.
+    """Send the email, as it is, with its attachments. Nothing is stored and
+    nothing is checked: the Triage Queue is for mail that arrives. The page
+    waits the second or two Gmail takes to accept it, so it can say whether
+    it went.
 
     Fields are declared optional and checked here. A required Form field
     that arrives empty is dropped by the encoder and reported as missing,
@@ -712,19 +718,21 @@ async def compose_submit(request: Request, to: str = Form(""), subject: str = Fo
                               mb=MAX_ATTACHMENT_BYTES // 1024 // 1024))
         attachments.append((f.filename, data))
 
-    account = os.environ.get("SDOC_MAIL_USER") or "sdoc@localhost"
-    who = auth.current_user(request)
-    who_name = (auth.get_user(who, OUT_DIR) or {}).get("name") or None
-    email = save_email(account, subject, body, attachments, root=MAIL_DIR,
-                       recipient=to, direction="sent",
-                       sent_by={"email": who, "name": who_name})
-    mark_pending(email, out_dir=OUT_DIR)
     # Sent from the desk's shared address, which is the only account the app
     # may send as - but named for the person, and replies go back to them.
-    threading.Thread(target=_check_then_send, daemon=True,
-                     args=(email, to, subject, body, attachments, who, who_name),
-                     name=f"send-{email['email_id']}").start()
-    return RedirectResponse(f"/email/{email['email_id']}", status_code=303)
+    who = auth.current_user(request)
+    who_name = (auth.get_user(who, OUT_DIR) or {}).get("name") or None
+    try:
+        await run_in_threadpool(send_mail, to, subject, body, attachments,
+                                reply_to=who, sender_name=who_name)
+    except Exception as e:
+        log.warning("could not send to %s: %s", to, e)
+        if "unreachable" in str(e).lower() or "outbound SMTP" in str(e):
+            note_unreachable()      # stop offering what cannot work
+        return _compose_page(request, status=502, send_error=f"{type(e).__name__}: {e}",
+                             typed={"to": to, "subject": subject, "body": body})
+    request.session["sent_to"] = to
+    return RedirectResponse("/compose", status_code=303)
 
 
 @app.get("/attachment/{path:path}", response_class=HTMLResponse)

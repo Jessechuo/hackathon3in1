@@ -183,29 +183,13 @@
   "ms": "dikesan",
   "zh": "已检出"
  },
- "Check and send": {
-  "ms": "Semak dan hantar",
-  "zh": "核对并发送"
- },
  "Check it live, on this server": {
   "ms": "Semak secara langsung, di pelayan ini",
   "zh": "在此服务器上实时检查"
  },
- "Checked and sent to {address}.": {
-  "ms": "Telah disemak dan dihantar kepada {address}.",
-  "zh": "已核对并发送至 {address}。"
- },
  "Checked live on this server, and scored by the organizers' own scorer": {
   "ms": "Disemak secara langsung di pelayan ini, dan diberi skor oleh pemarkah penganjur sendiri",
   "zh": "在此服务器上实时检查，并由主办方自己的评分程序评分"
- },
- "Checking the documents costs about 2 cents of API credit.": {
-  "ms": "Menyemak dokumen menelan kos kira-kira 2 sen kredit API.",
-  "zh": "核对文件大约消耗 2 美分的 API 额度。"
- },
- "Checking the documents, then sending.": {
-  "ms": "Menyemak dokumen, kemudian menghantar.",
-  "zh": "正在核对文件，然后发送。"
  },
  "checking…": {
   "ms": "menyemak…",
@@ -759,10 +743,6 @@
   "ms": "Kadar",
   "zh": "比率"
  },
- "Reading both files takes a few seconds; this page refreshes itself when it is done.": {
-  "ms": "Membaca kedua-dua fail mengambil masa beberapa saat; halaman ini akan dimuat semula sendiri apabila selesai.",
-  "zh": "读取两个文件需要几秒钟；完成后此页面会自动刷新。"
- },
  "Reading the queue needs no account; sending does, because the message leaves under this address. This app is on a public URL, and an unlocked send form would let strangers mail the world from it.": {
   "ms": "Membaca baris gilir tidak memerlukan akaun; menghantar memerlukannya, kerana mesej dihantar di bawah alamat ini. Aplikasi ini berada di URL awam, dan borang hantar yang tidak dikunci membolehkan orang asing menghantar e-mel ke seluruh dunia daripadanya.",
   "zh": "查看队列无需账户；发送则需要，因为邮件会以此地址发出。本应用位于公开网址上，不加锁的发送表单会让陌生人用它向任何人发邮件。"
@@ -887,6 +867,10 @@
   "ms": "PILIH NOD BARIS GILIR OPERASI...",
   "zh": "选择业务队列节点..."
  },
+ "Send": {
+  "ms": "Hantar",
+  "zh": "发送"
+ },
  "Send an email": {
   "ms": "Hantar e-mel",
   "zh": "发送邮件"
@@ -899,17 +883,13 @@
   "ms": "Penghantaran tidak tersedia pada hos ini.",
   "zh": "此主机无法发送邮件。"
  },
- "sent by": {
-  "ms": "dihantar oleh",
-  "zh": "发送人"
+ "Sends from the shared MailOps address with your name on it, and replies come back to you. Mail you send is not added to the Triage Queue - only mail that arrives is.": {
+  "ms": "Dihantar dari alamat MailOps bersama dengan nama anda, dan balasan akan kembali kepada anda. Mel yang anda hantar tidak ditambah ke Baris Gilir Triaj - hanya mel yang diterima.",
+  "zh": "以共享的 MailOps 地址发送并署上您的名字，回复会直接发给您。您发送的邮件不会加入分拣队列——只有收到的邮件才会。"
  },
- "Sent from this account": {
-  "ms": "Dihantar dari akaun ini",
-  "zh": "从此账户发送"
- },
- "sent to {address}": {
-  "ms": "dihantar kepada {address}",
-  "zh": "发送至 {address}"
+ "Sent to {address}.": {
+  "ms": "Dihantar kepada {address}.",
+  "zh": "已发送至 {address}。"
  },
  "Shortcuts": {
   "ms": "Pintasan",
@@ -1051,10 +1031,6 @@
   "ms": "E-mel dan kata laluan itu tidak sepadan dengan mana-mana akaun.",
   "zh": "该邮箱和密码与任何账户都不匹配。"
  },
- "The attached documents are checked before the message goes out — same classifier and same SI-against-BL comparison the rest of the queue uses. A discrepancy is worth catching before a draft leaves, not after the customer finds it.": {
-  "ms": "Dokumen yang dilampirkan disemak sebelum mesej dihantar — pengelas dan perbandingan SI dengan BL yang sama seperti baris gilir. Percanggahan lebih baik dikesan sebelum draf dihantar, bukan selepas pelanggan menemuinya.",
-  "zh": "邮件发出前会先核对附件——使用与队列其他部分相同的分类器和 SI 对 BL 比对。差异最好在草稿发出前发现，而不是等客户发现。"
- },
  "the checks are already running": {
   "ms": "semakan sedang berjalan",
   "zh": "检查已在运行"
@@ -1063,13 +1039,13 @@
   "ms": "Semakan tidak dapat dijalankan",
   "zh": "检查无法运行"
  },
- "The documents were checked, but the message could not be sent:": {
-  "ms": "Dokumen telah disemak, tetapi mesej tidak dapat dihantar:",
-  "zh": "文件已核对，但邮件无法发送："
- },
  "The graded answers for every email, as a CSV file": {
   "ms": "Jawapan bergred bagi setiap e-mel, sebagai fail CSV",
   "zh": "所有评分邮件的答案，导出为 CSV 文件"
+ },
+ "The message could not be sent.": {
+  "ms": "Mesej tidak dapat dihantar.",
+  "zh": "邮件无法发送。"
  },
  "the run did not finish": {
   "ms": "larian tidak selesai",
@@ -1131,10 +1107,6 @@
   "ms": "Tandakan sekurang-kurangnya satu medan.",
   "zh": "请至少勾选一个字段。"
  },
- "TO": {
-  "ms": "KE",
-  "zh": "发往"
- },
  "To": {
   "ms": "Kepada",
   "zh": "收件人"
@@ -1155,9 +1127,9 @@
   "ms": "Baris Gilir Triaj",
   "zh": "分拣队列"
  },
- "Up to {n} files, {mb} MB each. Pick them one at a time or several at once — they add up. Name them so the SI and the BL are tellable apart: {si} and {bl} is enough. txt, pdf, docx and xlsx can be read and compared.": {
-  "ms": "Sehingga {n} fail, {mb} MB setiap satu. Pilih satu demi satu atau beberapa sekali gus — semuanya akan ditambah. Namakan fail supaya SI dan BL boleh dibezakan: {si} dan {bl} sudah memadai. Fail txt, pdf, docx dan xlsx boleh dibaca dan dibandingkan.",
-  "zh": "最多 {n} 个文件，每个 {mb} MB。可以逐个选择，也可以一次选多个——会累加。请命名文件以便区分 SI 和 BL：{si} 和 {bl} 即可。可读取并比对 txt、pdf、docx 和 xlsx 文件。"
+ "Up to {n} files, {mb} MB each. Pick them one at a time or several at once - they add up.": {
+  "ms": "Sehingga {n} fail, {mb} MB setiap satu. Pilih satu demi satu atau beberapa sekali gus - semuanya akan ditambah.",
+  "zh": "最多 {n} 个文件，每个 {mb} MB。可以逐个选择，也可以一次选多个——会累加。"
  },
  "Used to sign in. Any working address is accepted.": {
   "ms": "Digunakan untuk log masuk. Sebarang alamat yang berfungsi diterima.",

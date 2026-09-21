@@ -172,6 +172,18 @@ def test_account_errors_come_back_in_the_page_language(tmp_path, monkeypatch):
     assert "密码" in html and "password needs" not in html.lower()
 
 
+@pytest.mark.parametrize("lang", ["en", "ms", "zh"])
+def test_no_page_shows_markup_as_text(site, lang, monkeypatch):
+    """A bold word inside a translated sentence once came out as the text
+    "From <b>hackathon3in1@gmail.com</b>" - the tags on screen."""
+    from sdoc.mail import send as snd
+    monkeypatch.setattr(snd, "_REACHABLE", False)       # the "host blocks mail" notice too
+    for path in ("/", "/dashboard", "/email/email_004", "/compose", "/tests", "/login", "/register"):
+        html = render(site, path, lang)
+        for escaped in ("&lt;b&gt;", "&lt;/b&gt;", "&lt;a ", "&lt;code&gt;"):
+            assert escaped not in html, (path, escaped)
+
+
 def test_the_run_checks_script_gets_its_sentences_in_the_page_language(site):
     html = render(site, "/tests", "zh")
     # base.html's panel script has its own table; find the Run checks one.

@@ -279,8 +279,8 @@ QUEUE = [
     {"email_id": "email_002", "from": "b@x.com", "subject": "Second in the dataset", "body": "", "attachments": []},
     {"email_id": "mail_0001", "from": "c@x.com", "subject": "Arrived first", "body": "", "attachments": [],
      "received_at": "2026-09-21T10:00:00+00:00"},
-    {"email_id": "mail_0002", "from": "me@x.com", "subject": "Sent later", "body": "", "attachments": [],
-     "received_at": "2026-09-21T11:00:00+00:00", "direction": "sent", "to": "d@x.com"},
+    {"email_id": "mail_0002", "from": "d@x.com", "subject": "Arrived later", "body": "", "attachments": [],
+     "received_at": "2026-09-21T11:00:00+00:00"},
 ]
 
 

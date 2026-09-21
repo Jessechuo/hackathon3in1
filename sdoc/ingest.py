@@ -43,25 +43,13 @@ def save_mail_results(state: dict, out_dir: Path | None = None) -> None:
     (base / MAIL_RESULTS).write_text(json.dumps(state, indent=2), encoding="utf-8")
 
 
-def update_result(email_id: str, out_dir: Path | None = None, **fields) -> dict:
-    """Merge fields into one email's result, leaving the rest alone."""
+def forget(email_ids: list[str], out_dir: Path | None = None) -> None:
+    """Drop these emails' results - for mail that no longer exists."""
     with _LOCK:
         state = load_mail_results(out_dir)
-        current = dict(state.get(email_id) or {})
-        current.update(fields)
-        state[email_id] = current
+        for eid in email_ids:
+            state.pop(eid, None)
         save_mail_results(state, out_dir)
-    return current
-
-
-def mark_pending(email: dict, out_dir: Path | None = None) -> dict:
-    """A placeholder so the email has a page to open while the work runs."""
-    return update_result(
-        email["email_id"], out_dir,
-        category=None, status=None, pending=True, fields=[], defect_fields=[],
-        has_defect=False, review_reason=None, error=None, failed=False,
-        note="Reading the documents and comparing them...",
-    )
 
 
 def ingest(email: dict, out_dir: Path | None = None) -> dict:
@@ -90,14 +78,8 @@ def ingest(email: dict, out_dir: Path | None = None) -> dict:
                       note="Processing failed before a decision was reached - see the error.",
                       error=traceback.format_exc())
 
-    result["pending"] = False
     with _LOCK:
         state = load_mail_results(out_dir)
-        # Keep anything already recorded about delivery; the check does not own it.
-        previous = state.get(email["email_id"]) or {}
-        for keep in ("sent", "send_error", "sent_at"):
-            if keep in previous:
-                result[keep] = previous[keep]
         state[email["email_id"]] = result
         save_mail_results(state, out_dir)
     return result

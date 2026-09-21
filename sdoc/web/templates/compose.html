@@ -83,16 +83,36 @@
     padding:var(--lg); border:1px solid var(--border); border-left:3px solid var(--review);
     border-radius:var(--r-ctl); background:var(--l1); color:var(--fg-muted);
     font-size:13px; line-height:1.6; margin-bottom:var(--xl); }
+  /* What happened to the last send: gone, or the exact reason it did not. */
+  .outcome { display:flex; align-items:flex-start; gap:var(--md); }
+  .outcome svg { flex:none; margin-top:3px; }
+  .outcome.ok { border-left-color:var(--ok); }
+  .outcome.ok svg { color:var(--ok); }
+  .outcome.bad { border-left-color:var(--mismatch); }
+  .outcome.bad svg { color:var(--mismatch); }
+  .outcome b { color:var(--fg); }
 </style>
 
 <div class="compose">
   <h1 class="t-headline-sm">{{ t("Send an email") }}</h1>
 
-  <p class="lede">{{ t("The attached documents are checked before the message goes out — same classifier and same SI-against-BL comparison the rest of the queue uses. A discrepancy is worth catching before a draft leaves, not after the customer finds it.") }}</p>
+  <p class="lede">{{ t("Sends from the shared MailOps address with your name on it, and replies come back to you. Mail you send is not added to the Triage Queue - only mail that arrives is.") }}</p>
+
+  {% if sent_to %}
+  <p class="locked outcome ok" role="status">
+    <svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>
+    <span>{{ t("Sent to {address}.", address=bold(sent_to))|safe }}</span>
+  </p>
+  {% elif send_error %}
+  <p class="locked outcome bad" role="alert">
+    <svg class="ico" aria-hidden="true"><use href="#i-alert"/></svg>
+    <span><b>{{ t("The message could not be sent.") }}</b> <span translate="no">{{ send_error }}</span></span>
+  </p>
+  {% endif %}
 
   {% if smtp_reachable is false %}
   <p class="locked"><b>{{ t("Sending is unavailable on this host.") }}</b>
-  {{ t("This deployment cannot reach a mail server — the hosting provider blocks outbound SMTP, as most do so their addresses are not used for spam. Receiving is unaffected: mail to {address} is still picked up and checked within twenty seconds. Run the app locally and this form works.", address="<b>" ~ (mail_address|e) ~ "</b>")|safe }}</p>
+  {{ t("This deployment cannot reach a mail server — the hosting provider blocks outbound SMTP, as most do so their addresses are not used for spam. Receiving is unaffected: mail to {address} is still picked up and checked within twenty seconds. Run the app locally and this form works.", address=bold(mail_address))|safe }}</p>
   {% elif not can_send %}
   <p class="locked"><b>{{ t("{link} to send.", link='<a href="/login?next=/compose">' ~ t("Sign in") ~ "</a>")|safe }}</b>
   {{ t("Reading the queue needs no account; sending does, because the message leaves under this address. This app is on a public URL, and an unlocked send form would let strangers mail the world from it.") }}</p>
@@ -101,18 +121,18 @@
   <form method="post" action="/compose" enctype="multipart/form-data">
     <div class="from-line">
       <svg class="ico ico-sm"><use href="#i-send"/></svg>
-      <span>{{ t("From {address}", address="<b>" ~ ((mail_address or t('this account'))|e) ~ "</b>")|safe }}</span>
+      <span>{{ t("From {address}", address=bold(mail_address or t('this account')))|safe }}</span>
     </div>
 
     <label class="field">
       <span class="lbl">{{ t("To") }}</span>
-      <input type="email" name="to" required placeholder="ops@shipper.com"
+      <input type="email" name="to" required placeholder="ops@shipper.com" value="{{ typed.to if typed else '' }}"
              {% if not can_send or smtp_reachable is false %}disabled{% endif %}>
     </label>
 
     <label class="field">
       <span class="lbl">{{ t("Subject") }}</span>
-      <input type="text" name="subject" required
+      <input type="text" name="subject" required value="{{ typed.subject if typed else '' }}"
              placeholder="{{ t('Draft BL for confirmation - PO 26067') }}"
              {% if not can_send or smtp_reachable is false %}disabled{% endif %}>
     </label>
@@ -120,7 +140,7 @@
     <label class="field">
       <span class="lbl">{{ t("Body") }}</span>
       <textarea name="body" {% if not can_send or smtp_reachable is false %}disabled{% endif %}
-        placeholder="{{ t('Dear Sir/Madam,') }}&#10;&#10;{{ t('Please find attached the SI and the draft BL for your confirmation.') }}&#10;&#10;{{ t('Regards') }}"></textarea>
+        placeholder="{{ t('Dear Sir/Madam,') }}&#10;&#10;{{ t('Please find attached the SI and the draft BL for your confirmation.') }}&#10;&#10;{{ t('Regards') }}">{{ typed.body if typed else '' }}</textarea>
     </label>
 
     <div class="field">
@@ -139,14 +159,13 @@
       <ul class="files" id="file-list"></ul>
       <p class="hint" id="file-error" hidden></p>
 
-      <p class="hint">{{ t("Up to {n} files, {mb} MB each. Pick them one at a time or several at once — they add up. Name them so the SI and the BL are tellable apart: {si} and {bl} is enough. txt, pdf, docx and xlsx can be read and compared.", n=max_attachments, mb=max_mb, si="<code>SI.txt</code>", bl="<code>BL.txt</code>")|safe }}</p>
+      <p class="hint">{{ t("Up to {n} files, {mb} MB each. Pick them one at a time or several at once - they add up.", n=max_attachments, mb=max_mb) }}</p>
     </div>
 
 
     <button class="send" type="submit" {% if not can_send or smtp_reachable is false %}disabled{% endif %}>
-      <svg class="ico ico-sm"><use href="#i-send"/></svg> {{ t("Check and send") }}
+      <svg class="ico ico-sm"><use href="#i-send"/></svg> {{ t("Send") }}
     </button>
-    <p class="hint">{{ t("Checking the documents costs about 2 cents of API credit.") }}</p>
   </form>
 </div>
 
