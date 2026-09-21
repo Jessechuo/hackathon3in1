@@ -68,8 +68,25 @@ def test_the_rail_offers_only_what_works(site):
     sitting beside the links that do work."""
     client, _ = site
     html = client.get("/").text
-    rail = html.split('<aside class="rail">', 1)[1].split("</aside>", 1)[0]
+    rail = html.split('<aside class="rail"', 1)[1].split("</aside>", 1)[0]
     assert "not built yet" not in rail
     assert rail.count("<a ") == 3            # overview, queue, send
     for href in ('href="/dashboard"', 'href="/"', 'href="/compose"'):
         assert href in rail
+
+
+def test_the_rail_can_be_widened_to_show_labels(site):
+    """<|> at the bottom of the rail widens it to show labels, and folds it
+    back. Its state is restored before first paint, or an open panel would
+    render closed and jump open on every page."""
+    client, _ = site
+    html = client.get("/").text
+    rail = html.split('<aside class="rail"', 1)[1].split("</aside>", 1)[0]
+    assert 'id="rail-toggle"' in rail
+    assert 'href="#i-diff"' in rail                       # the <|> icon
+    assert 'aria-expanded="false"' in rail
+    for label in ("Overview", "Triage Queue", "Send an email"):
+        assert f'<span class="rail-lbl">{label}</span>' in rail
+    head = html.split("</head>", 1)[0]
+    assert 'localStorage.getItem("sdoc-rail")' in head    # restored before paint
+    assert 'html[data-rail="open"] { --rail:200px; }' in html

@@ -12,6 +12,10 @@
   try {
     var t = localStorage.getItem("sdoc-theme");
     if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    // Same reason for the side panel: restored after paint, an expanded
+    // panel would render collapsed and then jump open on every page.
+    if (localStorage.getItem("sdoc-rail") === "open")
+      document.documentElement.setAttribute("data-rail", "open");
   } catch (e) {}
 })();
 </script>
@@ -238,23 +242,51 @@ header.app {
 }
 .iconbtn:hover { background:var(--l2); color:var(--fg); }
 
-/* Collapsible navigation rail. */
+/* Collapsible navigation rail. Icons only by default; the <|> button at the
+   bottom widens it to show labels. Everything reads --rail, so changing that
+   one value moves the panel and the page beside it together. */
+html[data-rail="open"] { --rail:200px; }
+
 aside.rail {
   position:fixed; left:0; top:var(--head); bottom:0; width:var(--rail); z-index:40;
   background:var(--l1); border-right:1px solid var(--border);
   display:flex; flex-direction:column; align-items:center; justify-content:space-between;
-  padding:var(--md) 0;
+  padding:var(--md) 0; overflow:hidden;
+  transition:width .18s ease;
 }
+html[data-rail="open"] aside.rail { align-items:stretch; }
 .rail nav { display:flex; flex-direction:column; gap:var(--xs); }
-.rail a {
-  width:36px; height:36px; border-radius:var(--r-ctl);
-  display:flex; align-items:center; justify-content:center;
+html[data-rail="open"] .rail nav { padding:0 var(--md); }
+
+.rail a, .rail-toggle {
+  width:36px; height:36px; border-radius:var(--r-ctl); flex:none;
+  display:flex; align-items:center; justify-content:center; gap:var(--md);
   color:var(--fg-muted); transition:background var(--t), color var(--t);
 }
-.rail a:hover { background:var(--l2); color:var(--fg); }
+html[data-rail="open"] .rail a,
+html[data-rail="open"] .rail-toggle {
+  width:auto; justify-content:flex-start; padding:0 10px;
+}
+.rail a:hover, .rail-toggle:hover { background:var(--l2); color:var(--fg); }
 .rail a[aria-current="page"] { background:var(--primary); color:var(--on-primary); }
 
-.shell { padding-left:var(--rail); padding-top:var(--head); }
+.rail-toggle { border:0; background:transparent; cursor:pointer; font:inherit; }
+html[data-rail="open"] .rail-toggle { margin:0 var(--md); }
+
+/* Labels: read aloud always, shown only when the panel is open. */
+.rail-lbl {
+  position:absolute; width:1px; height:1px; overflow:hidden;
+  clip:rect(0 0 0 0); white-space:nowrap;
+}
+html[data-rail="open"] .rail-lbl {
+  position:static; width:auto; height:auto; overflow:visible; clip:auto;
+  font-size:13px; font-weight:500;
+}
+
+.shell { padding-left:var(--rail); padding-top:var(--head); transition:padding-left .18s ease; }
+@media (prefers-reduced-motion:reduce) {
+  aside.rail, .shell { transition:none; }
+}
 
 /* ── Badges & status ────────────────────────────────────────────────── */
 .badge {
@@ -399,12 +431,17 @@ aside.rail {
   </div>
 </header>
 
-<aside class="rail">
+<aside class="rail" id="rail">
   <nav aria-label="Sections">
-    <a href="/dashboard" aria-current="{{ 'page' if page == 'dashboard' else 'false' }}" title="Overview"><svg class="ico ico-lg"><use href="#i-grid"/></svg><span class="vh">Overview</span></a>
-    <a href="/" aria-current="{{ 'page' if page == 'inbox' else 'false' }}" title="Triage Queue"><svg class="ico ico-lg"><use href="#i-inbox"/></svg><span class="vh">Triage Queue</span></a>
-    <a href="/compose" aria-current="{{ 'page' if page == 'compose' else 'false' }}" title="Send an email"><svg class="ico ico-lg"><use href="#i-send"/></svg><span class="vh">Send an email</span></a>
+    <a href="/dashboard" aria-current="{{ 'page' if page == 'dashboard' else 'false' }}" title="Overview"><svg class="ico ico-lg"><use href="#i-grid"/></svg><span class="rail-lbl">Overview</span></a>
+    <a href="/" aria-current="{{ 'page' if page == 'inbox' else 'false' }}" title="Triage Queue"><svg class="ico ico-lg"><use href="#i-inbox"/></svg><span class="rail-lbl">Triage Queue</span></a>
+    <a href="/compose" aria-current="{{ 'page' if page == 'compose' else 'false' }}" title="Send an email"><svg class="ico ico-lg"><use href="#i-send"/></svg><span class="rail-lbl">Send an email</span></a>
   </nav>
+  <button class="rail-toggle" id="rail-toggle" type="button"
+          aria-controls="rail" aria-expanded="false"
+          aria-label="Expand panel" title="Expand panel">
+    <svg class="ico ico-lg" aria-hidden="true"><use href="#i-diff"/></svg><span class="rail-lbl">Collapse</span>
+  </button>
 </aside>
 
 <div class="shell">
@@ -477,6 +514,31 @@ aside.rail {
   else window.addEventListener("resize", sync);
   // Web fonts land after first paint and can change the height by a pixel.
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(sync);
+})();
+
+// Side panel: <|> widens it to show labels, and again folds it back. The
+// choice is remembered, and the head script restores it before first paint.
+(function () {
+  var root = document.documentElement,
+      btn = document.getElementById("rail-toggle");
+  if (!btn) return;
+
+  function sync() {
+    var open = root.getAttribute("data-rail") === "open",
+        label = open ? "Collapse panel" : "Expand panel";
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+    btn.setAttribute("aria-label", label);
+    btn.title = label;
+  }
+
+  btn.addEventListener("click", function () {
+    var open = root.getAttribute("data-rail") !== "open";
+    if (open) root.setAttribute("data-rail", "open");
+    else root.removeAttribute("data-rail");
+    try { localStorage.setItem("sdoc-rail", open ? "open" : "closed"); } catch (e) {}
+    sync();
+  });
+  sync();
 })();
 
 // Account menu: click the initial to open, click anywhere else or Esc to close.
